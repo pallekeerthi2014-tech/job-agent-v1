@@ -1,0 +1,76 @@
+{
+  "jobs": [
+    {
+      "external_job_id": "demo-health-001",
+      "title": "Senior Healthcare Business Analyst",
+      "company": "Centene Demo Health",
+      "location": "Remote, United States",
+      "employment_type": "full-time",
+      "salary_min": 105000,
+      "salary_max": 128000,
+      "posted_date": "today",
+      "apply_url": "https://example.com/jobs/demo-health-001",
+      "description": "Lead payer business analysis for claims adjudication, EDI 837 and 835 remittance workflows, HEDIS reporting, SQL validation, Jira backlog grooming, UAT, and stakeholder documentation. US work authorization required."
+    },
+    {
+      "external_job_id": "demo-health-002",
+      "title": "Healthcare Data Analyst",
+      "company": "Molina Demo Healthcare",
+      "location": "Remote",
+      "employment_type": "full-time",
+      "salary_min": 92000,
+      "salary_max": 116000,
+      "posted_date": "4 hours ago",
+      "apply_url": "https://example.com/jobs/demo-health-002",
+      "description": "Analyze Medicaid and Medicare claims, encounter submissions, HEDIS quality measures, care gaps, member outreach data, and supplemental data feeds using SQL, Excel, Tableau, and Power BI."
+    },
+    {
+      "external_job_id": "demo-health-003",
+      "title": "Interoperability Business Analyst",
+      "company": "Elevance Demo Health",
+      "location": "Boston, MA Hybrid",
+      "employment_type": "contract",
+      "salary_min": 100000,
+      "salary_max": 130000,
+      "posted_date": "1 day ago",
+      "apply_url": "https://example.com/jobs/demo-health-003",
+      "description": "Document FHIR API, HL7 v2, CCD, eligibility 270/271, and payer-provider data exchange requirements. Coordinate integration testing, workflow mapping, business rules, and UAT with product and engineering teams."
+    },
+    {
+      "external_job_id": "demo-health-004",
+      "title": "Business Systems Analyst - Claims Configuration",
+      "company": "Optum Demo",
+      "location": "Remote",
+      "employment_type": "full-time",
+      "salary_min": 98000,
+      "salary_max": 122000,
+      "posted_date": "22 hours ago",
+      "apply_url": "https://example.com/jobs/demo-health-004",
+      "description": "Own payer operations requirements for benefit setup, claims configuration, EDI 834 enrollment, 837 claims, 835 remittance, SQL data validation, process documentation, and release readiness."
+    },
+    {
+      "external_job_id": "demo-health-005",
+      "title": "HEDIS Reporting Analyst",
+      "company": "Kaiser Demo Permanente",
+      "location": "Remote, CA",
+      "employment_type": "full-time",
+      "salary_min": 95000,
+      "salary_max": 118000,
+      "posted_date": "yesterday",
+      "apply_url": "https://example.com/jobs/demo-health-005",
+      "description": "Support HEDIS, Stars, quality measures, care gap closure, population health reporting, claims analytics, SQL extracts, provider outreach analysis, and CMS reporting documentation."
+    },
+    {
+      "external_job_id": "demo-health-006",
+      "title": "Clinical Quality Business Analyst",
+      "company": "Cardinal Demo Health",
+      "location": "Remote",
+      "employment_type": "contract",
+      "salary_min": 90000,
+      "salary_max": 110000,
+      "posted_date": "36 hours ago",
+      "apply_url": "https://example.com/jobs/demo-health-006",
+      "description": "Partner with clinical quality and provider analytics teams on care management workflows, quality measures, HEDIS supplemental data, HL7 interfaces, SQL validation, and business process documentation."
+    }
+  ]
+}

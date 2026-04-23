@@ -1,0 +1,27 @@
+[
+  {
+    "full_name": "Anika Rao",
+    "email": "anika.rao@example.com",
+    "headline": "Senior Backend Engineer",
+    "location": "Bengaluru",
+    "years_experience": 7,
+    "skills": ["python", "sql", "fastapi", "postgres"],
+    "preferences": {
+      "desired_titles": ["backend engineer", "platform engineer"]
+    },
+    "is_active": true
+  },
+  {
+    "full_name": "Marcus Lee",
+    "email": "marcus.lee@example.com",
+    "headline": "Product-minded Data Engineer",
+    "location": "Remote",
+    "years_experience": 5,
+    "skills": ["python", "sql", "ml", "ops"],
+    "preferences": {
+      "desired_titles": ["data engineer", "machine learning engineer"]
+    },
+    "is_active": true
+  }
+]
+

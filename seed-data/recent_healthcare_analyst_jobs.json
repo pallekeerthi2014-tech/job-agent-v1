@@ -1,0 +1,94 @@
+{
+  "jobs": [
+    {
+      "external_job_id": "recent-healthcare-001",
+      "title": "Business Analyst III UM, Excel, SQL",
+      "company": "Centene",
+      "location": "Remote-IL / Remote-MO",
+      "employment_type": "full-time",
+      "salary_min": 70100,
+      "salary_max": 126200,
+      "posted_date": "2026-04-22",
+      "apply_url": "https://jobs.centene.com/us/en/jobs/1636960/business-analyst-iii-um-excel-sql/",
+      "description": "Healthcare business analyst role supporting utilization management, business process analysis, SQL, Excel, UAT, data validation, requirements documentation, and payer operations."
+    },
+    {
+      "external_job_id": "recent-healthcare-002",
+      "title": "Business Analyst Consultant - Remote",
+      "company": "Optum",
+      "location": "Remote",
+      "employment_type": "full-time",
+      "posted_date": "2026-04-22",
+      "apply_url": "https://diversityjobs.com/career/16637135/Business-Analyst-Consultant-Remote-Minnesota-Eden-Prairie",
+      "description": "Remote healthcare and insurance business analyst consultant role involving requirements, SQL, UAT, data analysis, business process mapping, stakeholder documentation, and health plan systems."
+    },
+    {
+      "external_job_id": "recent-healthcare-003",
+      "title": "Business Analyst",
+      "company": "Dana-Farber Cancer Institute",
+      "location": "Boston, MA Hybrid",
+      "employment_type": "full-time",
+      "salary_min": 74500,
+      "salary_max": 89300,
+      "posted_date": "2026-04-22",
+      "apply_url": "https://hospitalcareers.com/job/10625302/business-analyst/",
+      "description": "Healthcare IT business analyst role supporting Boston-based clinical and research operations, requirements gathering, workflow analysis, documentation, testing, and stakeholder coordination."
+    },
+    {
+      "external_job_id": "recent-healthcare-004",
+      "title": "Business Analyst II, Research Informatics Operations",
+      "company": "Dana-Farber Cancer Institute",
+      "location": "Boston, MA Onsite / Hybrid",
+      "employment_type": "full-time",
+      "salary_min": 96900,
+      "salary_max": 111000,
+      "posted_date": "2026-04-22",
+      "apply_url": "https://jobs.nationalguard.com/job/770419/business-analyst-ii-research-informatics-operations/",
+      "description": "Research informatics business analyst role for healthcare operations, clinical research workflows, data analysis, requirements documentation, systems testing, and stakeholder communication."
+    },
+    {
+      "external_job_id": "recent-healthcare-005",
+      "title": "Senior Epic Business Analyst",
+      "company": "Dana-Farber Cancer Institute",
+      "location": "Boston, MA Onsite / Hybrid",
+      "employment_type": "full-time",
+      "salary_min": 91900,
+      "salary_max": 119500,
+      "posted_date": "2026-04-22",
+      "apply_url": "https://jobs.nationalguard.com/job/770307/senior-epic-business-analyst/",
+      "description": "Senior healthcare systems business analyst role supporting Epic workflows, clinical systems, business requirements, UAT, documentation, data validation, and stakeholder coordination."
+    },
+    {
+      "external_job_id": "recent-healthcare-006",
+      "title": "Senior Clinical Data Analyst",
+      "company": "Clover Health",
+      "location": "Remote - USA",
+      "employment_type": "full-time",
+      "posted_date": "2026-04-22",
+      "apply_url": "https://job-boards.greenhouse.io/cloverhealth/jobs/7839078",
+      "description": "Remote clinical data analyst role using healthcare data, clinical quality, SQL, analytics, payer and provider workflows, risk adjustment, reporting, and population health analysis."
+    },
+    {
+      "external_job_id": "recent-healthcare-007",
+      "title": "Senior Healthcare Data Analyst - Remote",
+      "company": "Sentara Health",
+      "location": "Remote",
+      "employment_type": "full-time",
+      "posted_date": "2026-04-17",
+      "apply_url": "https://www.indeed.com/q-data-analyst-remote-l-remote-jobs.html",
+      "description": "Healthcare data analyst role supporting medical economics, health plan analytics, SQL, Power BI, Tableau, cost of care trends, operational dashboards, and reporting."
+    },
+    {
+      "external_job_id": "recent-pharma-001",
+      "title": "Senior Health Data Analyst - Payer",
+      "company": "Veeva Systems",
+      "location": "Remote",
+      "employment_type": "full-time",
+      "salary_min": 80000,
+      "salary_max": 125000,
+      "posted_date": "2026-04-17",
+      "apply_url": "https://www.indeed.com/q-data-analyst-l-remote-%27.-jobs.html",
+      "description": "Life sciences and healthcare data analyst role involving payer data, healthcare organization data, claims, Sigma BI, analytics, SQL, and pharma/life-sciences data workflows."
+    }
+  ]
+}

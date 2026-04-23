@@ -1,0 +1,154 @@
+[
+  {
+    "company": "UnitedHealth Group / Optum / UnitedHealthcare",
+    "segment": "Payer / Health Services",
+    "portal_family": "custom / Phenom-like careers site",
+    "portal_url": "https://www.unitedhealthgroup.com/careers/en/optum.html",
+    "coverage_status": "partially_covered",
+    "notes": "Registered in source catalog for validation. Needs custom adapter or site-specific HTML/API discovery."
+  },
+  {
+    "company": "Elevance Health",
+    "segment": "Payer",
+    "portal_family": "custom careers site",
+    "portal_url": "https://careers.elevancehealth.com/",
+    "coverage_status": "partially_covered",
+    "notes": "Can often be onboarded through generic HTML or discovered API calls. No dedicated adapter yet."
+  },
+  {
+    "company": "The Cigna Group / Evernorth",
+    "segment": "Payer / PBM",
+    "portal_family": "custom / Phenom",
+    "portal_url": "https://jobs.thecignagroup.com/us/en",
+    "coverage_status": "partially_covered",
+    "notes": "Registered in source catalog for validation. Needs custom or Phenom-specific integration."
+  },
+  {
+    "company": "CVS Health / Aetna / Caremark",
+    "segment": "Payer / PBM / Retail Health",
+    "portal_family": "custom careers site",
+    "portal_url": "https://jobs.cvshealth.com/us/en",
+    "coverage_status": "partially_covered",
+    "notes": "Registered in source catalog for validation. Needs site-specific integration."
+  },
+  {
+    "company": "Centene",
+    "segment": "Payer",
+    "portal_family": "custom careers site",
+    "portal_url": "https://jobs.centene.com/us/en",
+    "coverage_status": "partially_covered",
+    "notes": "Can be onboarded via custom HTML/API discovery. No dedicated adapter yet."
+  },
+  {
+    "company": "Molina Healthcare",
+    "segment": "Payer",
+    "portal_family": "custom careers site",
+    "portal_url": "https://careers.molinahealthcare.com/",
+    "coverage_status": "partially_covered",
+    "notes": "May be feasible via generic HTML with selectors."
+  },
+  {
+    "company": "Humana",
+    "segment": "Payer / Medicare Advantage",
+    "portal_family": "custom / Phenom",
+    "portal_url": "https://careers.humana.com/us/en/about-us",
+    "coverage_status": "partially_covered",
+    "notes": "Registered in source catalog for validation. Needs custom or Phenom-aware integration."
+  },
+  {
+    "company": "Kaiser Permanente",
+    "segment": "Integrated Payer / Provider",
+    "portal_family": "custom careers site",
+    "portal_url": "https://www.kaiserpermanentejobs.org/",
+    "coverage_status": "partially_covered",
+    "notes": "Potential fit for generic HTML/API discovery depending on job search backend."
+  },
+  {
+    "company": "HCA Healthcare",
+    "segment": "Provider / Health System",
+    "portal_family": "custom careers site",
+    "portal_url": "https://careers.hcahealthcare.com/pages/hca-healthcare",
+    "coverage_status": "partially_covered",
+    "notes": "May be onboarded via generic HTML. Needs validation."
+  },
+  {
+    "company": "Tenet Healthcare",
+    "segment": "Provider / Health System",
+    "portal_family": "custom careers site",
+    "portal_url": "https://www.tenethealth.com/careers",
+    "coverage_status": "partially_covered",
+    "notes": "May be onboarded via generic HTML. Needs validation."
+  },
+  {
+    "company": "Cardinal Health",
+    "segment": "Healthcare Distribution / Services",
+    "portal_family": "custom careers site",
+    "portal_url": "https://jobs.cardinalhealth.com/",
+    "coverage_status": "partially_covered",
+    "notes": "Registered in source catalog. Potential generic HTML/API integration."
+  },
+  {
+    "company": "McKesson",
+    "segment": "Healthcare Distribution / Services",
+    "portal_family": "custom careers site",
+    "portal_url": "https://careers.mckesson.com/en",
+    "coverage_status": "partially_covered",
+    "notes": "Registered in source catalog. Potential generic HTML/API integration."
+  },
+  {
+    "company": "Cencora",
+    "segment": "Healthcare Distribution / Pharma Services",
+    "portal_family": "custom careers site",
+    "portal_url": "https://careers.cencora.com/",
+    "coverage_status": "partially_covered",
+    "notes": "Registered in source catalog. Potential generic HTML/API integration."
+  },
+  {
+    "company": "AbbVie",
+    "segment": "Pharma / Life Sciences",
+    "portal_family": "custom careers site",
+    "portal_url": "https://careers.abbvie.com/",
+    "coverage_status": "not_yet_covered",
+    "notes": "Needs site-specific integration."
+  },
+  {
+    "company": "Merck",
+    "segment": "Pharma / Life Sciences",
+    "portal_family": "custom careers site",
+    "portal_url": "https://jobs.merck.com/",
+    "coverage_status": "not_yet_covered",
+    "notes": "Needs site-specific integration."
+  },
+  {
+    "company": "Pfizer",
+    "segment": "Pharma / Life Sciences",
+    "portal_family": "custom careers site",
+    "portal_url": "https://www.pfizer.com/en/about/careers/science-careers",
+    "coverage_status": "not_yet_covered",
+    "notes": "Needs site-specific integration."
+  },
+  {
+    "company": "Generic Greenhouse employers",
+    "segment": "Any healthcare segment",
+    "portal_family": "greenhouse",
+    "portal_url": "https://boards.greenhouse.io/",
+    "coverage_status": "covered_now",
+    "notes": "Dedicated adapter implemented. Needs per-company board token."
+  },
+  {
+    "company": "Generic Lever employers",
+    "segment": "Any healthcare segment",
+    "portal_family": "lever",
+    "portal_url": "https://jobs.lever.co/",
+    "coverage_status": "covered_now",
+    "notes": "Dedicated adapter implemented. Needs per-company handle."
+  },
+  {
+    "company": "Generic Workday employers",
+    "segment": "Any healthcare segment",
+    "portal_family": "workday",
+    "portal_url": "https://*.myworkdayjobs.com/",
+    "coverage_status": "covered_now",
+    "notes": "New adapter implemented. Needs per-company API/search endpoint."
+  }
+]

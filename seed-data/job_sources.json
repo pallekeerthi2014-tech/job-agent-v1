@@ -1,0 +1,353 @@
+[
+  {
+    "name": "Recent Healthcare Analyst Discovery Feed",
+    "adapter_type": "generic_ats_json",
+    "config": {
+      "path": "/app/seed-data/recent_healthcare_analyst_jobs.json",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "business systems analyst",
+        "clinical data analyst",
+        "business process analyst",
+        "research informatics",
+        "epic business analyst",
+        "health data analyst",
+        "healthcare analyst",
+        "pharma analyst",
+        "life sciences analyst"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "cybersecurity analyst",
+        "engineer",
+        "developer",
+        "manager",
+        "director",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Sample JSON Feed",
+    "adapter_type": "generic_ats_json",
+    "config": {
+      "path": "/app/seed-data/job_feed.json"
+    },
+    "enabled": false
+  },
+  {
+    "name": "Clover Health Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "cloverhealth",
+      "company_name": "Clover Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "clinical data analyst",
+        "operations analyst",
+        "payment integrity analyst",
+        "risk adjustment",
+        "healthcare analyst"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "sales operations",
+        "security analyst",
+        "engineer",
+        "developer",
+        "manager",
+        "director",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Capital Rx Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "capitalrx",
+      "company_name": "Capital Rx / Judi Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "data exchange",
+        "operations analyst",
+        "senior analyst",
+        "analytics",
+        "reporting",
+        "client audit",
+        "claims"
+      ],
+      "exclude_titles": [
+        "privacy analyst",
+        "proposal",
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "total rewards",
+        "engineer",
+        "developer",
+        "manager",
+        "director",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Example Greenhouse Board",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "example-company",
+      "company_name": "Example Company"
+    },
+    "enabled": false
+  },
+  {
+    "name": "Example Lever Postings",
+    "adapter_type": "lever_postings",
+    "config": {
+      "company_handle": "example-company",
+      "company_name": "Example Company"
+    },
+    "enabled": false
+  },
+  {
+    "name": "Example Workday Jobs",
+    "adapter_type": "workday_jobs",
+    "config": {
+      "url": "https://example.myworkdayjobs.com/wday/cxs/example/careers/jobs",
+      "job_url_prefix": "https://example.myworkdayjobs.com/en-US/careers",
+      "company_name": "Example Company"
+    },
+    "enabled": false
+  },
+  {
+    "name": "Elevance Health Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://careers.elevancehealth.com/",
+      "company_name": "Elevance Health",
+      "job_selector": "job-listing-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "apply",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification against the current careers site."
+    },
+    "enabled": false
+  },
+  {
+    "name": "Centene Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://jobs.centene.com/us/en",
+      "company_name": "Centene",
+      "job_selector": "jobs-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "apply",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification and likely API discovery for stronger freshness support."
+    },
+    "enabled": false
+  },
+  {
+    "name": "Molina Healthcare Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://careers.molinahealthcare.com/",
+      "company_name": "Molina Healthcare",
+      "job_selector": "search-results__item",
+      "title_selector": "jobTitle",
+      "location_selector": "jobLocation",
+      "link_selector": "jobTitle-link",
+      "posted_selector": "date",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification; may shift to API-backed ingestion after inspection."
+    },
+    "enabled": false
+  },
+  {
+    "name": "Kaiser Permanente Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://www.kaiserpermanentejobs.org/",
+      "company_name": "Kaiser Permanente",
+      "job_selector": "jobs-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification and potential API discovery for searchable jobs."
+    },
+    "enabled": false
+  },
+  {
+    "name": "HCA Healthcare Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://careers.hcahealthcare.com/pages/hca-healthcare",
+      "company_name": "HCA Healthcare",
+      "job_selector": "search-results-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification; likely requires search page endpoint rather than landing page."
+    },
+    "enabled": false
+  },
+  {
+    "name": "Tenet Healthcare Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://www.tenethealth.com/careers/search-our-careers",
+      "company_name": "Tenet Healthcare",
+      "job_selector": "job-result",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification and possible search-endpoint discovery."
+    },
+    "enabled": false
+  },
+  {
+    "name": "UnitedHealth Group / Optum Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://www.unitedhealthgroup.com/careers/en/optum.html",
+      "company_name": "UnitedHealth Group / Optum",
+      "job_selector": "job-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "High-priority target. Needs custom endpoint or selector validation; likely custom/Phenom-like implementation."
+    },
+    "enabled": false
+  },
+  {
+    "name": "The Cigna Group / Evernorth Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://jobs.thecignagroup.com/us/en",
+      "company_name": "The Cigna Group / Evernorth",
+      "job_selector": "job-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "High-priority target. Needs live validation; likely custom/Phenom-aware integration."
+    },
+    "enabled": false
+  },
+  {
+    "name": "CVS Health / Aetna Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://jobs.cvshealth.com/us/en",
+      "company_name": "CVS Health / Aetna",
+      "job_selector": "job-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "High-priority target. Needs live selector verification and likely API discovery."
+    },
+    "enabled": false
+  },
+  {
+    "name": "Humana Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://careers.humana.com/us/en/about-us",
+      "company_name": "Humana",
+      "job_selector": "job-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "High-priority target. Needs live validation; likely Phenom-style or custom integration."
+    },
+    "enabled": false
+  },
+  {
+    "name": "Cardinal Health Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://jobs.cardinalhealth.com/",
+      "company_name": "Cardinal Health",
+      "job_selector": "job-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification and possible API discovery."
+    },
+    "enabled": false
+  },
+  {
+    "name": "McKesson Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://careers.mckesson.com/en",
+      "company_name": "McKesson",
+      "job_selector": "job-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification and possible API discovery."
+    },
+    "enabled": false
+  },
+  {
+    "name": "Cencora Careers",
+    "adapter_type": "generic_html_careers",
+    "config": {
+      "url": "https://careers.cencora.com/",
+      "company_name": "Cencora",
+      "job_selector": "job-list-item",
+      "title_selector": "job-title",
+      "location_selector": "job-location",
+      "link_selector": "job-link",
+      "posted_selector": "date-posted",
+      "default_employment_type": "full-time",
+      "integration_status": "initial_onboarding",
+      "validation_notes": "Needs live selector verification and possible API discovery."
+    },
+    "enabled": false
+  }
+]

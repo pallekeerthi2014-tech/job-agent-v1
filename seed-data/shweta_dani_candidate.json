@@ -1,0 +1,133 @@
+{
+  "name": "Shweta Dani",
+  "assigned_employee_name": "Olivia Chen",
+  "preferred_titles": [
+    "Senior Healthcare Business Analyst",
+    "Business Systems Analyst",
+    "Senior Business Analyst",
+    "Business Analyst"
+  ],
+  "years_experience": 8,
+  "work_authorization": "US Citizen",
+  "healthcare_domain_expertise": [
+    "claims",
+    "edi",
+    "interoperability",
+    "quality",
+    "payer",
+    "provider",
+    "population-health"
+  ],
+  "must_have_keywords": [
+    "FHIR",
+    "HL7",
+    "EDI",
+    "claims adjudication",
+    "HEDIS",
+    "270/271",
+    "276/277",
+    "278",
+    "820",
+    "834",
+    "835",
+    "837",
+    "MMIS",
+    "Medicare",
+    "Medicaid",
+    "PBM",
+    "CMS"
+  ],
+  "exclude_keywords": [
+    "bedside nursing",
+    "medical assistant",
+    "front desk",
+    "pure software engineering"
+  ],
+  "employment_preferences": [
+    "full-time",
+    "contract",
+    "remote"
+  ],
+  "location_preferences": [
+    "Remote",
+    "New Jersey",
+    "New York",
+    "Pennsylvania"
+  ],
+  "salary_min": 90000,
+  "salary_unit": "yearly",
+  "active": true,
+  "skills": [
+    {
+      "skill_name": "Claims",
+      "years_used": 8
+    },
+    {
+      "skill_name": "EDI",
+      "years_used": 8
+    },
+    {
+      "skill_name": "FHIR",
+      "years_used": 4
+    },
+    {
+      "skill_name": "HL7",
+      "years_used": 5
+    },
+    {
+      "skill_name": "HEDIS",
+      "years_used": 4
+    },
+    {
+      "skill_name": "SQL",
+      "years_used": 8
+    },
+    {
+      "skill_name": "PL/SQL",
+      "years_used": 6
+    },
+    {
+      "skill_name": "T-SQL",
+      "years_used": 5
+    },
+    {
+      "skill_name": "Oracle",
+      "years_used": 6
+    },
+    {
+      "skill_name": "DB2",
+      "years_used": 5
+    },
+    {
+      "skill_name": "Edifecs",
+      "years_used": 3
+    },
+    {
+      "skill_name": "JIRA",
+      "years_used": 8
+    },
+    {
+      "skill_name": "Confluence",
+      "years_used": 6
+    },
+    {
+      "skill_name": "Power BI",
+      "years_used": 4
+    },
+    {
+      "skill_name": "SSRS",
+      "years_used": 4
+    }
+  ],
+  "resume_metadata": {
+    "source_file": "/Users/keerthiprakash/Downloads/Shweta Dani-Resume.docx",
+    "linkedin_url": "https://www.linkedin.com/in/shweta-dani-b64220296/",
+    "phone": "+1 (704) 775-2828",
+    "current_title": "Sr. Business Analyst / Business System Analyst",
+    "target_compensation_range": {
+      "min": 90000,
+      "max": 130000,
+      "unit": "yearly"
+    }
+  }
+}
