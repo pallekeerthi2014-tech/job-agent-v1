@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Kutiram | Farm Stay & Orchard Learning Escape</title>
+    <meta
+      name="description"
+      content="The Kutiram is a serene farm stay designed for families, nature lovers, and curious kids to experience orchard life, animals, vegetables, fish farming, and night sky gazing."
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <span class="leaf-corner leaf-corner-top-left" aria-hidden="true"></span>
+      <span class="leaf-corner leaf-corner-top-right" aria-hidden="true"></span>
+      <span class="leaf-corner leaf-corner-bottom-left" aria-hidden="true"></span>
+      <span class="leaf-corner leaf-corner-bottom-right" aria-hidden="true"></span>
+      <header class="site-header">
+        <a class="brand" href="#top">
+          <span class="brand-copy">
+            <strong>The Kutiram</strong>
+            <small>Orchard learning farm stay</small>
+          </span>
+        </a>
+
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-label="Toggle navigation">
+          <span></span>
+          <span></span>
+        </button>
+
+        <nav class="site-nav">
+          <a href="#escape-story">Story</a>
+          <a href="#orchard-experience">Experiences</a>
+          <a href="#orchard">Orchard</a>
+          <a href="#gallery">Gallery</a>
+          <a href="#contact">Visit</a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero">
+          <div class="hero-visual" data-reveal="scale">
+            <img
+              class="hero-image"
+              src="assets/photos/IMG_3851.HEIC.png"
+              loading="eager"
+              alt="The Kutiram pathway leading through banana trees toward the farmhouse"
+            />
+            <div class="hero-overlay">
+              <p class="eyebrow hero-eyebrow">Relaxed family stays with organic integrated farming and nature learning</p>
+              <h1>Escape into nature.</h1>
+              <p class="hero-text hero-text-centered">
+                A premium farm stay where orchard walks, gentle animal life, learning for children, organic food,
+                and open skies come together in one calm, memorable escape.
+              </p>
+              <div class="hero-actions hero-actions-centered">
+                <a class="button button-light" href="#contact">Plan Your Stay</a>
+                <a class="button button-outline-light" href="#experiences">Explore Experiences</a>
+              </div>
+              <ul class="hero-meta hero-meta-centered">
+                <li>45+ mango varieties</li>
+                <li>Family-friendly nature learning</li>
+                <li>Hands-on farm experiences</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="story-intro" id="escape-story" data-reveal="up">
+          <p class="eyebrow">A visual story of The Kutiram</p>
+          <h2>A calm farm stay shaped by orchards, animals, family discovery, and open skies.</h2>
+          <p class="story-intro-text">
+            Every part of the stay invites families to slow down, experience integrated organic farming, and let
+            children learn from the land in a natural, memorable way.
+          </p>
+        </section>
+
+        <section class="scroll-story" id="orchard-experience">
+          <div class="story-sticky">
+            <div class="story-copy" data-reveal="up">
+              <p class="eyebrow">Organic orchard experience</p>
+              <h2>Walk through mango rows, banana groves, and growing landscapes shaped slowly by seasons.</h2>
+              <p>
+                The orchard is not a backdrop here. It is the main experience: 45+ mango varieties, fruiting corners,
+                shifting light, and pathways that invite slow, observant walking.
+              </p>
+            </div>
+            <div class="story-media story-media-orchard">
+              <div class="parallax-layer layer-back">
+                <img src="assets/photos/IMG_9523.HEIC.png" loading="lazy" alt="Wide orchard view at The Kutiram" />
+              </div>
+              <div class="parallax-layer layer-front">
+                <img src="assets/photos/IMG_9540.HEIC.png" loading="lazy" alt="Banana grove and farm path at The Kutiram" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="scroll-story">
+          <div class="story-sticky reverse">
+            <div class="story-copy" data-reveal="up">
+              <p class="eyebrow">Farm animals and poultry life cycle</p>
+              <h2>Meet hens, poultry, and cows in a setting where children can observe care, feeding, and daily life.</h2>
+              <p>
+                Animal life at The Kutiram brings movement and wonder to the land. It helps children understand living
+                systems, routines, and the quiet intelligence of farm ecosystems.
+              </p>
+            </div>
+            <div class="story-media story-media-animals">
+              <div class="parallax-layer layer-back">
+                <img src="assets/photos/IMG_8403.HEIC.png" loading="lazy" alt="Poultry life at The Kutiram" />
+              </div>
+              <div class="parallax-layer layer-front">
+                <img src="assets/photos/IMG_8419.HEIC.png" loading="lazy" alt="Cow under banana trees at The Kutiram" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="scroll-story">
+          <div class="story-sticky">
+            <div class="story-copy" data-reveal="up">
+              <p class="eyebrow">Family and kids learning experience</p>
+              <h2>A living classroom where curiosity begins with trees, soil, vegetables, birds, and questions.</h2>
+              <p>
+                Children do not just visit. They notice leaf textures, watch hens move, trace garden paths, and begin
+                understanding where food comes from and why biodiversity matters.
+              </p>
+            </div>
+            <div class="story-media story-media-learning">
+              <div class="parallax-layer layer-back">
+                <img src="assets/photos/IMG_4594.HEIC.png" loading="lazy" alt="Vegetable garden at The Kutiram" />
+              </div>
+              <div class="parallax-layer layer-front">
+                <img src="assets/photos/IMG_3851.HEIC.png" loading="lazy" alt="Farmhouse path through the banana grove" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="scroll-story scroll-story-sky">
+          <div class="story-sticky reverse">
+            <div class="story-copy story-copy-light" data-reveal="up">
+              <p class="eyebrow">Night sky and telescope stargazing</p>
+              <h2>When the farm quiets down, the sky becomes part of the stay.</h2>
+              <p>
+                Evening at The Kutiram shifts into a slower, more reflective mood. Stargazing sessions bring wonder,
+                conversation, and a sense of scale that children and adults both remember.
+              </p>
+            </div>
+            <div class="story-media story-media-sky">
+              <div class="parallax-layer layer-back">
+                <img src="assets/photos/IMG_7536.HEIC.png" loading="lazy" alt="Night sky view at The Kutiram" />
+              </div>
+              <div class="parallax-layer layer-front">
+                <img src="assets/photos/IMG_0079-2.HEIC.png" loading="lazy" alt="Night-time farm atmosphere at The Kutiram" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="scroll-story">
+          <div class="story-sticky">
+            <div class="story-copy" data-reveal="up">
+              <p class="eyebrow">Organic food and peaceful stay</p>
+              <h2>From fresh produce to green lawns and restful spaces, the stay feels grounded, nourishing, and calm.</h2>
+              <p>
+                There is a quiet luxury in staying close to food, trees, and open air. The Kutiram brings that feeling
+                together with comfortable spaces that slow the pace of family life.
+              </p>
+            </div>
+            <div class="story-media story-media-stay">
+              <div class="parallax-layer layer-back">
+                <img src="assets/photos/IMG_6376.HEIC.png" loading="lazy" alt="Green lawn at The Kutiram" />
+              </div>
+              <div class="parallax-layer layer-front">
+                <img src="assets/photos/IMG_6381.HEIC.png" loading="lazy" alt="Farmhouse exterior at The Kutiram" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats" aria-label="Farm highlights">
+          <article data-reveal="up">
+            <strong class="stat-number" data-target="45">0</strong>
+            <span>Mango cultivars nurtured on the land</span>
+          </article>
+          <article data-reveal="up">
+            <strong class="stat-number" data-target="7">0</strong>
+            <span>Learning zones across orchard, animals, vegetables, fish, and sky</span>
+          </article>
+          <article data-reveal="up">
+            <strong class="stat-number" data-target="100">0</strong>
+            <span>Percent focused on relaxed family time and nature appreciation</span>
+          </article>
+        </section>
+
+        <section class="story-grid" id="experiences">
+          <div class="story-panel story-panel-large" data-reveal="up">
+            <p class="eyebrow">Why The Kutiram</p>
+            <h2>A natural hub for learning, play, and quiet restoration.</h2>
+            <p>
+              This is not just a stay. It is a place where children ask questions, touch leaves,
+              notice animal behavior, learn where food comes from, and understand why biodiversity
+              matters. Adults get the rare joy of slowing down without losing a sense of discovery.
+            </p>
+          </div>
+
+          <article class="story-card story-photo-card" data-reveal="up">
+              <img src="assets/photos/IMG_4594.HEIC.png" loading="lazy" alt="Vegetable patch at The Kutiram" />
+            <div>
+              <h3>Fresh vegetable learning</h3>
+              <p>
+                Vegetable beds bring food, soil, water, and seasonality into a form children can see and understand.
+              </p>
+            </div>
+          </article>
+
+          <article class="story-card story-photo-card" data-reveal="up">
+              <img src="assets/photos/IMG_8403.HEIC.png" loading="lazy" alt="Hens roaming in the farm" />
+            <div>
+              <h3>Gentle animal encounters</h3>
+              <p>
+                Hens and poultry add movement, curiosity, and a playful learning rhythm to the stay.
+              </p>
+            </div>
+          </article>
+
+          <article class="story-card story-photo-card" data-reveal="up">
+              <img src="assets/photos/IMG_8419.HEIC.png" loading="lazy" alt="Cow among banana plants at The Kutiram" />
+            <div>
+              <h3>Life among trees and animals</h3>
+              <p>
+                The land feels lived in and real, with animals woven naturally into the orchard environment.
+              </p>
+            </div>
+          </article>
+        </section>
+
+        <section class="experience-section" id="experiences">
+          <div class="section-heading" data-reveal="up">
+            <p class="eyebrow">What guests can experience</p>
+            <h2>Interactive moments that keep the stay engaging from sunrise to stargazing.</h2>
+          </div>
+
+          <div class="experience-grid">
+            <article class="experience-card" data-reveal="up">
+              <span class="card-index">01</span>
+              <h3>Fruit orchard immersion</h3>
+              <p>Discover how different mangoes, fruit plants, and seasonal cycles shape the orchard.</p>
+            </article>
+            <article class="experience-card" data-reveal="up">
+              <span class="card-index">02</span>
+              <h3>Animal learning trails</h3>
+              <p>Introduce kids to hens, poultry, sheep, and Punganur cows in a calm farm setting.</p>
+            </article>
+            <article class="experience-card" data-reveal="up">
+              <span class="card-index">03</span>
+              <h3>Vegetable and food awareness</h3>
+              <p>Show how soil, seasonal care, and local farming connect everyday food to the land.</p>
+            </article>
+            <article class="experience-card" data-reveal="up">
+              <span class="card-index">04</span>
+              <h3>Fish farming insight</h3>
+              <p>Help guests see another side of farm ecology through water-based cultivation systems.</p>
+            </article>
+            <article class="experience-card" data-reveal="up">
+              <span class="card-index">05</span>
+              <h3>Night sky telescope sessions</h3>
+              <p>Close the day with sky gazing, quiet conversation, and a deeper sense of wonder.</p>
+            </article>
+            <article class="experience-card" data-reveal="up">
+              <span class="card-index">06</span>
+              <h3>Relaxed family stays</h3>
+              <p>Unplug, breathe, and enjoy a setting that supports shared time more than fast schedules.</p>
+            </article>
+          </div>
+
+          <div class="photo-ribbon" data-reveal="up">
+            <figure class="photo-ribbon-item photo-ribbon-wide">
+              <img src="assets/photos/IMG_6501.HEIC.png" loading="lazy" alt="Farmhouse veranda and lawn at The Kutiram" />
+            </figure>
+            <figure class="photo-ribbon-item">
+              <img src="assets/photos/IMG_5193.HEIC.png" loading="lazy" alt="Open pavilion and lawn at The Kutiram" />
+            </figure>
+            <figure class="photo-ribbon-item">
+              <img src="assets/photos/IMG_7375.HEIC.png" loading="lazy" alt="Banana grove in warm light at The Kutiram" />
+            </figure>
+          </div>
+        </section>
+
+        <section class="gallery-section" id="gallery">
+          <div class="section-heading" data-reveal="up">
+            <p class="eyebrow">Gallery</p>
+            <h2>Moments of lawn, orchard, garden, animals, and open skies presented as a calm visual sequence.</h2>
+          </div>
+          <div class="gallery-flow">
+            <figure class="gallery-item gallery-item-large" data-reveal="up">
+              <img src="assets/photos/IMG_6383.HEIC.png" loading="lazy" alt="Farmhouse lawn and walkway at The Kutiram" />
+            </figure>
+            <figure class="gallery-item" data-reveal="up">
+              <img src="assets/photos/IMG_6376.HEIC.png" loading="lazy" alt="Lawn and landscape at The Kutiram" />
+            </figure>
+            <figure class="gallery-item" data-reveal="up">
+              <img src="assets/photos/IMG_9523.HEIC.png" loading="lazy" alt="Orchard panorama at The Kutiram" />
+            </figure>
+            <figure class="gallery-item" data-reveal="up">
+              <img src="assets/photos/IMG_4594.HEIC.png" loading="lazy" alt="Organic vegetable patch at The Kutiram" />
+            </figure>
+            <figure class="gallery-item gallery-item-wide" data-reveal="up">
+              <img src="assets/photos/IMG_9540.HEIC.png" loading="lazy" alt="Banana grove at The Kutiram" />
+            </figure>
+            <figure class="gallery-item" data-reveal="up">
+              <img src="assets/photos/IMG_8403.HEIC.png" loading="lazy" alt="Poultry at The Kutiram" />
+            </figure>
+          </div>
+        </section>
+
+        <section class="orchard-section" id="orchard">
+          <div class="section-heading" data-reveal="up">
+            <p class="eyebrow">Our orchard</p>
+            <h2>An evolving collection of heritage favourites, regional classics, and rare mango finds.</h2>
+            <p>
+              The collection below combines names visible from your current records and WhatsApp notes.
+              It presents a featured snapshot of the orchard while keeping the larger 45+ variety story at the center.
+            </p>
+          </div>
+
+          <div class="orchard-layout">
+            <aside class="filter-panel" data-reveal="up">
+              <p class="filter-title">Explore by collection</p>
+              <div class="filter-buttons" role="tablist" aria-label="Fruit collections">
+                <button class="filter-button is-active" data-filter="all" type="button">All</button>
+                <button class="filter-button" data-filter="classic" type="button">Classics</button>
+                <button class="filter-button" data-filter="rare" type="button">Rare finds</button>
+                <button class="filter-button" data-filter="regional" type="button">Regional gems</button>
+              </div>
+              <div class="record-card">
+                <p>Orchard note</p>
+                <strong id="orchard-note-title">45+ mango varieties with a mix of classics, regional favourites, and rare cultivars.</strong>
+                <span id="orchard-note-copy">
+                  The orchard is now backed by your real farm visuals and can keep growing as we add more curated photo stories.
+                </span>
+              </div>
+            </aside>
+
+            <div class="fruit-grid">
+              <article class="fruit-card" data-group="classic" data-reveal="up">
+                <h3>Beneshan</h3>
+                <p>Popular for balanced sweetness and reliable appeal across generations.</p>
+              </article>
+              <article class="fruit-card" data-group="classic" data-reveal="up">
+                <h3>Totapuri</h3>
+                <p>Known for its tangy edge and strong use in juices, slices, and culinary prep.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Cheraku Rasam</h3>
+                <p>A juicy regional variety celebrated for soft texture and traditional taste.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Himayat</h3>
+                <p>Also loved as Imam Pasand, prized for aroma, elegance, and rich eating quality.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Yallamanda</h3>
+                <p>A local favourite that keeps the orchard rooted in regional growing traditions.</p>
+              </article>
+              <article class="fruit-card" data-group="classic" data-reveal="up">
+                <h3>Neelam</h3>
+                <p>Valued for dependable production and late-season presence in many orchards.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Suvarna Rekha</h3>
+                <p>Recognized for attractive colour and a lively sweet-acid profile.</p>
+              </article>
+              <article class="fruit-card" data-group="classic" data-reveal="up">
+                <h3>Dasheri</h3>
+                <p>A beloved Indian cultivar with a smooth, sweet character and nostalgic appeal.</p>
+              </article>
+              <article class="fruit-card" data-group="classic" data-reveal="up">
+                <h3>Alphonso</h3>
+                <p>One of the most celebrated mangoes for fragrance, richness, and premium taste.</p>
+              </article>
+              <article class="fruit-card" data-group="classic" data-reveal="up">
+                <h3>Kesar</h3>
+                <p>Deep colour, fragrant pulp, and dessert-friendly sweetness make it unforgettable.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Mallika Hybrid</h3>
+                <p>A cultivar appreciated for breeding quality, flavour concentration, and texture.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Pedda Rasam</h3>
+                <p>Richly local in identity and ideal for celebrating orchard diversity.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Chinna Rasam</h3>
+                <p>A smaller-format counterpart that adds range to the orchard story.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Jalal</h3>
+                <p>Distinctive and regionally relevant, giving guests something new to discover.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Kottapally Kobbari</h3>
+                <p>A named local specialty that strengthens the orchard's sense of place.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Tellagulabi</h3>
+                <p>A beautiful cultivar name that reflects local naming traditions and diversity.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Royal Special</h3>
+                <p>An expressive cultivar that adds a premium note to the collection.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Haden</h3>
+                <p>An internationally known mango line that broadens the orchard's flavour story.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Yuwen</h3>
+                <p>A less common name in Indian orchards, bringing global curiosity to the grove.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Bari 13</h3>
+                <p>A selection that reflects agricultural experimentation and cultivar diversity.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Mahachanak</h3>
+                <p>Admired for graceful form and a refined eating experience.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Katiman</h3>
+                <p>A striking addition that helps make the orchard feel discoverable and uncommon.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Osteen</h3>
+                <p>Known in wider growing circles and interesting for guests who love mango variety lore.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Sonapuri</h3>
+                <p>A bright-sounding cultivar that adds further range to the collection.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Maya</h3>
+                <p>Compact in name, memorable in identity, and perfect for a featured orchard story.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Lily</h3>
+                <p>A rare listing that feels fresh and distinctive in a family orchard showcase.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Ambica</h3>
+                <p>A cultivar name with warmth and character, ideal for a curated orchard collection.</p>
+              </article>
+              <article class="fruit-card" data-group="rare" data-reveal="up">
+                <h3>Gulab Khas</h3>
+                <p>Associated with fragrant notes and a memorable sensory profile.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Bobbili Mamidi</h3>
+                <p>A strong local identity mango that deepens the Andhra orchard narrative.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Panakalu</h3>
+                <p>An evocative local cultivar name that guests are likely to remember.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Pachha Sindhuram</h3>
+                <p>A beautiful regional cultivar that hints at distinctive colour and character.</p>
+              </article>
+              <article class="fruit-card" data-group="regional" data-reveal="up">
+                <h3>Ammapatam</h3>
+                <p>A rare local name that adds authenticity and cultural richness to the orchard.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="knowledge-section" id="knowledge">
+          <div class="section-heading" data-reveal="up">
+            <p class="eyebrow">Nature knowledge</p>
+            <h2>Farm facts worth discovering.</h2>
+            <p>
+              The Kutiram is a place to learn how traditional farm life, native breeds, organic practices, and orchard
+              biodiversity all work together.
+            </p>
+          </div>
+
+          <div class="knowledge-grid">
+            <article class="knowledge-card" data-reveal="up">
+              <h3>Punganur cows are culturally and biologically special</h3>
+              <p>
+                Punganur cattle are one of India’s smallest indigenous breeds and are valued for their adaptability,
+                manageable size, and deep connection to local farming heritage.
+              </p>
+            </article>
+            <article class="knowledge-card" data-reveal="up">
+              <h3>Organic manure keeps the soil alive</h3>
+              <p>
+                Farm manure and compost improve soil structure, feed beneficial microbes, help retain moisture, and
+                reduce the need for heavy chemical dependence.
+              </p>
+            </article>
+            <article class="knowledge-card" data-reveal="up">
+              <h3>Many mango varieties means stronger biodiversity</h3>
+              <p>
+                A diverse orchard preserves regional genetics, supports pollinators, extends seasonal interest, and
+                teaches children that nature thrives through variety rather than sameness.
+              </p>
+            </article>
+            <article class="knowledge-card" data-reveal="up">
+              <h3>Poultry reveals the farm life cycle clearly</h3>
+              <p>
+                Hens help children see feeding patterns, egg cycles, flock behaviour, and how smaller animals fit into
+                the daily rhythm of a functioning farm.
+              </p>
+            </article>
+            <article class="knowledge-card" data-reveal="up">
+              <h3>Vegetable gardens teach seasonality</h3>
+              <p>
+                Kitchen gardens make it easy to understand water needs, sunlight, pests, seasonal growth, and why
+                fresh produce tastes different when grown close to home.
+              </p>
+            </article>
+            <article class="knowledge-card" data-reveal="up">
+              <h3>Tree shade changes the farm microclimate</h3>
+              <p>
+                Fruit trees cool the ground, soften harsh heat, hold moisture better, and create more pleasant spaces
+                for both people and animals.
+              </p>
+            </article>
+            <article class="knowledge-card" data-reveal="up">
+              <h3>Farm ecology is about connected systems</h3>
+              <p>
+                Trees, animals, vegetable beds, manure, water, insects, and soil health are linked. A farm stay helps
+                children see that food and ecology are part of one living cycle.
+              </p>
+            </article>
+            <article class="knowledge-card" data-reveal="up">
+              <h3>Stargazing gives children a wider sense of wonder</h3>
+              <p>
+                Telescope nights slow everyone down and connect the farm to the larger sky, making the stay feel both
+                rooted in the earth and open to the cosmos.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="booking-cta" data-reveal="up">
+          <div class="booking-cta-inner">
+            <p class="eyebrow">Booking call-to-action</p>
+            <h2>Choose a slower, greener weekend for your family.</h2>
+            <p>
+              Plan a farm stay that combines orchard discovery, animal learning, organic food awareness, and quiet rest.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#contact">Book Your Stay</a>
+              <a class="button button-secondary" href="tel:+918008438080">Call 8008438080</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="visit-section" id="contact">
+          <div class="visit-copy" data-reveal="up">
+            <p class="eyebrow">Plan a visit</p>
+            <h2>Bring your family for a stay that is calm, hands-on, and genuinely memorable.</h2>
+            <p>
+              Use the form to send your interest directly. For quick enquiries, you can also call us.
+            </p>
+            <div class="contact-list">
+              <a href="tel:+918008438080">8008438080</a>
+            </div>
+          </div>
+
+          <div class="visit-stack" data-reveal="up">
+            <div class="map-card">
+              <div class="map-card-copy">
+                <p class="eyebrow">Location</p>
+                <h3>Find The Kutiram</h3>
+                <p>Vijithendra Farm House location is now embedded here so guests can view and navigate easily.</p>
+              </div>
+              <div class="map-frame">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4329.151154766581!2d78.184554775619!3d17.34144620412604!2m3!1f0!2f0!2f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcbe93cab86f35d%3A0x1dd3600f1fab6775!2sVijithendra%20Farm%20House!5e1!3m2!1sen!2sin!4v1776993261068!5m2!1sen!2sin"
+                  width="600"
+                  height="450"
+                  style="border:0;"
+                  allowfullscreen=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                  title="Vijithendra Farm House map location"
+                ></iframe>
+              </div>
+            </div>
+
+            <form
+              class="contact-form"
+              action="https://formsubmit.co/Thinksuccess.Itconsultants@gmail.com"
+              method="POST"
+            >
+              <input type="hidden" name="_subject" value="New enquiry from The Kutiram website" />
+              <input type="hidden" name="_captcha" value="false" />
+              <input type="hidden" name="_template" value="table" />
+
+              <label>
+                <span>Your name</span>
+                <input type="text" name="name" placeholder="Enter your name" required />
+              </label>
+              <label>
+                <span>Phone number</span>
+                <input type="tel" name="phone" placeholder="Enter your phone number" required />
+              </label>
+              <label>
+                <span>Email address</span>
+                <input type="email" name="email" placeholder="Enter your email" required />
+              </label>
+              <label>
+                <span>Preferred visit details</span>
+                <textarea
+                  name="message"
+                  rows="5"
+                  placeholder="Tell us about your family, dates, and what experiences you are interested in."
+                  required
+                ></textarea>
+              </label>
+              <button class="button button-primary" type="submit">Send enquiry</button>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

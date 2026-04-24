@@ -1,0 +1,11 @@
+{
+  "name": "the-kutiram-site",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Production-ready static website for The Kutiram farm stay.",
+  "scripts": {
+    "lint": "node tooling/lint.js && node tooling/check-secrets.js",
+    "build": "node tooling/build.js",
+    "seo:check": "node tooling/seo-check.js"
+  }
+}
