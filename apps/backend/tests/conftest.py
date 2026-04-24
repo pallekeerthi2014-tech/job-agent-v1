@@ -14,8 +14,10 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.api.deps import get_db
+from app.db import crud
 from app.db.base import Base
 from app.main import app, settings
+from app.schemas.user import UserCreate
 from app import models  # noqa: F401
 
 
@@ -55,3 +57,32 @@ def client(db_session: Session):
 
     settings.scheduler_enabled = original_scheduler_enabled
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def super_admin(db_session: Session):
+    return crud.create_user(
+        db_session,
+        UserCreate(
+            name="Test Admin",
+            email="admin@example.com",
+            password="Admin123!",
+            role="super_admin",
+            is_active=True,
+            employee_id=None,
+        ),
+    )
+
+
+@pytest.fixture()
+def auth_headers(client: TestClient, super_admin):
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": super_admin.email,
+            "password": "Admin123!",
+        },
+    )
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}

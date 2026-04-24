@@ -1,8 +1,12 @@
 import type { ReactNode } from "react";
 
+import type { User } from "../types";
+
 type LayoutProps = {
   activePage: string;
   onNavigate: (page: string) => void;
+  currentUser: User;
+  onLogout: () => void;
   children: ReactNode;
 };
 
@@ -14,7 +18,9 @@ const NAV_ITEMS = [
   { id: "job-match-detail", label: "Job Match Detail" }
 ];
 
-export function Layout({ activePage, onNavigate, children }: LayoutProps) {
+export function Layout({ activePage, onNavigate, currentUser, onLogout, children }: LayoutProps) {
+  const navItems = currentUser.role === "super_admin" ? [...NAV_ITEMS, { id: "admin-users", label: "User Admin" }] : NAV_ITEMS;
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -26,7 +32,7 @@ export function Layout({ activePage, onNavigate, children }: LayoutProps) {
         </div>
 
         <nav className="nav-list">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               className={`nav-button ${activePage === item.id ? "nav-button-active" : ""}`}
@@ -36,6 +42,15 @@ export function Layout({ activePage, onNavigate, children }: LayoutProps) {
             </button>
           ))}
         </nav>
+
+        <div className="sidebar-user-card">
+          <strong>{currentUser.name}</strong>
+          <span>{currentUser.role === "super_admin" ? "Super Admin" : "Employee Login"}</span>
+          <small>{currentUser.email}</small>
+          <button className="logout-button" onClick={onLogout}>
+            Logout
+          </button>
+        </div>
       </aside>
 
       <div className="content-shell">{children}</div>

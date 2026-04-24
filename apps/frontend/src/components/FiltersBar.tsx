@@ -3,6 +3,7 @@ import type { Candidate, Employee, PriorityFilter } from "../types";
 type FiltersBarProps = {
   candidates: Candidate[];
   employees: Employee[];
+  canFilterByEmployee: boolean;
   selectedCandidateId: number | null;
   selectedEmployeeId: number | null;
   selectedPriority: PriorityFilter;
@@ -14,6 +15,7 @@ type FiltersBarProps = {
 export function FiltersBar({
   candidates,
   employees,
+  canFilterByEmployee,
   selectedCandidateId,
   selectedEmployeeId,
   selectedPriority,
@@ -39,23 +41,23 @@ export function FiltersBar({
         </select>
       </div>
 
-      <div className="filter-field">
-        <label htmlFor="employeeFilter">Employee</label>
-        <select
-          id="employeeFilter"
-          value={selectedEmployeeId ?? ""}
-          onChange={(event) => onEmployeeChange(event.target.value ? Number(event.target.value) : null)}
-        >
-          <option value="">All employees</option>
-          {employees
-            .filter((employee) => ["Jyothi", "Sajid", "Siddesh"].includes(employee.name))
-            .map((employee) => (
-            <option key={employee.id} value={employee.id}>
-              {employee.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {canFilterByEmployee ? (
+        <div className="filter-field">
+          <label htmlFor="employeeFilter">Employee</label>
+          <select
+            id="employeeFilter"
+            value={selectedEmployeeId ?? ""}
+            onChange={(event) => onEmployeeChange(event.target.value ? Number(event.target.value) : null)}
+          >
+            <option value="">All employees</option>
+            {employees.map((employee) => (
+              <option key={employee.id} value={employee.id}>
+                {employee.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       <div className="filter-field">
         <label htmlFor="priorityFilter">Priority</label>

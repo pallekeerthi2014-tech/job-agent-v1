@@ -10,12 +10,15 @@ from app.models.candidate import Candidate, CandidatePreference, CandidateSkill
 from app.models.employee import Employee
 from app.models.job import JobNormalized, JobRaw
 from app.models.match_score import JobCandidateMatch
+from app.models.user import User
 from app.models.work_queue import EmployeeWorkQueue
 from app.schemas.application import ApplicationCreate
 from app.schemas.candidate import CandidateCreate, CandidatePreferenceCreate, CandidateSkillCreate, CandidateUpdate
 from app.schemas.employee import EmployeeCreate
 from app.schemas.job import JobNormalizedCreate, JobRawCreate
 from app.schemas.match import JobCandidateMatchCreate
+from app.schemas.user import UserCreate, UserUpdate
+from app.services.auth import hash_password
 
 
 def create_candidate(db: Session, payload: CandidateCreate) -> Candidate:
@@ -119,6 +122,50 @@ def create_employee(db: Session, payload: EmployeeCreate) -> Employee:
 
 def list_employees(db: Session) -> list[Employee]:
     return list(db.scalars(select(Employee).order_by(Employee.id.desc())))
+
+
+def get_employee(db: Session, employee_id: int) -> Employee | None:
+    return db.get(Employee, employee_id)
+
+
+def create_user(db: Session, payload: UserCreate) -> User:
+    user = User(
+        name=payload.name,
+        email=payload.email.lower(),
+        password_hash=hash_password(payload.password),
+        role=payload.role,
+        is_active=payload.is_active,
+        employee_id=payload.employee_id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def list_users(db: Session) -> list[User]:
+    return list(db.scalars(select(User).order_by(User.role.asc(), User.name.asc(), User.id.asc())))
+
+
+def get_user(db: Session, user_id: int) -> User | None:
+    return db.get(User, user_id)
+
+
+def update_user(db: Session, user_id: int, payload: UserUpdate) -> User | None:
+    user = db.get(User, user_id)
+    if user is None:
+        return None
+
+    values = payload.model_dump(exclude_unset=True)
+    password = values.pop("password", None)
+    for key, value in values.items():
+        setattr(user, key, value)
+    if password:
+        user.password_hash = hash_password(password)
+
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 def create_job_raw(db: Session, payload: JobRawCreate) -> JobRaw:

@@ -27,7 +27,7 @@ def ensure_employee(db, employee_name: str) -> int | None:
     if employee:
         return employee.id
 
-    email = f"{employee_name.lower().replace(' ', '.')}@jobagent.example"
+    email = f"{employee_name.lower().replace(' ', '.')}@thinksuccessitconsulting.com"
     created = create_employee(db, EmployeeCreate(name=employee_name, email=email))
     return created.id
 

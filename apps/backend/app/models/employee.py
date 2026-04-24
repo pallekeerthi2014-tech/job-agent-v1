@@ -15,4 +15,4 @@ class Employee(Base):
 
     assigned_candidates = relationship("Candidate", back_populates="employee")
     applications = relationship("Application", back_populates="employee")
-
+    user = relationship("User", back_populates="employee", uselist=False)

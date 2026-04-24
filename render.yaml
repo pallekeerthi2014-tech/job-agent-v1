@@ -1,0 +1,85 @@
+databases:
+  - name: job-agent-db
+    databaseName: job_ops
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - name: job-agent-backend
+    type: web
+    runtime: docker
+    plan: free
+    rootDir: apps/backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: job-agent-db
+          property: connectionString
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: "8000"
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: FRESH_JOB_MAX_AGE_HOURS
+        value: "168"
+      - key: SCHEDULER_ENABLED
+        value: "true"
+      - key: SCHEDULER_TIMEZONE
+        value: UTC
+      - key: DAILY_JOB_HOUR
+        value: "6"
+      - key: DAILY_JOB_MINUTE
+        value: "0"
+      - key: DEFAULT_QUEUE_LIMIT
+        value: "50"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "480"
+      - key: RESET_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: PUBLIC_APP_URL
+        sync: false
+      - key: SUPER_ADMIN_NAME
+        value: Super Admin
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: EMPLOYEE_DEFAULT_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      - key: SMTP_USE_TLS
+        value: "true"
+      - key: SEED_SAMPLE_CANDIDATES
+        value: "false"
+
+  - name: job-agent-frontend
+    type: web
+    runtime: static
+    plan: free
+    rootDir: apps/frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

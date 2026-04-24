@@ -8,6 +8,8 @@ Production-ready starter for a job-matching operations dashboard with:
 - APScheduler for daily ingestion and scoring jobs
 - React + Vite frontend
 - Docker Compose local development stack
+- Employee login and super-admin user management
+- Forgot/reset-password flow
 
 ## Phase 1 capabilities
 
@@ -80,6 +82,13 @@ docker compose up --build
 docker compose exec backend python scripts/seed.py
 ```
 
+5. Sign in locally.
+
+- Frontend: [http://localhost:5173](http://localhost:5173)
+- Super admin email: `admin@thinksuccessitconsulting.com`
+- Super admin password: `ChangeMe123!`
+- Default employee password: `ThinkSuccess123!`
+
 ## Local services
 
 - `postgres`: PostgreSQL 16
@@ -106,6 +115,51 @@ The monorepo uses environment variables across Compose, backend, and frontend.
 - `FRONTEND_PORT`, `VITE_API_BASE_URL`
 - `ALLOWED_ORIGINS`
 - `SCHEDULER_ENABLED`, `SCHEDULER_TIMEZONE`, `DAILY_JOB_HOUR`, `DAILY_JOB_MINUTE`
+- `JWT_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `RESET_TOKEN_EXPIRE_MINUTES`
+- `PUBLIC_APP_URL`
+- `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`, `EMPLOYEE_DEFAULT_PASSWORD`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_USE_TLS`
+- `SEED_SAMPLE_CANDIDATES`
+
+## Auth overview
+
+- `POST /api/v1/auth/login`: employee or super-admin sign-in
+- `GET /api/v1/auth/me`: current logged-in user
+- `POST /api/v1/auth/forgot-password`: sends email if SMTP is configured, otherwise returns a preview reset token locally
+- `POST /api/v1/auth/reset-password`: resets the password from the token
+- `GET /api/v1/admin/users`: super-admin user list
+- `POST /api/v1/admin/users`: create employee or super-admin logins
+- `PUT /api/v1/admin/users/{id}`: activate/deactivate or reset passwords
+
+Employees only see their own candidates, matches, applications, and work queue. Super admins can see and manage everything.
+
+## Deployment
+
+This repo now includes `render.yaml` for a public deployment with:
+
+- Render Postgres
+- Render Docker web service for the FastAPI backend
+- Render static site for the React frontend
+
+Setup steps:
+
+1. Push the latest repo to GitHub.
+2. In Render, create a new Blueprint and point it to this repo.
+3. During setup, provide secret values for:
+   - `SUPER_ADMIN_EMAIL`
+   - `SUPER_ADMIN_PASSWORD`
+   - `EMPLOYEE_DEFAULT_PASSWORD`
+   - `PUBLIC_APP_URL`
+   - `VITE_API_BASE_URL`
+   - `ALLOWED_ORIGINS`
+   - SMTP settings if you want reset emails to be sent automatically
+4. After the first backend deploy, run:
+
+```bash
+python scripts/seed.py
+```
+
+5. Add your custom domain in Render once the default `onrender.com` URLs are working.
 
 ### Supported source configuration
 
@@ -176,10 +230,7 @@ The seed script:
 - computes scores
 - generates work queue items
 
-## Next Phase ideas
+## Notes
 
-- stronger source adapters and deduplication
-- auth and role-based access
-- audit views and application history UX
-- caching and async workers via Redis/Celery or RQ
-- richer scoring features and explainability
+- `scripts/seed.py` now cleans up legacy demo employees and candidates before seeding the current team accounts.
+- Sample healthcare candidates are no longer seeded by default. Set `SEED_SAMPLE_CANDIDATES=true` only if you want demo candidate data in a fresh environment.

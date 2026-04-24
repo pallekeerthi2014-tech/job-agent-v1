@@ -3,7 +3,7 @@ from app.models.employee import Employee
 from app.models.source import JobSource
 
 
-def test_run_daily_pipeline_endpoint_processes_jobs_and_creates_matches(client, db_session) -> None:
+def test_run_daily_pipeline_endpoint_processes_jobs_and_creates_matches(client, db_session, auth_headers) -> None:
     employee = Employee(name="Avery Ops", email="avery.ops@example.com")
     candidate = Candidate(
         name="Morgan Healthcare BA",
@@ -68,7 +68,7 @@ def test_run_daily_pipeline_endpoint_processes_jobs_and_creates_matches(client, 
     db_session.add(source)
     db_session.commit()
 
-    response = client.post("/api/v1/admin/run-daily-pipeline")
+    response = client.post("/api/v1/admin/run-daily-pipeline", headers=auth_headers)
 
     assert response.status_code == 200
     payload = response.json()
@@ -81,7 +81,7 @@ def test_run_daily_pipeline_endpoint_processes_jobs_and_creates_matches(client, 
     assert payload["summary"]["work_queue_items"] == 1
 
 
-def test_work_queue_retrieval_supports_filters(client, db_session) -> None:
+def test_work_queue_retrieval_supports_filters(client, db_session, auth_headers) -> None:
     employee = Employee(name="Riley Queue", email="riley.queue@example.com")
     candidate = Candidate(
         name="Dana Interop Analyst",
@@ -143,11 +143,12 @@ def test_work_queue_retrieval_supports_filters(client, db_session) -> None:
     db_session.add(source)
     db_session.commit()
 
-    pipeline_response = client.post("/api/v1/admin/run-daily-pipeline")
+    pipeline_response = client.post("/api/v1/admin/run-daily-pipeline", headers=auth_headers)
     assert pipeline_response.status_code == 200
 
     response = client.get(
         "/api/v1/work-queues",
+        headers=auth_headers,
         params={
             "employee_id": employee.id,
             "candidate_id": candidate.id,
@@ -165,7 +166,7 @@ def test_work_queue_retrieval_supports_filters(client, db_session) -> None:
     assert "Dana Interop Analyst scores" in queue_item["explanation"]
 
 
-def test_pipeline_excludes_stale_or_unverified_jobs_from_work_queue(client, db_session) -> None:
+def test_pipeline_excludes_stale_or_unverified_jobs_from_work_queue(client, db_session, auth_headers) -> None:
     employee = Employee(name="Freshness Ops", email="freshness.ops@example.com")
     candidate = Candidate(
         name="Taylor Recent",
@@ -246,19 +247,19 @@ def test_pipeline_excludes_stale_or_unverified_jobs_from_work_queue(client, db_s
     db_session.add(source)
     db_session.commit()
 
-    pipeline_response = client.post("/api/v1/admin/run-daily-pipeline")
+    pipeline_response = client.post("/api/v1/admin/run-daily-pipeline", headers=auth_headers)
     assert pipeline_response.status_code == 200
 
-    jobs_response = client.get("/api/v1/jobs", params={"freshness_status": "verified_recent"})
+    jobs_response = client.get("/api/v1/jobs", params={"freshness_status": "verified_recent"}, headers=auth_headers)
     assert jobs_response.status_code == 200
     assert jobs_response.json()["meta"]["total"] == 1
 
-    queue_response = client.get("/api/v1/work-queues", params={"employee_id": employee.id})
+    queue_response = client.get("/api/v1/work-queues", params={"employee_id": employee.id}, headers=auth_headers)
     assert queue_response.status_code == 200
     assert queue_response.json()["meta"]["total"] == 1
 
 
-def test_pipeline_skips_irrelevant_non_analyst_titles(client, db_session) -> None:
+def test_pipeline_skips_irrelevant_non_analyst_titles(client, db_session, auth_headers) -> None:
     employee = Employee(name="Filter Ops", email="filter.ops@example.com")
     candidate = Candidate(
         name="Jamie Analyst",
@@ -326,7 +327,7 @@ def test_pipeline_skips_irrelevant_non_analyst_titles(client, db_session) -> Non
     db_session.add(source)
     db_session.commit()
 
-    response = client.post("/api/v1/admin/run-daily-pipeline")
+    response = client.post("/api/v1/admin/run-daily-pipeline", headers=auth_headers)
     assert response.status_code == 200
     payload = response.json()
     assert payload["summary"]["raw_jobs_stored"] == 1

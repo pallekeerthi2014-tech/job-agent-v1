@@ -1,6 +1,7 @@
-def test_candidate_crud_flow(client) -> None:
+def test_candidate_crud_flow(client, auth_headers) -> None:
     create_response = client.post(
         "/api/v1/candidates",
+        headers=auth_headers,
         json={
             "name": "Priya Claims Analyst",
             "assigned_employee": None,
@@ -15,17 +16,18 @@ def test_candidate_crud_flow(client) -> None:
     created = create_response.json()
     candidate_id = created["id"]
 
-    list_response = client.get("/api/v1/candidates", params={"candidate_id": candidate_id})
+    list_response = client.get("/api/v1/candidates", params={"candidate_id": candidate_id}, headers=auth_headers)
     assert list_response.status_code == 200
     assert list_response.json()["meta"]["total"] == 1
     assert list_response.json()["items"][0]["name"] == "Priya Claims Analyst"
 
-    get_response = client.get(f"/api/v1/candidates/{candidate_id}")
+    get_response = client.get(f"/api/v1/candidates/{candidate_id}", headers=auth_headers)
     assert get_response.status_code == 200
     assert get_response.json()["work_authorization"] == "US Citizen"
 
     update_response = client.put(
         f"/api/v1/candidates/{candidate_id}",
+        headers=auth_headers,
         json={
             "name": "Priya Senior Claims Analyst",
             "years_experience": 7,
@@ -38,8 +40,8 @@ def test_candidate_crud_flow(client) -> None:
     assert updated["years_experience"] == 7
     assert updated["active"] is False
 
-    delete_response = client.delete(f"/api/v1/candidates/{candidate_id}")
+    delete_response = client.delete(f"/api/v1/candidates/{candidate_id}", headers=auth_headers)
     assert delete_response.status_code == 204
 
-    missing_response = client.get(f"/api/v1/candidates/{candidate_id}")
+    missing_response = client.get(f"/api/v1/candidates/{candidate_id}", headers=auth_headers)
     assert missing_response.status_code == 404

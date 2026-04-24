@@ -3,18 +3,42 @@ import type {
   ApplicationCreatePayload,
   Candidate,
   Employee,
+  ForgotPasswordPayload,
+  ForgotPasswordResponse,
   Job,
+  LoginPayload,
+  LoginResponse,
   Match,
   PaginatedResponse,
+  ResetPasswordPayload,
+  User,
+  UserCreatePayload,
+  UserUpdatePayload,
   WorkQueueItem
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const ACCESS_TOKEN_KEY = "job-agent-access-token";
+
+export function getStoredAccessToken() {
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function setStoredAccessToken(token: string) {
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+}
+
+export function clearStoredAccessToken() {
+  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getStoredAccessToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers ?? {})
     },
     ...options
   });
@@ -38,6 +62,33 @@ function buildQuery(params: Record<string, string | number | undefined | null>) 
 }
 
 export const apiClient = {
+  login: (payload: LoginPayload) =>
+    request<LoginResponse>("/api/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  forgotPassword: (payload: ForgotPasswordPayload) =>
+    request<ForgotPasswordResponse>("/api/v1/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  resetPassword: (payload: ResetPasswordPayload) =>
+    request<{ message: string }>("/api/v1/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  getMe: () => request<User>("/api/v1/auth/me"),
+  getUsers: () => request<User[]>("/api/v1/admin/users"),
+  createUser: (payload: UserCreatePayload) =>
+    request<User>("/api/v1/admin/users", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  updateUser: (userId: number, payload: UserUpdatePayload) =>
+    request<User>(`/api/v1/admin/users/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }),
   getCandidates: (params?: { limit?: number; offset?: number; employee_id?: number }) =>
     request<PaginatedResponse<Candidate>>(`/api/v1/candidates${buildQuery(params ?? {})}`),
   getEmployees: () => request<Employee[]>("/api/v1/employees"),

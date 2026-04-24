@@ -26,6 +26,18 @@ export type Employee = {
   email: string;
 };
 
+export type UserRole = "super_admin" | "employee";
+
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  is_active: boolean;
+  employee_id?: number | null;
+  last_login_at?: string | null;
+};
+
 export type Job = {
   id: number;
   source: string;
@@ -100,3 +112,47 @@ export type ApplicationCreatePayload = {
 };
 
 export type PriorityFilter = "All" | "High" | "Medium" | "Low";
+
+export type LoginPayload = {
+  email: string;
+  password: string;
+};
+
+export type LoginResponse = {
+  access_token: string;
+  token_type: string;
+  user: User;
+};
+
+export type ForgotPasswordPayload = {
+  email: string;
+};
+
+export type ForgotPasswordResponse = {
+  message: string;
+  delivery: "email" | "preview";
+  reset_token?: string | null;
+  reset_url?: string | null;
+};
+
+export type ResetPasswordPayload = {
+  token: string;
+  password: string;
+};
+
+export type UserCreatePayload = {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  is_active: boolean;
+  employee_id?: number | null;
+};
+
+export type UserUpdatePayload = {
+  name?: string;
+  role?: UserRole;
+  is_active?: boolean;
+  employee_id?: number | null;
+  password?: string;
+};

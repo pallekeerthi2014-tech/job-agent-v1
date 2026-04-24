@@ -8,27 +8,74 @@ from sqlalchemy import select
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.core.config import settings
 from app.db.crud import (
     create_candidate,
     create_candidate_skill,
     create_employee,
+    create_user,
     upsert_candidate_preference,
 )
 from app.db.session import SessionLocal
 from app.models.candidate import Candidate
 from app.models.employee import Employee
 from app.models.source import JobSource
+from app.models.user import User
 from app.schemas.candidate import CandidateCreate, CandidatePreferenceCreate, CandidateSkillCreate
 from app.schemas.employee import EmployeeCreate
+from app.schemas.user import UserCreate
 
 DEFAULT_SEED_DIR = Path("/app/seed-data")
 BASE_DIR = Path(__file__).resolve().parents[1]
 SEED_DIR = DEFAULT_SEED_DIR if DEFAULT_SEED_DIR.exists() else BASE_DIR.parent.parent / "seed-data"
 
+LEGACY_EMPLOYEE_EMAILS = {
+    "olivia@example.com",
+    "marcus@example.com",
+    "olivia.chen@jobagent.example",
+    "marcus.patel@jobagent.example",
+    "sofia.ramirez@jobagent.example",
+}
+LEGACY_EMPLOYEE_NAMES = {"Olivia Chen", "Marcus Patel", "Sofia Ramirez"}
+LEGACY_CANDIDATE_NAMES = {
+    "Ariana Brooks",
+    "Devika Nair",
+    "Miguel Santos",
+    "Priya Deshmukh",
+    "Jonathan Reed",
+    "Sarah Kim",
+    "Nikhil Arora",
+    "Lisa Tran",
+    "Omar Haddad",
+    "Emily Walker",
+}
+
 
 def load_json(name: str) -> list[dict]:
     with (SEED_DIR / name).open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def cleanup_legacy_demo_data() -> None:
+    db = SessionLocal()
+    try:
+        legacy_candidates = list(db.scalars(select(Candidate).where(Candidate.name.in_(LEGACY_CANDIDATE_NAMES))))
+        for candidate in legacy_candidates:
+            db.delete(candidate)
+        db.flush()
+
+        legacy_users = list(db.scalars(select(User).where(User.email.in_(LEGACY_EMPLOYEE_EMAILS))))
+        for user in legacy_users:
+            db.delete(user)
+        db.flush()
+
+        legacy_employees = list(db.scalars(select(Employee).where(Employee.name.in_(LEGACY_EMPLOYEE_NAMES))))
+        for employee in legacy_employees:
+            db.delete(employee)
+
+        db.commit()
+    finally:
+        db.close()
 
 
 def seed_employees() -> dict[str, int]:
@@ -37,12 +84,16 @@ def seed_employees() -> dict[str, int]:
     employee_ids: dict[str, int] = {}
 
     try:
-        existing = list(db.scalars(select(Employee).order_by(Employee.id.asc())))
-        if existing:
-            return {employee.name: employee.id for employee in existing}
+        existing_by_name = {employee.name: employee for employee in db.scalars(select(Employee).order_by(Employee.id.asc()))}
 
         for payload in employee_records:
-            employee = create_employee(db, EmployeeCreate(**payload))
+            employee = existing_by_name.get(payload["name"])
+            if employee is None:
+                employee = create_employee(db, EmployeeCreate(**payload))
+            else:
+                employee.email = payload["email"]
+                db.commit()
+                db.refresh(employee)
             employee_ids[employee.name] = employee.id
     finally:
         db.close()
@@ -76,7 +127,10 @@ def seed_job_sources() -> None:
         db.close()
 
 
-def seed_candidates() -> None:
+def seed_sample_candidates() -> None:
+    if not settings.seed_sample_candidates:
+        return
+
     db = SessionLocal()
     try:
         if db.scalar(select(Candidate.id).limit(1)):
@@ -90,12 +144,11 @@ def seed_candidates() -> None:
     db = SessionLocal()
     try:
         for payload in candidate_records:
-            assigned_employee_name = payload["assigned_employee_name"]
             candidate = create_candidate(
                 db,
                 CandidateCreate(
                     name=payload["name"],
-                    assigned_employee=employee_ids.get(assigned_employee_name),
+                    assigned_employee=employee_ids.get(payload["assigned_employee_name"]),
                     work_authorization=payload["work_authorization"],
                     years_experience=payload["years_experience"],
                     salary_min=payload["salary_min"],
@@ -130,7 +183,50 @@ def seed_candidates() -> None:
         db.close()
 
 
+def seed_users() -> None:
+    db = SessionLocal()
+    try:
+        existing_users = {user.email: user for user in db.scalars(select(User).order_by(User.id.asc()))}
+
+        if settings.super_admin_email not in existing_users:
+            create_user(
+                db,
+                UserCreate(
+                    name=settings.super_admin_name,
+                    email=settings.super_admin_email,
+                    password=settings.super_admin_password,
+                    role="super_admin",
+                    is_active=True,
+                    employee_id=None,
+                ),
+            )
+
+        employees = list(db.scalars(select(Employee).order_by(Employee.id.asc())))
+        existing_emails = {user.email for user in db.scalars(select(User).order_by(User.id.asc()))}
+        for employee in employees:
+            normalized_email = employee.email.lower()
+            if normalized_email in existing_emails:
+                continue
+            create_user(
+                db,
+                UserCreate(
+                    name=employee.name,
+                    email=employee.email,
+                    password=settings.employee_default_password,
+                    role="employee",
+                    is_active=True,
+                    employee_id=employee.id,
+                ),
+            )
+            existing_emails.add(normalized_email)
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
+    cleanup_legacy_demo_data()
     seed_job_sources()
-    seed_candidates()
-    print("Seeded job sources and healthcare business analyst candidate profiles")
+    seed_employees()
+    seed_sample_candidates()
+    seed_users()
+    print("Seeded job sources, current employees, optional sample candidates, and auth users")
