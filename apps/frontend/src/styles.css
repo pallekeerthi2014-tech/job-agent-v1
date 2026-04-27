@@ -951,11 +951,54 @@ button:disabled {
   border-radius: 4px;
   padding: 1px 6px;
 }
+.resume-badge-missing {
+  background: #fef3c7;
+  color: #92400e;
+}
 .resume-upload-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+/* ── Inline resume panel (on candidate card) ──────────────────────────────────── */
+.resume-panel-inline {
+  border-top: 1px solid #e5e7eb;
+  padding: 0.85rem 1rem 0.85rem 1rem;
+  background: #f8faff;
+}
+.resume-current {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.85rem;
+}
+.resume-empty-hint {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  margin: 0 0 0.5rem;
+}
+
+/* ── Resume button on card header ────────────────────────────────────────────── */
+.resume-button {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #6366f1;
+  background: #eef2ff;
+  color: #4338ca;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.resume-button:hover {
+  background: #e0e7ff;
+}
+.resume-button.active {
+  background: #4338ca;
+  color: #fff;
 }
 .success-msg {
   color: #065f46;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { apiClient } from "../api/client";
 import type { Candidate, CandidateCreatePayload, CandidatePreference, CandidateSkill, Employee } from "../types";
@@ -67,6 +67,79 @@ function tagInput(
   );
 }
 
+/** Inline resume upload panel shown directly on the card — no expansion needed */
+function ResumePanel({
+  candidate,
+  onRefresh
+}: {
+  candidate: Candidate;
+  onRefresh: () => Promise<void>;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleUpload() {
+    if (!file) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await apiClient.uploadResume(candidate.id, file);
+      setMsg(`✓ Uploaded: ${res.filename}`);
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+      await onRefresh();
+    } catch {
+      setMsg("Upload failed. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="resume-panel-inline">
+      {candidate.resume_filename ? (
+        <div className="resume-current">
+          <span>📄 <strong>{candidate.resume_filename}</strong></span>
+          <a
+            href={apiClient.getResumeUrl(candidate.id)}
+            target="_blank"
+            rel="noreferrer"
+            className="secondary-button"
+            style={{ fontSize: "0.72rem", padding: "3px 8px" }}
+          >
+            Download
+          </a>
+        </div>
+      ) : (
+        <p className="resume-empty-hint">No resume uploaded yet.</p>
+      )}
+      <div className="resume-upload-row">
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".pdf,.docx,.txt"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+        <button
+          className="primary-button"
+          disabled={!file || busy}
+          onClick={() => void handleUpload()}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {busy ? "Uploading…" : candidate.resume_filename ? "Replace Resume" : "Upload Resume"}
+        </button>
+      </div>
+      {msg ? (
+        <p className={msg.startsWith("✓") ? "success-msg" : "error-banner"} style={{ marginTop: "0.4rem" }}>
+          {msg}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function AdminCandidatesPage({
   candidates,
   employees,
@@ -81,20 +154,19 @@ export function AdminCandidatesPage({
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<CandidateCreatePayload>>({});
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [resumePanelId, setResumePanelId] = useState<number | null>(null);
   const [prefs, setPrefs] = useState<Omit<CandidatePreference, "candidate_id">>(BLANK_PREFS);
   const [skills, setSkills] = useState<CandidateSkill[]>([]);
   const [prefsBusy, setPrefsBusy] = useState(false);
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [resumeBusy, setResumeBusy] = useState(false);
-  const [resumeMsg, setResumeMsg] = useState<string | null>(null);
+  const [prefsMsg, setPrefsMsg] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
-  // Load preferences + skills when expanding a candidate
+  // Load preferences + skills when expanding a candidate for editing
   useEffect(() => {
     if (expandedId == null) return;
     setPrefsBusy(true);
-    setResumeMsg(null);
+    setPrefsMsg(null);
     Promise.all([
       apiClient.getCandidatePreferences(expandedId).catch(() => null),
       apiClient.getCandidateSkills(expandedId).catch(() => [])
@@ -111,27 +183,11 @@ export function AdminCandidatesPage({
     setPrefsBusy(true);
     try {
       await apiClient.upsertCandidatePreferences(expandedId, prefs);
-      setResumeMsg("Preferences saved.");
+      setPrefsMsg("Preferences saved.");
     } catch {
       setLocalError("Failed to save preferences.");
     } finally {
       setPrefsBusy(false);
-    }
-  }
-
-  async function handleUploadResume() {
-    if (!resumeFile || expandedId == null) return;
-    setResumeBusy(true);
-    setResumeMsg(null);
-    try {
-      const res = await apiClient.uploadResume(expandedId, resumeFile);
-      setResumeMsg(`✓ Resume uploaded: ${res.filename}`);
-      setResumeFile(null);
-      await onRefresh();
-    } catch {
-      setResumeMsg("Upload failed. Please try again.");
-    } finally {
-      setResumeBusy(false);
     }
   }
 
@@ -157,7 +213,7 @@ export function AdminCandidatesPage({
       <section className="panel">
         <div className="section-heading">
           <h3>Add Candidate</h3>
-          <p>Create a new candidate profile. You can upload a resume and set preferences after saving.</p>
+          <p>Create a new candidate profile. You can upload a resume directly from the candidate card after saving.</p>
         </div>
 
         <form
@@ -281,7 +337,7 @@ export function AdminCandidatesPage({
       <section className="panel">
         <div className="section-heading">
           <h3>Candidates ({candidates.length})</h3>
-          <p>Click a row to edit profile, preferences, and upload resume.</p>
+          <p>Use <strong>📎 Resume</strong> to upload a resume, <strong>Edit</strong> to update profile & preferences.</p>
         </div>
 
         <div className="admin-candidate-list">
@@ -289,6 +345,7 @@ export function AdminCandidatesPage({
             const assignedEmp = employees.find((e) => e.id === c.assigned_employee);
             const isExpanded = expandedId === c.id;
             const isEditing = editId === c.id;
+            const showResume = resumePanelId === c.id;
 
             return (
               <article key={c.id} className={`admin-candidate-card${isExpanded ? " expanded" : ""}`}>
@@ -301,18 +358,29 @@ export function AdminCandidatesPage({
                       {assignedEmp ? `Assigned to ${assignedEmp.name}` : "Unassigned"} ·{" "}
                       {c.work_authorization ?? "Auth not set"} ·{" "}
                       {c.years_experience != null ? `${c.years_experience}y exp` : ""}{" "}
-                      {c.resume_filename ? <span className="resume-badge">📄 {c.resume_filename}</span> : null}
+                      {c.resume_filename
+                        ? <span className="resume-badge">📄 {c.resume_filename}</span>
+                        : <span className="resume-badge resume-badge-missing">No resume</span>}
                     </p>
                   </div>
                   <div className="candidate-card-actions">
                     <span className={`queue-status-pill queue-status-${c.active ? "pending" : "skipped"}`}>
                       {c.active ? "Active" : "Inactive"}
                     </span>
+                    {/* ── Resume button — always visible ── */}
+                    <button
+                      className={`resume-button${showResume ? " active" : ""}`}
+                      title={c.resume_filename ? "Replace resume" : "Upload resume"}
+                      onClick={() => setResumePanelId(showResume ? null : c.id)}
+                    >
+                      📎 {c.resume_filename ? "Resume ✓" : "Resume"}
+                    </button>
                     <button
                       className="secondary-button"
                       onClick={() => {
-                        setExpandedId(isExpanded ? null : c.id);
-                        startEdit(c);
+                        const next = isExpanded ? null : c.id;
+                        setExpandedId(next);
+                        if (next) startEdit(c);
                       }}
                     >
                       {isExpanded ? "Collapse" : "Edit"}
@@ -333,6 +401,11 @@ export function AdminCandidatesPage({
                     )}
                   </div>
                 </div>
+
+                {/* ── Inline resume panel ────────────────────────────────────── */}
+                {showResume ? (
+                  <ResumePanel candidate={c} onRefresh={onRefresh} />
+                ) : null}
 
                 {/* ── Expanded edit panel ────────────────────────────────────── */}
                 {isExpanded && isEditing ? (
@@ -415,6 +488,7 @@ export function AdminCandidatesPage({
                         <button className="primary-button" disabled={prefsBusy} onClick={() => void handleSavePrefs()}>
                           Save Preferences
                         </button>
+                        {prefsMsg ? <p className="success-msg" style={{ marginTop: "0.5rem" }}>{prefsMsg}</p> : null}
                       </>
                     )}
 
@@ -431,40 +505,6 @@ export function AdminCandidatesPage({
                         </div>
                       </>
                     ) : null}
-
-                    {/* Resume upload */}
-                    <h4 style={{ marginTop: "1.5rem" }}>Resume</h4>
-                    {c.resume_filename ? (
-                      <p>
-                        Current: <strong>{c.resume_filename}</strong>{" "}
-                        <a
-                          href={apiClient.getResumeUrl(c.id)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="secondary-button"
-                          style={{ display: "inline-block", padding: "4px 10px", fontSize: "0.75rem" }}
-                        >
-                          Download
-                        </a>
-                      </p>
-                    ) : (
-                      <p>No resume uploaded yet.</p>
-                    )}
-                    <div className="resume-upload-row">
-                      <input
-                        type="file"
-                        accept=".pdf,.docx,.txt"
-                        onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
-                      />
-                      <button
-                        className="primary-button"
-                        disabled={!resumeFile || resumeBusy}
-                        onClick={() => void handleUploadResume()}
-                      >
-                        {resumeBusy ? "Uploading..." : "Upload Resume"}
-                      </button>
-                    </div>
-                    {resumeMsg ? <p className={resumeMsg.startsWith("✓") ? "success-msg" : "error-banner"}>{resumeMsg}</p> : null}
                   </div>
                 ) : null}
               </article>
