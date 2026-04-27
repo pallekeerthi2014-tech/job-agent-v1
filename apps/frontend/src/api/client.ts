@@ -151,15 +151,19 @@ export const apiClient = {
     request<{ message: string }>(`/api/v1/candidates/${id}`, { method: "DELETE" }),
 
   // ── Phase 3: Candidate preferences & skills ─────────────────────────────────
+  // Backend uses flat routes: GET /candidate-preferences (all), PUT /candidate-preferences/{id}
   getCandidatePreferences: (candidateId: number) =>
-    request<CandidatePreference>(`/api/v1/candidates/${candidateId}/preferences`),
+    request<CandidatePreference[]>("/api/v1/candidate-preferences").then(
+      (all) => all.find((p) => p.candidate_id === candidateId) ?? null
+    ),
   upsertCandidatePreferences: (candidateId: number, payload: Omit<CandidatePreference, "candidate_id">) =>
-    request<CandidatePreference>(`/api/v1/candidates/${candidateId}/preferences`, {
+    request<CandidatePreference>(`/api/v1/candidate-preferences/${candidateId}`, {
       method: "PUT",
       body: JSON.stringify(payload)
     }),
+  // Backend: GET /candidate-skills?candidate_id={id}
   getCandidateSkills: (candidateId: number) =>
-    request<CandidateSkill[]>(`/api/v1/candidates/${candidateId}/skills`),
+    request<CandidateSkill[]>(`/api/v1/candidate-skills?candidate_id=${candidateId}`),
 
   // ── Phase 3: Resume upload ──────────────────────────────────────────────────
   uploadResume: (candidateId: number, file: File) => {
