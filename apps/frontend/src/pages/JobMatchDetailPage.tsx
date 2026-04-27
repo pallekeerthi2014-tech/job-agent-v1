@@ -63,6 +63,66 @@ export function JobMatchDetailPage({
           <p>{match.explanation ?? "No explanation available yet."}</p>
         </div>
       </section>
+
+      {/* Phase 2: Job intelligence panel — domain tags, keywords, visa hints */}
+      <section className="panel">
+        <div className="section-heading">
+          <h3>Job Intelligence</h3>
+          <p>Tags and signals extracted from the live job posting.</p>
+        </div>
+
+        {(job.domain_tags?.length ?? 0) > 0 && (
+          <div className="intel-group">
+            <h4>Domain Tags</h4>
+            <div className="job-tags">
+              {job.domain_tags.map((tag) => (
+                <span key={tag} className="job-tag job-tag-domain">{tag}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(job.keywords_extracted?.length ?? 0) > 0 && (
+          <div className="intel-group">
+            <h4>Keywords Extracted</h4>
+            <div className="job-tags">
+              {job.keywords_extracted.map((kw) => (
+                <span key={kw} className="job-tag">{kw}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(job.visa_hints?.length ?? 0) > 0 && (
+          <div className="intel-group">
+            <h4>Visa / Authorization Signals</h4>
+            <div className="job-tags">
+              {job.visa_hints.map((hint) => (
+                <span key={hint} className="job-tag job-tag-visa">{hint}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(job.domain_tags?.length ?? 0) === 0 &&
+          (job.keywords_extracted?.length ?? 0) === 0 &&
+          (job.visa_hints?.length ?? 0) === 0 && (
+            <p className="intel-empty">No signals extracted yet — run the pipeline to populate tags.</p>
+        )}
+
+        {(job.apply_url || job.canonical_apply_url) && (
+          <div className="intel-group">
+            <a
+              className="link-button apply-now-button"
+              href={job.apply_url ?? job.canonical_apply_url ?? "#"}
+              target="_blank"
+              rel="noreferrer"
+            >
+              ↗ Apply Now on {job.company}
+            </a>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

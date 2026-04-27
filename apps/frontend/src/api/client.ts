@@ -1,7 +1,15 @@
 import type {
+  AlertRecipient,
+  AlertRecipientCreatePayload,
+  AlertRecipientUpdatePayload,
+  AnalyticsOverview,
   Application,
   ApplicationCreatePayload,
   Candidate,
+  CandidateCreatePayload,
+  CandidatePreference,
+  CandidateSkill,
+  CandidateUpdatePayload,
   Employee,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
@@ -14,7 +22,8 @@ import type {
   User,
   UserCreatePayload,
   UserUpdatePayload,
-  WorkQueueItem
+  WorkQueueItem,
+  WorkQueueReportPayload
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -42,6 +51,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
     ...options
   });
+
+  // 204 No Content — return empty object (DELETE endpoints)
+  if (response.status === 204) {
+    return {} as T;
+  }
 
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status}`);
@@ -120,5 +134,83 @@ export const apiClient = {
     request<Application>("/api/v1/applications", {
       method: "POST",
       body: JSON.stringify(payload)
-    })
+    }),
+
+  // ── Phase 3: Candidate CRUD ─────────────────────────────────────────────────
+  createCandidate: (payload: CandidateCreatePayload) =>
+    request<Candidate>("/api/v1/candidates", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  updateCandidate: (id: number, payload: CandidateUpdatePayload) =>
+    request<Candidate>(`/api/v1/candidates/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }),
+  deleteCandidate: (id: number) =>
+    request<{ message: string }>(`/api/v1/candidates/${id}`, { method: "DELETE" }),
+
+  // ── Phase 3: Candidate preferences & skills ─────────────────────────────────
+  getCandidatePreferences: (candidateId: number) =>
+    request<CandidatePreference>(`/api/v1/candidates/${candidateId}/preferences`),
+  upsertCandidatePreferences: (candidateId: number, payload: Omit<CandidatePreference, "candidate_id">) =>
+    request<CandidatePreference>(`/api/v1/candidates/${candidateId}/preferences`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }),
+  getCandidateSkills: (candidateId: number) =>
+    request<CandidateSkill[]>(`/api/v1/candidates/${candidateId}/skills`),
+
+  // ── Phase 3: Resume upload ──────────────────────────────────────────────────
+  uploadResume: (candidateId: number, file: File) => {
+    const token = getStoredAccessToken();
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      return res.json() as Promise<{ message: string; filename: string }>;
+    });
+  },
+  getResumeUrl: (candidateId: number) =>
+    `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
+
+  // ── Phase 3: Work queue reporting ───────────────────────────────────────────
+  reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>
+    request<WorkQueueItem>(`/api/v1/work-queues/${queueId}/report`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
+  // ── Phase 3: WhatsApp recipient management ───────────────────────────────────
+  getWhatsappRecipients: () =>
+    request<AlertRecipient[]>("/api/v1/admin/whatsapp-recipients"),
+  createWhatsappRecipient: (payload: AlertRecipientCreatePayload) =>
+    request<AlertRecipient>("/api/v1/admin/whatsapp-recipients", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  updateWhatsappRecipient: (id: number, payload: AlertRecipientUpdatePayload) =>
+    request<AlertRecipient>(`/api/v1/admin/whatsapp-recipients/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }),
+  deleteWhatsappRecipient: (id: number) =>
+    request<{ message: string }>(`/api/v1/admin/whatsapp-recipients/${id}`, { method: "DELETE" }),
+
+  // ── Phase 3: Employee management ─────────────────────────────────────────────
+  updateEmployee: (id: number, payload: { name?: string; email?: string }) =>
+    request<Employee>(`/api/v1/admin/employees/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }),
+  deleteEmployee: (id: number) =>
+    request<{ message: string }>(`/api/v1/admin/employees/${id}`, { method: "DELETE" }),
+
+  // ── Phase 3: Analytics ───────────────────────────────────────────────────────
+  getAnalyticsOverview: () =>
+    request<AnalyticsOverview>("/api/v1/analytics/overview")
 };

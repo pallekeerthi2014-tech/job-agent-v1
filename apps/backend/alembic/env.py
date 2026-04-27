@@ -7,7 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.db.base import Base
-from app.models import application, candidate, employee, job, match_score, source, work_queue
+from app.models import alert_recipient, application, candidate, employee, job, match_score, source, work_queue
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.sqlalchemy_database_url)

@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from sqlalchemy import tuple_
+
 from app.models.job import JobRaw
 from app.models.source import JobSource
 from app.services.logging_utils import log_event
@@ -31,6 +33,13 @@ def fetch_jobs_from_enabled_sources(db: Session) -> dict[str, int]:
             include_titles = source.config.get("include_titles", DEFAULT_ANALYST_INCLUDE_TITLES)
             exclude_titles = source.config.get("exclude_titles", DEFAULT_ANALYST_EXCLUDE_TITLES)
 
+            # Build set of already-stored external IDs for this source (avoids per-row queries)
+            raw_external_ids: set[str] = set(
+                db.scalars(
+                    select(JobRaw.external_job_id).where(JobRaw.source == source.name)
+                )
+            )
+
             for raw_job in raw_jobs:
                 normalized_record = adapter.normalize_job(raw_job)
                 if not is_relevant_analyst_role(
@@ -42,6 +51,11 @@ def fetch_jobs_from_enabled_sources(db: Session) -> dict[str, int]:
                     continue
 
                 external_id = normalized_record.external_job_id or adapter.dedupe_key(raw_job)
+
+                # Skip if already stored — prevents duplicate raw rows on re-runs
+                if external_id in raw_external_ids:
+                    continue
+
                 db.add(
                     JobRaw(
                         source=source.name,
@@ -49,6 +63,7 @@ def fetch_jobs_from_enabled_sources(db: Session) -> dict[str, int]:
                         raw_payload=raw_job,
                     )
                 )
+                raw_external_ids.add(external_id)
                 stored += 1
 
             source.last_run_at = datetime.now(timezone.utc)

@@ -12,12 +12,16 @@ export type PaginatedResponse<T> = {
 export type Candidate = {
   id: number;
   name: string;
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
   assigned_employee?: number | null;
   work_authorization?: string | null;
   years_experience?: number | null;
   salary_min?: number | null;
   salary_unit?: string | null;
   active: boolean;
+  resume_filename?: string | null;
 };
 
 export type Employee = {
@@ -99,6 +103,9 @@ export type WorkQueueItem = {
   score: number;
   explanation?: string | null;
   status: string;
+  report_status?: string | null;
+  report_reason?: string | null;
+  reported_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -155,4 +162,75 @@ export type UserUpdatePayload = {
   is_active?: boolean;
   employee_id?: number | null;
   password?: string;
+};
+
+// ── Phase 3 types ─────────────────────────────────────────────────────────────
+
+export type AlertRecipient = {
+  id: number;
+  phone_number: string;
+  label?: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type CandidatePreference = {
+  candidate_id: number;
+  preferred_titles: string[];
+  employment_preferences: string[];
+  location_preferences: string[];
+  domain_expertise: string[];
+  must_have_keywords: string[];
+  exclude_keywords: string[];
+};
+
+export type CandidateSkill = {
+  candidate_id: number;
+  skill_name: string;
+  years_used?: number | null;
+};
+
+export type CandidateCreatePayload = {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  assigned_employee?: number | null;
+  work_authorization?: string | null;
+  years_experience?: number | null;
+  salary_min?: number | null;
+  salary_unit?: string | null;
+  active?: boolean;
+};
+
+export type CandidateUpdatePayload = Partial<CandidateCreatePayload>;
+
+export type AlertRecipientCreatePayload = {
+  phone_number: string;
+  label?: string | null;
+  is_active?: boolean;
+};
+
+export type AlertRecipientUpdatePayload = {
+  label?: string | null;
+  is_active?: boolean;
+};
+
+export type WorkQueueReportPayload = {
+  report_status: "invalid" | "outdated" | "not_relevant";
+  report_reason?: string | null;
+};
+
+export type AnalyticsOverview = {
+  jobs_by_source: { source: string; count: number; latest_posted: string | null }[];
+  freshness: { status: string; count: number }[];
+  funnel: {
+    total_raw: number;
+    total_normalized: number;
+    total_matched: number;
+    total_queued: number;
+    total_applied: number;
+  };
+  reports_by_source: { source: string; total: number; invalid: number; outdated: number; not_relevant: number }[];
+  top_candidates: { candidate_id: number; candidate_name: string; match_count: number; avg_score: number }[];
 };

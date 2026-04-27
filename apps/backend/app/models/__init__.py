@@ -1,3 +1,4 @@
+from app.models.alert_recipient import AlertRecipient
 from app.models.application import Application
 from app.models.candidate import Candidate, CandidatePreference, CandidateSkill
 from app.models.employee import Employee
@@ -8,6 +9,7 @@ from app.models.user import User
 from app.models.work_queue import EmployeeWorkQueue
 
 __all__ = [
+    "AlertRecipient",
     "Application",
     "Candidate",
     "CandidatePreference",

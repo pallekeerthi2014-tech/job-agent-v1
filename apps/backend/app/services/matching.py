@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import os
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.candidate import Candidate
 from app.models.job import JobNormalized
 from app.models.match_score import JobCandidateMatch
-from app.scoring.engine import score_candidate_to_job
+from app.scoring.engine import enrich_with_ai_explanation, score_candidate_to_job
+
+_AI_ENABLED = os.getenv("AI_SCORING_ENABLED", "false").lower() == "true"
 
 
 def score_job_candidate_matches(db: Session) -> int:
@@ -32,6 +36,12 @@ def score_job_candidate_matches(db: Session) -> int:
     for candidate in candidates:
         for job in jobs:
             result = score_candidate_to_job(candidate, job)
+            # Phase 2: AI enrichment — writes ai_summary into explanation field
+            if _AI_ENABLED:
+                result = enrich_with_ai_explanation(result, candidate, job)
+                if result.ai_summary:
+                    from dataclasses import replace as _replace
+                    result = _replace(result, explanation=result.ai_summary)
             existing = db.scalar(
                 select(JobCandidateMatch).where(
                     JobCandidateMatch.candidate_id == candidate.id,

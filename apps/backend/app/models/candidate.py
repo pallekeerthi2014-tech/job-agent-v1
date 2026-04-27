@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, String
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -12,12 +12,18 @@ class Candidate(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     assigned_employee: Mapped[int | None] = mapped_column(ForeignKey("employees.id", ondelete="SET NULL"), nullable=True)
     work_authorization: Mapped[str | None] = mapped_column(String(100), nullable=True)
     years_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)
     salary_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     salary_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Resume storage — filename on disk + extracted plain text for scoring
+    resume_filename: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    resume_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     employee = relationship("Employee", back_populates="assigned_candidates")
     preference = relationship("CandidatePreference", back_populates="candidate", uselist=False, cascade="all, delete-orphan")

@@ -23,6 +23,10 @@ class EmployeeWorkQueue(Base):
     score: Mapped[float] = mapped_column(Float, nullable=False)
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    # Employee-reported quality signals fed back to analytics
+    report_status: Mapped[str | None] = mapped_column(String(50), nullable=True)  # invalid|outdated|not_relevant
+    report_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    reported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -737,3 +737,413 @@ button:disabled {
     align-items: start;
   }
 }
+
+/* ── Phase 2: Source badges ───────────────────────────────────────── */
+.source-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted-copy);
+}
+
+.source-label-live {
+  color: var(--brand-green-dark);
+  font-weight: 700;
+}
+
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand-green);
+  margin-right: 4px;
+  vertical-align: middle;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+
+.remote-pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(0, 122, 61, 0.12);
+  color: var(--brand-green-dark);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Phase 2: Job tags / chips ────────────────────────────────────── */
+.job-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.job-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(0, 122, 61, 0.09);
+  color: var(--brand-green-dark);
+  border: 1px solid rgba(0, 122, 61, 0.2);
+}
+
+.job-tag-domain {
+  background: rgba(0, 90, 45, 0.14);
+  border-color: rgba(0, 90, 45, 0.3);
+  font-weight: 600;
+}
+
+.job-tag-visa {
+  background: rgba(120, 60, 0, 0.09);
+  color: #7a3e00;
+  border-color: rgba(120, 60, 0, 0.2);
+}
+
+/* ── Phase 2: Apply Now button accent ────────────────────────────── */
+.apply-now-button {
+  background: var(--brand-green) !important;
+  color: white !important;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.apply-now-button:hover {
+  background: var(--brand-green-dark) !important;
+}
+
+/* ── Phase 2: Job Intelligence panel ─────────────────────────────── */
+.intel-group {
+  margin-bottom: 18px;
+}
+
+.intel-group h4 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-copy);
+  margin-bottom: 8px;
+}
+
+.intel-empty {
+  color: var(--muted-copy);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Phase 3 — Admin / Analytics styles
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Nav divider ──────────────────────────────────────────────────────────────── */
+.nav-divider {
+  padding: 0.5rem 0.75rem 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  opacity: 0.7;
+  margin-top: 0.5rem;
+}
+
+/* ── Form rows ────────────────────────────────────────────────────────────────── */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.form-row .filter-field {
+  flex: 1 1 180px;
+}
+
+/* ── Tag chips (preference editor) ───────────────────────────────────────────── */
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--color-accent, #e0e9f8);
+  color: var(--color-primary, #1B6EC2);
+  border-radius: 20px;
+  padding: 2px 10px 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.tag-chip button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: 0.85rem;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ── Admin candidate list ─────────────────────────────────────────────────────── */
+.admin-candidate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.admin-candidate-card {
+  border: 1px solid var(--color-border, #dde3ea);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-surface, #fff);
+  transition: border-color 0.15s;
+}
+.admin-candidate-card.expanded {
+  border-color: var(--color-primary, #1B6EC2);
+}
+.candidate-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+}
+.candidate-card-header p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-muted, #667);
+}
+.candidate-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.candidate-detail-panel {
+  border-top: 1px solid var(--color-border, #dde3ea);
+  padding: 1.25rem 1rem;
+  background: var(--color-bg, #f8fafc);
+}
+.candidate-detail-panel h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary, #1B6EC2);
+}
+.resume-badge {
+  font-size: 0.75rem;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.resume-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.success-msg {
+  color: #065f46;
+  background: #d1fae5;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* ── Danger button ────────────────────────────────────────────────────────────── */
+.danger-button {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.danger-button:hover {
+  background: #fca5a5;
+}
+.danger-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── WhatsApp recipient list ──────────────────────────────────────────────────── */
+.whatsapp-recipient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* ── Work queue report panel ─────────────────────────────────────────────────── */
+.queue-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.queue-card-footer {
+  padding: 0.4rem 0.75rem;
+  background: var(--color-bg, #f8fafc);
+  border: 1px solid var(--color-border, #dde3ea);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+}
+.report-button {
+  background: none;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  color: #64748b;
+  cursor: pointer;
+}
+.report-button:hover {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+.report-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+.report-panel select,
+.report-panel input {
+  border: 1px solid var(--color-border, #dde3ea);
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  background: var(--color-surface, #fff);
+}
+.report-panel input { flex: 1 1 140px; }
+
+/* ── Analytics ────────────────────────────────────────────────────────────────── */
+.stat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.stat-card {
+  flex: 1 1 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #dde3ea);
+  border-radius: 8px;
+  padding: 1rem 0.75rem;
+  text-align: center;
+}
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted, #667);
+  margin-bottom: 0.25rem;
+}
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-primary, #1B6EC2);
+  line-height: 1;
+}
+.stat-sub {
+  font-size: 0.7rem;
+  color: var(--color-muted, #667);
+  margin-top: 0.2rem;
+}
+
+/* Funnel bars */
+.funnel-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.funnel-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.funnel-label {
+  width: 90px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text, #222);
+  text-align: right;
+  flex-shrink: 0;
+}
+.funnel-bar-track {
+  flex: 1;
+  background: #e0e7ef;
+  border-radius: 4px;
+  height: 14px;
+  overflow: hidden;
+}
+.funnel-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.funnel-count {
+  width: 60px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text, #222);
+}
+
+/* Analytics table */
+.analytics-table-wrap {
+  overflow-x: auto;
+}
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.analytics-table th {
+  background: var(--color-primary, #1B6EC2);
+  color: #fff;
+  padding: 8px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+.analytics-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--color-border, #dde3ea);
+  vertical-align: middle;
+}
+.analytics-table tr:nth-child(even) td {
+  background: #f8fafc;
+}
+.analytics-table tr.row-flagged td {
+  background: #fff7ed;
+}
+
+/* empty state */
+.empty-state {
+  color: var(--color-muted, #667);
+  font-size: 0.875rem;
+  padding: 1rem 0;
+}

@@ -19,6 +19,9 @@ class EmployeeWorkQueueRead(BaseModel):
     score: float
     explanation: str | None = None
     status: str
+    report_status: str | None = None
+    report_reason: str | None = None
+    reported_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -26,3 +29,8 @@ class EmployeeWorkQueueRead(BaseModel):
 class EmployeeWorkQueuePage(BaseModel):
     items: list[EmployeeWorkQueueRead]
     meta: PageMeta
+
+
+class WorkQueueReportPayload(BaseModel):
+    report_status: str   # "invalid" | "outdated" | "not_relevant"
+    report_reason: str | None = None

@@ -10,16 +10,29 @@ type LayoutProps = {
   children: ReactNode;
 };
 
-const NAV_ITEMS = [
-  { id: "operations-dashboard", label: "Operations Dashboard" },
-  { id: "candidate-list", label: "Candidate List" },
-  { id: "candidate-detail", label: "Candidate Detail" },
-  { id: "employee-work-queue", label: "Employee Work Queue" },
-  { id: "job-match-detail", label: "Job Match Detail" }
+const COMMON_NAV_ITEMS = [
+  { id: "operations-dashboard", label: "📋 Operations Dashboard" },
+  { id: "employee-work-queue", label: "🗂 Work Queue" },
+  { id: "candidate-list", label: "👥 Candidate List" },
+  { id: "candidate-detail", label: "🔍 Candidate Detail" },
+  { id: "job-match-detail", label: "🎯 Job Match Detail" }
+];
+
+const ADMIN_NAV_ITEMS = [
+  { id: "admin-candidates", label: "➕ Manage Candidates" },
+  { id: "admin-users", label: "👤 User Admin" },
+  { id: "admin-whatsapp", label: "📱 WhatsApp Alerts" },
+  { id: "analytics", label: "📊 Analytics" }
 ];
 
 export function Layout({ activePage, onNavigate, currentUser, onLogout, children }: LayoutProps) {
-  const navItems = currentUser.role === "super_admin" ? [...NAV_ITEMS, { id: "admin-users", label: "User Admin" }] : NAV_ITEMS;
+  const navItems =
+    currentUser.role === "super_admin"
+      ? [...COMMON_NAV_ITEMS, ...ADMIN_NAV_ITEMS]
+      : COMMON_NAV_ITEMS;
+
+  // Group admin items visually with a divider
+  const isAdmin = currentUser.role === "super_admin";
 
   return (
     <div className="app-shell">
@@ -32,7 +45,7 @@ export function Layout({ activePage, onNavigate, currentUser, onLogout, children
         </div>
 
         <nav className="nav-list">
-          {navItems.map((item) => (
+          {COMMON_NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               className={`nav-button ${activePage === item.id ? "nav-button-active" : ""}`}
@@ -41,6 +54,21 @@ export function Layout({ activePage, onNavigate, currentUser, onLogout, children
               {item.label}
             </button>
           ))}
+
+          {isAdmin ? (
+            <>
+              <div className="nav-divider">Admin</div>
+              {ADMIN_NAV_ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  className={`nav-button ${activePage === item.id ? "nav-button-active" : ""}`}
+                  onClick={() => onNavigate(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </>
+          ) : null}
         </nav>
 
         <div className="sidebar-user-card">

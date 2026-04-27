@@ -7,6 +7,9 @@ from app.schemas.pagination import PageMeta
 
 class CandidateBase(BaseModel):
     name: str
+    email: str | None = None
+    phone: str | None = None
+    location: str | None = None
     assigned_employee: int | None = None
     work_authorization: str | None = None
     years_experience: int | None = None
@@ -21,6 +24,9 @@ class CandidateCreate(CandidateBase):
 
 class CandidateUpdate(BaseModel):
     name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    location: str | None = None
     assigned_employee: int | None = None
     work_authorization: str | None = None
     years_experience: int | None = None
@@ -33,6 +39,7 @@ class CandidateRead(CandidateBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    resume_filename: str | None = None
 
 
 class CandidatePreferenceBase(BaseModel):

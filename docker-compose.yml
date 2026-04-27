@@ -54,11 +54,26 @@ services:
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
       SMTP_USE_TLS: ${SMTP_USE_TLS}
       SEED_SAMPLE_CANDIDATES: ${SEED_SAMPLE_CANDIDATES}
+      # ── Phase 2 ───────────────────────────────────────────────────────────
+      POLL_INTERVAL_MINUTES: ${POLL_INTERVAL_MINUTES:-15}
+      ALERT_MIN_SCORE: ${ALERT_MIN_SCORE:-65}
+      WHATSAPP_ALERTS_ENABLED: ${WHATSAPP_ALERTS_ENABLED:-false}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+      WHATSAPP_TEAM_NUMBERS: ${WHATSAPP_TEAM_NUMBERS:-}
+      EMAIL_ALERTS_ENABLED: ${EMAIL_ALERTS_ENABLED:-false}
+      AI_SCORING_ENABLED: ${AI_SCORING_ENABLED:-false}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     volumes:
       - ./apps/backend:/app
       - ./seed-data:/app/seed-data:ro
+      - resume_storage:/app/resumes
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,3 +96,4 @@ services:
 
 volumes:
   postgres_data:
+  resume_storage:

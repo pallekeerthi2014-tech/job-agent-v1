@@ -16,21 +16,27 @@ class JobNormalizationService:
         self.db = db
 
     def normalize_jobs(self) -> int:
+        # Only process raw jobs whose dedupe_hash is not yet in job_normalized.
+        # This avoids re-processing thousands of rows on every pipeline run.
+        existing_hashes: set[str] = set(
+            self.db.scalars(select(JobNormalized.dedupe_hash).where(JobNormalized.dedupe_hash.isnot(None)))
+        )
+
         raw_jobs = list(self.db.scalars(select(JobRaw).order_by(JobRaw.fetched_at.desc())))
         normalized_count = 0
 
         for raw_job in raw_jobs:
             payload = self._normalize_raw_job(raw_job)
-            existing = self.db.scalar(
-                select(JobNormalized).where(JobNormalized.dedupe_hash == payload["dedupe_hash"])
-            )
+            dedupe_hash = payload.get("dedupe_hash")
 
-            if existing:
-                for field_name, value in payload.items():
-                    setattr(existing, field_name, value)
-            else:
-                self.db.add(JobNormalized(**payload))
+            if dedupe_hash and dedupe_hash in existing_hashes:
+                # Already normalized — skip (ingestion keeps job_raw clean so
+                # we only see genuinely new rows here after Bug 2 fix)
+                continue
 
+            self.db.add(JobNormalized(**payload))
+            if dedupe_hash:
+                existing_hashes.add(dedupe_hash)
             normalized_count += 1
 
         self.db.commit()

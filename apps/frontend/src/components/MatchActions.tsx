@@ -13,8 +13,8 @@ export function MatchActions({ jobUrl, onViewJob, onMarkApplied, onSkip, disable
         View Job
       </button>
       {jobUrl ? (
-        <a className="link-button" href={jobUrl} target="_blank" rel="noreferrer">
-          Open Job Link
+        <a className="link-button apply-now-button" href={jobUrl} target="_blank" rel="noreferrer">
+          ↗ Apply Now
         </a>
       ) : null}
       <button className="primary-button" onClick={onMarkApplied} disabled={disabled}>

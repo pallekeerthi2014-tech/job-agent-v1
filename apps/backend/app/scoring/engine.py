@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import logging
+import os
+from dataclasses import dataclass, field
 
 from app.models.candidate import Candidate
 from app.models.job import JobNormalized
+
+logger = logging.getLogger(__name__)
 
 WEIGHTS = {
     "title": 25,
@@ -18,6 +22,7 @@ WEIGHTS = {
 
 @dataclass(slots=True)
 class MatchScoreResult:
+    # ── Core rule-based scores (Phase 1 — preserved character-for-character) ──
     total_score: float
     title_score: float
     domain_score: float
@@ -28,6 +33,12 @@ class MatchScoreResult:
     location_score: float
     priority_bucket: str
     explanation: str
+    # ── Phase 2 additions — AI enrichment + direct apply link ────────────────
+    # All fields are optional with safe defaults so Phase 1 callers are unaffected.
+    ai_summary: str = ""
+    ai_strengths: list = field(default_factory=list)
+    ai_gaps: list = field(default_factory=list)
+    apply_url: str = ""
 
 
 def score_candidate_to_job(candidate: Candidate, job: JobNormalized) -> MatchScoreResult:
@@ -75,6 +86,7 @@ def score_candidate_to_job(candidate: Candidate, job: JobNormalized) -> MatchSco
         location_score=location_score,
         priority_bucket=priority_bucket,
         explanation=explanation,
+        apply_url=job.apply_url or job.canonical_apply_url or "",
     )
 
 
@@ -214,4 +226,123 @@ def _build_explanation(
         f"Experience fit contributed {experience_score:.2f}/10, employment preference fit contributed {employment_score:.2f}/10, "
         f"visa fit contributed {visa_score:.2f}/10, and remote/location fit contributed {location_score:.2f}/5."
     )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Phase 2 — AI Enrichment Layer
+# ──────────────────────────────────────────────────────────────────────────────
+
+def enrich_with_ai_explanation(
+    result: MatchScoreResult,
+    candidate: Candidate,
+    job: JobNormalized,
+) -> MatchScoreResult:
+    """
+    Augment a MatchScoreResult with an AI-generated plain-English summary.
+
+    Called AFTER rule-based scoring when AI_SCORING_ENABLED=true.
+    If the AI call fails for any reason, returns the original result unchanged —
+    no crash, no data loss.
+
+    Supported providers (via env vars):
+        AI_PROVIDER=openai    →  uses OPENAI_API_KEY  (default: gpt-4o-mini)
+        AI_PROVIDER=anthropic →  uses ANTHROPIC_API_KEY  (default: claude-haiku-4-5-20251001)
+    """
+    if not _ai_enabled():
+        return result
+
+    try:
+        prompt = _build_ai_prompt(result, candidate, job)
+        ai_response = _call_ai(prompt)
+        summary, strengths, gaps = _parse_ai_response(ai_response)
+        # Return a new dataclass with AI fields populated — all other fields unchanged
+        from dataclasses import replace
+        return replace(result, ai_summary=summary, ai_strengths=strengths, ai_gaps=gaps)
+    except Exception as exc:
+        logger.warning("ai_enrichment.failed: %s", exc)
+        return result
+
+
+def _ai_enabled() -> bool:
+    return os.getenv("AI_SCORING_ENABLED", "false").lower() in {"true", "1", "yes"}
+
+
+def _build_ai_prompt(result: MatchScoreResult, candidate: Candidate, job: JobNormalized) -> str:
+    candidate_skills = ", ".join(skill.skill_name for skill in candidate.skills[:10]) or "not listed"
+    preferred_titles = ", ".join(candidate.preference.preferred_titles[:3]) if candidate.preference else "not listed"
+    domain_expertise = ", ".join(candidate.preference.domain_expertise[:3]) if candidate.preference else "not listed"
+    job_keywords = ", ".join(job.keywords_extracted[:10]) or "not listed"
+
+    return f"""You are a healthcare IT staffing specialist. Assess how well this candidate matches this job.
+
+CANDIDATE:
+- Name: {candidate.name}
+- Years of experience: {candidate.years_experience or "unknown"}
+- Work authorisation: {candidate.work_authorization or "unknown"}
+- Skills: {candidate_skills}
+- Preferred titles: {preferred_titles}
+- Domain expertise: {domain_expertise}
+
+JOB:
+- Title: {job.title}
+- Company: {job.company}
+- Location: {job.location or "Not specified"} | Remote: {job.is_remote}
+- Employment type: {job.employment_type or "Not specified"}
+- Key requirements: {job_keywords}
+- Job description (first 400 chars): {(job.description or "")[:400]}
+
+COMPUTED SCORES:
+- Overall: {result.total_score:.1f}/100 ({result.priority_bucket} priority)
+- Title: {result.title_score:.1f}/25 | Domain: {result.domain_score:.1f}/20 | Skills: {result.skills_score:.1f}/20
+- Experience: {result.experience_score:.1f}/10 | Employment: {result.employment_preference_score:.1f}/10
+- Visa: {result.visa_score:.1f}/10 | Location: {result.location_score:.1f}/5
+
+Respond with exactly this JSON (no markdown, no extra text):
+{{
+  "summary": "<two sentences: why this is/isn't a strong match>",
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "gaps": ["<gap 1>", "<gap 2>"]
+}}"""
+
+
+def _call_ai(prompt: str) -> str:
+    provider = os.getenv("AI_PROVIDER", "openai").lower()
+
+    if provider == "anthropic":
+        import anthropic  # type: ignore
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        model = os.getenv("AI_MODEL", "claude-haiku-4-5-20251001")
+        message = client.messages.create(
+            model=model,
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return message.content[0].text
+
+    else:  # default: openai
+        import openai  # type: ignore
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+        model = os.getenv("AI_MODEL", "gpt-4o-mini")
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0.3,
+        )
+        return response.choices[0].message.content or ""
+
+
+def _parse_ai_response(raw: str) -> tuple[str, list[str], list[str]]:
+    """Parse the JSON response from the AI. Falls back to empty values on failure."""
+    import json
+
+    try:
+        data = json.loads(raw.strip())
+        summary = str(data.get("summary", ""))
+        strengths = [str(s) for s in data.get("strengths", [])]
+        gaps = [str(g) for g in data.get("gaps", [])]
+        return summary, strengths, gaps
+    except (json.JSONDecodeError, KeyError, TypeError):
+        logger.warning("ai_enrichment.parse_failed: raw=%s", raw[:200])
+        return "", [], []
 

@@ -1,16 +1,24 @@
 from __future__ import annotations
 
-from datetime import date
+import os
+from datetime import date, datetime, timezone
+from pathlib import Path
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user, require_authenticated_user, require_super_admin
 from app.db import crud
+from app.models.alert_recipient import AlertRecipient
 from app.models.candidate import Candidate
 from app.models.employee import Employee
+from app.models.job import JobNormalized
+from app.models.match_score import JobCandidateMatch
 from app.models.user import User
+from app.models.work_queue import EmployeeWorkQueue
+from app.schemas.alert_recipient import AlertRecipientCreate, AlertRecipientRead, AlertRecipientUpdate
 from app.schemas.application import ApplicationCreate, ApplicationPage, ApplicationRead
 from app.schemas.candidate import (
     CandidateCreate,
@@ -38,7 +46,7 @@ from app.schemas.user import (
     UserRead,
     UserUpdate,
 )
-from app.schemas.work_queue import EmployeeWorkQueuePage
+from app.schemas.work_queue import EmployeeWorkQueuePage, WorkQueueReportPayload
 from app.services.auth import (
     authenticate_user,
     build_password_reset,
@@ -48,6 +56,9 @@ from app.services.auth import (
 )
 from app.services.emailer import send_password_reset_email, smtp_enabled
 from app.services.pipeline import run_daily_pipeline
+
+# Resume storage directory — mounted as a Docker volume in production
+_RESUME_DIR = Path(os.getenv("RESUME_STORAGE_PATH", "/app/resumes"))
 
 router = APIRouter(prefix="/api/v1")
 
@@ -508,4 +519,280 @@ def run_daily_pipeline_endpoint(
             "scored_matches": summary.scored_matches,
             "work_queue_items": summary.work_queue_items,
         },
+    }
+
+
+# ── Employee CRUD (admin) ─────────────────────────────────────────────────────
+
+@router.put("/admin/employees/{employee_id}", response_model=EmployeeRead)
+def update_employee(
+    employee_id: int,
+    payload: EmployeeCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> EmployeeRead:
+    employee = db.scalar(select(Employee).where(Employee.id == employee_id))
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    employee.name = payload.name
+    employee.email = payload.email
+    db.commit()
+    db.refresh(employee)
+    return employee
+
+
+@router.delete("/admin/employees/{employee_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_employee(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> Response:
+    employee = db.scalar(select(Employee).where(Employee.id == employee_id))
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    db.delete(employee)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ── WhatsApp Alert Recipients ─────────────────────────────────────────────────
+
+@router.get("/admin/whatsapp-recipients", response_model=list[AlertRecipientRead])
+def list_whatsapp_recipients(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> list[AlertRecipientRead]:
+    return list(db.scalars(select(AlertRecipient).order_by(AlertRecipient.id.asc())))
+
+
+@router.post("/admin/whatsapp-recipients", response_model=AlertRecipientRead, status_code=status.HTTP_201_CREATED)
+def create_whatsapp_recipient(
+    payload: AlertRecipientCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> AlertRecipientRead:
+    # Normalise to E.164 with whatsapp: prefix stripped for storage
+    number = payload.phone_number.strip()
+    if number.startswith("whatsapp:"):
+        number = number[len("whatsapp:"):]
+    existing = db.scalar(select(AlertRecipient).where(AlertRecipient.phone_number == number))
+    if existing:
+        raise HTTPException(status_code=409, detail="Phone number already registered")
+    recipient = AlertRecipient(phone_number=number, label=payload.label, is_active=payload.is_active)
+    db.add(recipient)
+    db.commit()
+    db.refresh(recipient)
+    return recipient
+
+
+@router.put("/admin/whatsapp-recipients/{recipient_id}", response_model=AlertRecipientRead)
+def update_whatsapp_recipient(
+    recipient_id: int,
+    payload: AlertRecipientUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> AlertRecipientRead:
+    recipient = db.scalar(select(AlertRecipient).where(AlertRecipient.id == recipient_id))
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    if payload.label is not None:
+        recipient.label = payload.label
+    if payload.is_active is not None:
+        recipient.is_active = payload.is_active
+    db.commit()
+    db.refresh(recipient)
+    return recipient
+
+
+@router.delete("/admin/whatsapp-recipients/{recipient_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_whatsapp_recipient(
+    recipient_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> Response:
+    recipient = db.scalar(select(AlertRecipient).where(AlertRecipient.id == recipient_id))
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    db.delete(recipient)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ── Candidate resume upload ───────────────────────────────────────────────────
+
+@router.post("/candidates/{candidate_id}/resume", response_model=CandidateRead)
+async def upload_resume(
+    candidate_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> CandidateRead:
+    candidate = db.scalar(select(Candidate).where(Candidate.id == candidate_id))
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    allowed = {".pdf", ".doc", ".docx", ".txt"}
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {suffix}. Allowed: {allowed}")
+
+    _RESUME_DIR.mkdir(parents=True, exist_ok=True)
+    safe_name = f"candidate_{candidate_id}{suffix}"
+    dest = _RESUME_DIR / safe_name
+
+    content = await file.read()
+    dest.write_bytes(content)
+
+    # Extract plain text for scoring
+    resume_text: str | None = None
+    try:
+        if suffix == ".pdf":
+            import pypdf  # type: ignore
+            import io
+            reader = pypdf.PdfReader(io.BytesIO(content))
+            resume_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        elif suffix in {".doc", ".docx"}:
+            import mammoth  # type: ignore
+            result = mammoth.extract_raw_text({"bytes": content})
+            resume_text = result.value
+        else:
+            resume_text = content.decode("utf-8", errors="ignore")
+    except Exception:
+        resume_text = None  # Store file even if text extraction fails
+
+    candidate.resume_filename = safe_name
+    candidate.resume_text = (resume_text or "").strip() or None
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+@router.get("/candidates/{candidate_id}/resume")
+def download_resume(
+    candidate_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_authenticated_user),
+) -> Response:
+    from fastapi.responses import FileResponse
+    candidate = db.scalar(select(Candidate).where(Candidate.id == candidate_id))
+    if not candidate or not candidate.resume_filename:
+        raise HTTPException(status_code=404, detail="No resume on file for this candidate")
+    path = _RESUME_DIR / candidate.resume_filename
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Resume file not found on disk")
+    return FileResponse(str(path), filename=candidate.resume_filename)
+
+
+# ── Work queue: report a job as invalid/outdated/not-relevant ─────────────────
+
+@router.post("/work-queues/{queue_id}/report", response_model=dict)
+def report_work_queue_item(
+    queue_id: int,
+    payload: WorkQueueReportPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> dict:
+    allowed_statuses = {"invalid", "outdated", "not_relevant"}
+    if payload.report_status not in allowed_statuses:
+        raise HTTPException(status_code=400, detail=f"report_status must be one of {allowed_statuses}")
+
+    item = db.scalar(select(EmployeeWorkQueue).where(EmployeeWorkQueue.id == queue_id))
+    if not item:
+        raise HTTPException(status_code=404, detail="Work queue item not found")
+
+    # Employees can only report their own items
+    if current_user.role != "super_admin" and item.employee_id != current_user.employee_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    item.report_status = payload.report_status
+    item.report_reason = payload.report_reason
+    item.reported_at = datetime.now(timezone.utc)
+    item.status = "skipped"
+    db.commit()
+    return {"status": "ok", "report_status": item.report_status}
+
+
+# ── Analytics ─────────────────────────────────────────────────────────────────
+
+@router.get("/analytics/overview")
+def analytics_overview(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> dict[str, Any]:
+    # Jobs by source
+    jobs_by_source = [
+        {"source": src, "count": cnt}
+        for src, cnt in db.execute(
+            select(JobNormalized.source, func.count().label("cnt"))
+            .where(JobNormalized.is_active.is_(True))
+            .group_by(JobNormalized.source)
+            .order_by(func.count().desc())
+        ).all()
+    ]
+
+    # Freshness breakdown
+    freshness_rows = db.execute(
+        select(JobNormalized.freshness_status, func.count().label("cnt"))
+        .group_by(JobNormalized.freshness_status)
+    ).all()
+    freshness = {row.freshness_status: row.cnt for row in freshness_rows}
+
+    # Application funnel
+    total_queue = db.scalar(select(func.count()).select_from(EmployeeWorkQueue)) or 0
+    applied = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "applied")) or 0
+    skipped = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "skipped")) or 0
+    pending = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "pending")) or 0
+
+    # Reported job issues by source
+    reported_rows = db.execute(
+        select(JobNormalized.source, EmployeeWorkQueue.report_status, func.count().label("cnt"))
+        .join(JobNormalized, EmployeeWorkQueue.job_id == JobNormalized.id)
+        .where(EmployeeWorkQueue.report_status.isnot(None))
+        .group_by(JobNormalized.source, EmployeeWorkQueue.report_status)
+        .order_by(func.count().desc())
+    ).all()
+    reports_by_source = [
+        {"source": row.source, "report_status": row.report_status, "count": row.cnt}
+        for row in reported_rows
+    ]
+
+    # Top match scores by candidate
+    top_matches = db.execute(
+        select(Candidate.name, func.max(JobCandidateMatch.score).label("top_score"), func.count().label("match_count"))
+        .join(JobCandidateMatch, JobCandidateMatch.candidate_id == Candidate.id)
+        .group_by(Candidate.id, Candidate.name)
+        .order_by(func.max(JobCandidateMatch.score).desc())
+        .limit(10)
+    ).all()
+    candidate_stats = [
+        {"name": row.name, "top_score": round(row.top_score, 1), "match_count": row.match_count}
+        for row in top_matches
+    ]
+
+    # Source quality: jobs applied vs reported
+    source_quality = db.execute(
+        select(
+            JobNormalized.source,
+            func.count().label("total"),
+            func.sum(
+                func.cast(EmployeeWorkQueue.status == "applied", db.bind.dialect.name == "sqlite" and "INTEGER" or "INT")
+            ).label("applied_count"),
+        )
+        .join(JobNormalized, EmployeeWorkQueue.job_id == JobNormalized.id)
+        .group_by(JobNormalized.source)
+        .order_by(func.count().desc())
+    ).all()
+
+    return {
+        "jobs_by_source": jobs_by_source,
+        "freshness": freshness,
+        "funnel": {
+            "total": total_queue,
+            "pending": pending,
+            "applied": applied,
+            "skipped": skipped,
+            "apply_rate_pct": round(applied / total_queue * 100, 1) if total_queue else 0,
+        },
+        "reports_by_source": reports_by_source,
+        "top_candidates": candidate_stats,
     }

@@ -1,5 +1,43 @@
 [
   {
+    "name": "Live Feed \u2014 The Muse, Arbeitnow, RemoteOK",
+    "adapter_type": "live_feed",
+    "config": {
+      "themuse_query": "Business Analyst",
+      "themuse_category": "Data and Analytics",
+      "arbeitnow_query": "healthcare business analyst",
+      "remoteok_tag": "healthcare",
+      "enable_themuse": true,
+      "enable_arbeitnow": true,
+      "enable_usajobs": false,
+      "enable_remoteok": true,
+      "include_titles": [
+        "business analyst",
+        "healthcare analyst",
+        "clinical analyst",
+        "health information",
+        "health it",
+        "ehr",
+        "epic",
+        "cerner",
+        "payer",
+        "provider",
+        "revenue cycle",
+        "managed care"
+      ],
+      "exclude_titles": [
+        "data engineer",
+        "software engineer",
+        "devops",
+        "qa engineer",
+        "marketing analyst",
+        "financial analyst",
+        "sales analyst"
+      ]
+    },
+    "enabled": true
+  },
+  {
     "name": "Recent Healthcare Analyst Discovery Feed",
     "adapter_type": "generic_ats_json",
     "config": {

@@ -13,3 +13,8 @@ redis==6.2.0
 pytest==8.4.2
 passlib==1.7.4
 python-jose==3.5.0
+# ── Phase 2 additions ─────────────────────────────────────────────────────────
+feedparser==6.0.11          # Indeed + Dice RSS feed parsing
+twilio==9.4.6               # WhatsApp alerts via Twilio API
+openai==1.84.0              # AI enrichment (GPT-4o-mini) — optional
+anthropic==0.53.0           # AI enrichment (Claude Haiku) — optional
