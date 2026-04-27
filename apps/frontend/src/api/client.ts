@@ -176,11 +176,31 @@ export const apiClient = {
       body: formData
     }).then((res) => {
       if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-      return res.json() as Promise<{ message: string; filename: string }>;
+      return res.json() as Promise<Candidate>;
     });
   },
   getResumeUrl: (candidateId: number) =>
     `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
+  downloadResume: async (candidateId: number) => {
+    const token = getStoredAccessToken();
+    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") ?? "";
+    const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
+    const filename = filenameMatch?.[1] ?? `candidate-${candidateId}-resume`;
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 
   // ── Phase 3: Work queue reporting ───────────────────────────────────────────
   reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>

@@ -161,6 +161,8 @@ python scripts/seed.py
 
 5. Add your custom domain in Render once the default `onrender.com` URLs are working.
 
+Resume files are stored on disk at `RESUME_STORAGE_PATH` (`/app/resumes` by default). Render free web services use an ephemeral filesystem, so resume uploads are only durable if you attach a paid persistent disk at that path or later move resume storage to S3-compatible object storage.
+
 ### Supported source configuration
 
 The sample app supports two source styles:

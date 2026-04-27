@@ -86,7 +86,7 @@ function ResumePanel({
     setMsg(null);
     try {
       const res = await apiClient.uploadResume(candidate.id, file);
-      setMsg(`✓ Uploaded: ${res.filename}`);
+      setMsg(`Uploaded: ${res.resume_filename ?? file.name}`);
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
       await onRefresh();
@@ -102,15 +102,14 @@ function ResumePanel({
       {candidate.resume_filename ? (
         <div className="resume-current">
           <span>📄 <strong>{candidate.resume_filename}</strong></span>
-          <a
-            href={apiClient.getResumeUrl(candidate.id)}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => void apiClient.downloadResume(candidate.id)}
             className="secondary-button"
             style={{ fontSize: "0.72rem", padding: "3px 8px" }}
           >
             Download
-          </a>
+          </button>
         </div>
       ) : (
         <p className="resume-empty-hint">No resume uploaded yet.</p>
@@ -132,7 +131,7 @@ function ResumePanel({
         </button>
       </div>
       {msg ? (
-        <p className={msg.startsWith("✓") ? "success-msg" : "error-banner"} style={{ marginTop: "0.4rem" }}>
+        <p className={msg.startsWith("Uploaded") ? "success-msg" : "error-banner"} style={{ marginTop: "0.4rem" }}>
           {msg}
         </p>
       ) : null}

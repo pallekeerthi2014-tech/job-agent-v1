@@ -35,10 +35,10 @@ def upgrade() -> None:
     op.add_column("candidates", sa.Column("resume_filename", sa.String(500), nullable=True))
     op.add_column("candidates", sa.Column("resume_text", sa.Text(), nullable=True))
 
-    try:
+    if op.get_bind().dialect.name == "sqlite":
+        op.create_index("uq_candidates_email", "candidates", ["email"], unique=True)
+    else:
         op.create_unique_constraint("uq_candidates_email", "candidates", ["email"])
-    except Exception:
-        pass  # Column may already have unique index in some DB flavours
 
     # ── EmployeeWorkQueue: report fields ─────────────────────────────────────
     op.add_column("employee_work_queues", sa.Column("report_status", sa.String(50), nullable=True))
@@ -55,6 +55,10 @@ def downgrade() -> None:
     op.drop_column("candidates", "resume_filename")
     op.drop_column("candidates", "location")
     op.drop_column("candidates", "phone")
+    if op.get_bind().dialect.name == "sqlite":
+        op.drop_index("uq_candidates_email", table_name="candidates")
+    else:
+        op.drop_constraint("uq_candidates_email", "candidates", type_="unique")
     op.drop_column("candidates", "email")
 
     op.drop_table("alert_recipients")

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
 
-STRICT_MAX_AGE_HOURS = 168
+STRICT_MAX_AGE_HOURS = 48
 
 _AMBIGUOUS_PATTERNS = (
     r"\breposted\b",

@@ -27,7 +27,7 @@ HEALTHCARE_DOMAIN_DICTIONARIES: dict[str, list[str]] = {
 
 TRANSACTION_KEYWORDS = ["834", "835", "837", "HL7", "FHIR", "EDI", "270", "271", "276", "277"]
 WORK_AUTHORIZATION_PATTERNS = {
-    "visa sponsorship available": r"(visa sponsorship|sponsor(?:ship)?)",
+    "visa sponsorship available": r"(sponsorship available|visa sponsorship available|will sponsor|sponsor visa)",
     "us work authorization required": r"(us work authorization|required to work in the us|authorized to work in the us)",
     "no sponsorship": r"(no sponsorship|unable to sponsor|cannot sponsor)",
     "citizenship preferred": r"(uscis|citizen(?:ship)? required|us citizen)",
@@ -79,6 +79,8 @@ def extract_work_authorization_hints(text: str) -> list[str]:
         for label, pattern in WORK_AUTHORIZATION_PATTERNS.items()
         if re.search(pattern, text_lower, flags=re.IGNORECASE)
     ]
+    if "no sponsorship" in hints and "visa sponsorship available" in hints:
+        hints.remove("visa sponsorship available")
     return sorted(set(hints))
 
 

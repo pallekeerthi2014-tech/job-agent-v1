@@ -25,7 +25,7 @@ services:
       - key: ALLOWED_ORIGINS
         sync: false
       - key: FRESH_JOB_MAX_AGE_HOURS
-        value: "168"
+        value: "48"
       - key: SCHEDULER_ENABLED
         value: "true"
       - key: SCHEDULER_TIMEZONE
@@ -44,6 +44,8 @@ services:
         value: "480"
       - key: RESET_TOKEN_EXPIRE_MINUTES
         value: "60"
+      - key: RESUME_STORAGE_PATH
+        value: /app/resumes
       - key: PUBLIC_APP_URL
         sync: false
       - key: SUPER_ADMIN_NAME

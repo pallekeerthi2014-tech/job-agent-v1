@@ -14,7 +14,7 @@ from app.db import crud
 from app.models.alert_recipient import AlertRecipient
 from app.models.candidate import Candidate
 from app.models.employee import Employee
-from app.models.job import JobNormalized
+from app.models.job import JobNormalized, JobRaw
 from app.models.match_score import JobCandidateMatch
 from app.models.user import User
 from app.models.work_queue import EmployeeWorkQueue
@@ -31,7 +31,7 @@ from app.schemas.candidate import (
     CandidateSkillRead,
     CandidateUpdate,
 )
-from app.schemas.employee import EmployeeCreate, EmployeeRead
+from app.schemas.employee import EmployeeCreate, EmployeeRead, EmployeeUpdate
 from app.schemas.job import JobNormalizedCreate, JobNormalizedPage, JobNormalizedRead, JobRawCreate, JobRawRead
 from app.schemas.match import JobCandidateMatchCreate, JobCandidateMatchPage, JobCandidateMatchRead
 from app.schemas.pagination import PageMeta
@@ -527,15 +527,18 @@ def run_daily_pipeline_endpoint(
 @router.put("/admin/employees/{employee_id}", response_model=EmployeeRead)
 def update_employee(
     employee_id: int,
-    payload: EmployeeCreate,
+    payload: EmployeeUpdate,
     db: Session = Depends(get_db),
     _: User = Depends(require_super_admin),
 ) -> EmployeeRead:
     employee = db.scalar(select(Employee).where(Employee.id == employee_id))
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
-    employee.name = payload.name
-    employee.email = payload.email
+    values = payload.model_dump(exclude_unset=True)
+    if "name" in values:
+        employee.name = values["name"]
+    if "email" in values:
+        employee.email = values["email"]
     db.commit()
     db.refresh(employee)
     return employee
@@ -671,12 +674,13 @@ async def upload_resume(
 def download_resume(
     candidate_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_authenticated_user),
+    current_user: User = Depends(require_authenticated_user),
 ) -> Response:
     from fastapi.responses import FileResponse
     candidate = db.scalar(select(Candidate).where(Candidate.id == candidate_id))
     if not candidate or not candidate.resume_filename:
         raise HTTPException(status_code=404, detail="No resume on file for this candidate")
+    _ensure_candidate_access(current_user, candidate)
     path = _RESUME_DIR / candidate.resume_filename
     if not path.exists():
         raise HTTPException(status_code=404, detail="Resume file not found on disk")
@@ -719,79 +723,87 @@ def analytics_overview(
     db: Session = Depends(get_db),
     _: User = Depends(require_super_admin),
 ) -> dict[str, Any]:
-    # Jobs by source
+    total_raw = db.scalar(select(func.count()).select_from(JobRaw)) or 0
+    total_normalized = db.scalar(select(func.count()).select_from(JobNormalized)) or 0
+    total_matched = db.scalar(select(func.count()).select_from(JobCandidateMatch)) or 0
+    total_queued = db.scalar(select(func.count()).select_from(EmployeeWorkQueue)) or 0
+    total_applied = (
+        db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "applied")) or 0
+    )
+
     jobs_by_source = [
-        {"source": src, "count": cnt}
-        for src, cnt in db.execute(
-            select(JobNormalized.source, func.count().label("cnt"))
+        {"source": row.source, "count": row.cnt, "latest_posted": row.latest_posted}
+        for row in db.execute(
+            select(
+                JobNormalized.source,
+                func.count().label("cnt"),
+                func.max(JobNormalized.posted_date).label("latest_posted"),
+            )
             .where(JobNormalized.is_active.is_(True))
             .group_by(JobNormalized.source)
             .order_by(func.count().desc())
         ).all()
     ]
 
-    # Freshness breakdown
     freshness_rows = db.execute(
         select(JobNormalized.freshness_status, func.count().label("cnt"))
         .group_by(JobNormalized.freshness_status)
     ).all()
-    freshness = {row.freshness_status: row.cnt for row in freshness_rows}
+    freshness = [
+        {"status": row.freshness_status or "unknown", "count": row.cnt}
+        for row in freshness_rows
+    ]
 
-    # Application funnel
-    total_queue = db.scalar(select(func.count()).select_from(EmployeeWorkQueue)) or 0
-    applied = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "applied")) or 0
-    skipped = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "skipped")) or 0
-    pending = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "pending")) or 0
-
-    # Reported job issues by source
     reported_rows = db.execute(
         select(JobNormalized.source, EmployeeWorkQueue.report_status, func.count().label("cnt"))
         .join(JobNormalized, EmployeeWorkQueue.job_id == JobNormalized.id)
         .where(EmployeeWorkQueue.report_status.isnot(None))
         .group_by(JobNormalized.source, EmployeeWorkQueue.report_status)
-        .order_by(func.count().desc())
+        .order_by(JobNormalized.source.asc())
     ).all()
-    reports_by_source = [
-        {"source": row.source, "report_status": row.report_status, "count": row.cnt}
-        for row in reported_rows
-    ]
+    reports_by_source_map: dict[str, dict[str, Any]] = {}
+    for row in reported_rows:
+        source = row.source or "unknown"
+        bucket = reports_by_source_map.setdefault(
+            source,
+            {"source": source, "total": 0, "invalid": 0, "outdated": 0, "not_relevant": 0},
+        )
+        if row.report_status in {"invalid", "outdated", "not_relevant"}:
+            bucket[row.report_status] += row.cnt
+            bucket["total"] += row.cnt
+    reports_by_source = sorted(reports_by_source_map.values(), key=lambda item: item["total"], reverse=True)
 
-    # Top match scores by candidate
     top_matches = db.execute(
-        select(Candidate.name, func.max(JobCandidateMatch.score).label("top_score"), func.count().label("match_count"))
+        select(
+            Candidate.id.label("candidate_id"),
+            Candidate.name.label("candidate_name"),
+            func.count(JobCandidateMatch.id).label("match_count"),
+            func.avg(JobCandidateMatch.score).label("avg_score"),
+        )
         .join(JobCandidateMatch, JobCandidateMatch.candidate_id == Candidate.id)
         .group_by(Candidate.id, Candidate.name)
-        .order_by(func.max(JobCandidateMatch.score).desc())
+        .order_by(func.count(JobCandidateMatch.id).desc(), func.avg(JobCandidateMatch.score).desc())
         .limit(10)
     ).all()
     candidate_stats = [
-        {"name": row.name, "top_score": round(row.top_score, 1), "match_count": row.match_count}
+        {
+            "candidate_id": row.candidate_id,
+            "candidate_name": row.candidate_name,
+            "match_count": row.match_count,
+            "avg_score": round(float(row.avg_score or 0), 1),
+        }
         for row in top_matches
     ]
-
-    # Source quality: jobs applied vs reported
-    source_quality = db.execute(
-        select(
-            JobNormalized.source,
-            func.count().label("total"),
-            func.sum(
-                func.cast(EmployeeWorkQueue.status == "applied", db.bind.dialect.name == "sqlite" and "INTEGER" or "INT")
-            ).label("applied_count"),
-        )
-        .join(JobNormalized, EmployeeWorkQueue.job_id == JobNormalized.id)
-        .group_by(JobNormalized.source)
-        .order_by(func.count().desc())
-    ).all()
 
     return {
         "jobs_by_source": jobs_by_source,
         "freshness": freshness,
         "funnel": {
-            "total": total_queue,
-            "pending": pending,
-            "applied": applied,
-            "skipped": skipped,
-            "apply_rate_pct": round(applied / total_queue * 100, 1) if total_queue else 0,
+            "total_raw": total_raw,
+            "total_normalized": total_normalized,
+            "total_matched": total_matched,
+            "total_queued": total_queued,
+            "total_applied": total_applied,
         },
         "reports_by_source": reports_by_source,
         "top_candidates": candidate_stats,

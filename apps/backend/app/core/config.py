@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     daily_job_hour: int = Field(default=6, alias="DAILY_JOB_HOUR")
     daily_job_minute: int = Field(default=0, alias="DAILY_JOB_MINUTE")
     default_queue_limit: int = Field(default=50, alias="DEFAULT_QUEUE_LIMIT")
-    fresh_job_max_age_hours: int = Field(default=168, alias="FRESH_JOB_MAX_AGE_HOURS")
+    fresh_job_max_age_hours: int = Field(default=48, alias="FRESH_JOB_MAX_AGE_HOURS")
     jwt_secret_key: str = Field(default="change-me-in-production", alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=480, alias="ACCESS_TOKEN_EXPIRE_MINUTES")

@@ -12,8 +12,12 @@ class EmployeeCreate(EmployeeBase):
     pass
 
 
+class EmployeeUpdate(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+
+
 class EmployeeRead(EmployeeBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-
