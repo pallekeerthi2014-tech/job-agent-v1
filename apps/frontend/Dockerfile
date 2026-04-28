@@ -1,4 +1,5 @@
-FROM node:22-alpine
+# Builder stage
+FROM node:22-alpine AS builder
 
 WORKDIR /frontend
 
@@ -7,4 +8,17 @@ RUN npm install
 
 COPY . .
 
-CMD ["sh", "-c", "npm run dev -- --host 0.0.0.0 --port ${FRONTEND_PORT:-5173}"]
+RUN npm run build
+
+# Production stage
+FROM node:22-alpine
+
+WORKDIR /frontend
+
+RUN npm install -g serve
+
+COPY --from=builder /frontend/dist ./dist
+
+EXPOSE 5173
+
+CMD ["serve", "-s", "dist", "-l", "5173"]
