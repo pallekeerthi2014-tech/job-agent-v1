@@ -7,13 +7,17 @@ import time
 
 import psycopg
 
-database_url = os.environ.get("DATABASE_URL")
+database_url = (
+    os.environ.get("DATABASE_URL")
+    or os.environ.get("DATABASE_PRIVATE_URL")
+)
 if not database_url:
-    database_url = (
-        "postgresql://"
-        f"{os.environ['POSTGRES_USER']}:{os.environ['POSTGRES_PASSWORD']}"
-        f"@{os.environ['POSTGRES_HOST']}:{os.environ['POSTGRES_PORT']}/{os.environ['POSTGRES_DB']}"
-    )
+    user = os.environ.get("POSTGRES_USER") or os.environ.get("PGUSER", "job_ops")
+    password = os.environ.get("POSTGRES_PASSWORD") or os.environ.get("PGPASSWORD", "job_ops")
+    host = os.environ.get("POSTGRES_HOST") or os.environ.get("PGHOST", "localhost")
+    port = os.environ.get("POSTGRES_PORT") or os.environ.get("PGPORT", "5432")
+    db = os.environ.get("POSTGRES_DB") or os.environ.get("PGDATABASE", "job_ops")
+    database_url = f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
 database_url = database_url.replace("+psycopg", "")
 
