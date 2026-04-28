@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass, field, replace
 
 from tenacity import (
@@ -94,14 +95,35 @@ def _score_domain_match(candidate: Candidate, job: JobNormalized) -> float:
     return round(WEIGHTS["domain"] * min(len(overlap) / max(len(job_domains), 1), 1.0), 2)
 
 
+def _extract_resume_keywords(resume_text: str | None) -> set[str]:
+    """Extract skill-like tokens from raw resume text for scoring augmentation."""
+    if not resume_text:
+        return set()
+    # Pull alphanumeric tokens including common tech punctuation (C++, .NET, Node.js)
+    tokens = re.findall(r'[A-Za-z][A-Za-z0-9\-\+\.\#]*', resume_text)
+    # Keep tokens ≥ 3 chars, lower-case them; discard very common English stop-words
+    _STOP = {
+        "the", "and", "for", "with", "that", "this", "are", "was", "has", "have",
+        "been", "from", "will", "also", "not", "but", "can", "our", "all", "you",
+        "your", "its", "use", "used", "work", "worked", "team", "role", "able",
+        "help", "using", "inc", "llc", "ltd", "corp", "position", "experience",
+    }
+    return {t.lower() for t in tokens if len(t) >= 3 and t.lower() not in _STOP}
+
+
 def _score_skills_match(candidate: Candidate, job: JobNormalized) -> float:
+    # Structured skills from the candidate_skills table
     candidate_skills = {s.skill_name.lower() for s in candidate.skills}
+    # Augment with keywords extracted directly from the uploaded resume text
+    resume_keywords = _extract_resume_keywords(candidate.resume_text)
+    all_candidate_signals = candidate_skills | resume_keywords
+
     must_have = {kw.lower() for kw in (candidate.preference.must_have_keywords if candidate.preference else [])}
     job_keywords = {kw.lower() for kw in job.keywords_extracted}
     relevant = must_have | job_keywords
     if not relevant:
         return round(WEIGHTS["skills"] * 0.5, 2)
-    matched = candidate_skills & relevant
+    matched = all_candidate_signals & relevant
     return round(WEIGHTS["skills"] * min(len(matched) / max(len(relevant), 1), 1.0), 2)
 
 
@@ -214,6 +236,7 @@ def _build_ai_prompt(result: MatchScoreResult, candidate: Candidate, job: JobNor
     domain_expertise = ", ".join(candidate.preference.domain_expertise[:3]) if candidate.preference else "not listed"
     job_keywords = ", ".join(job.keywords_extracted[:10]) or "not listed"
     job_desc = (job.description or "")[:400]
+    resume_snippet = (candidate.resume_text or "")[:300]
 
     return f"""You are a healthcare IT staffing specialist. Assess how well this candidate matches this job.
 
@@ -224,6 +247,7 @@ CANDIDATE:
 - Skills: {candidate_skills}
 - Preferred titles: {preferred_titles}
 - Domain expertise: {domain_expertise}
+- Resume excerpt: {resume_snippet or "not provided"}
 
 JOB:
 - Title: {job.title}

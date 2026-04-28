@@ -30,6 +30,7 @@ class Candidate(Base):
     skills = relationship("CandidateSkill", back_populates="candidate", cascade="all, delete-orphan")
     matches = relationship("JobCandidateMatch", back_populates="candidate", cascade="all, delete-orphan")
     applications = relationship("Application", back_populates="candidate", cascade="all, delete-orphan")
+    user = relationship("User", foreign_keys="[User.candidate_id]", back_populates="candidate", uselist=False)
 
 
 class CandidatePreference(Base):

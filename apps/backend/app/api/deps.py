@@ -46,3 +46,12 @@ def require_super_admin(user: User = Depends(get_current_user)) -> User:
     if user.role != "super_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
     return user
+
+
+def require_candidate_user(user: User = Depends(get_current_user)) -> User:
+    """Allow only users with role='candidate' who are linked to a Candidate record."""
+    if user.role != "candidate":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Candidate portal access only")
+    if user.candidate_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No candidate profile linked to this account")
+    return user

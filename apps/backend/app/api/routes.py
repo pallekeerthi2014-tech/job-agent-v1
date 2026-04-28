@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_user, require_authenticated_user, require_super_admin
+from app.api.deps import get_db, get_current_user, require_authenticated_user, require_super_admin, require_candidate_user
 from app.db import crud
 from app.models.alert_recipient import AlertRecipient
 from app.models.candidate import Candidate
@@ -36,6 +36,8 @@ from app.schemas.job import JobNormalizedCreate, JobNormalizedPage, JobNormalize
 from app.schemas.match import JobCandidateMatchCreate, JobCandidateMatchPage, JobCandidateMatchRead
 from app.schemas.pagination import PageMeta
 from app.schemas.user import (
+    CandidateProfileUpdate,
+    CandidateSelfRegister,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     LoginRequest,
@@ -796,3 +798,168 @@ def analytics_overview(
         "reports_by_source": reports_by_source,
         "top_candidates": candidate_stats,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Candidate Self-Service Portal
+# Routes prefixed /api/v1/portal/... — accessible only to role="candidate" users
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/portal/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def candidate_register(payload: CandidateSelfRegister, db: Session = Depends(get_db)) -> TokenResponse:
+    """Self-registration: creates a Candidate record + linked User (role=candidate) in one shot."""
+    from app.services.auth import get_user_by_email
+
+    if get_user_by_email(db, payload.email) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists")
+
+    # Create the Candidate profile
+    candidate = Candidate(
+        name=payload.name,
+        email=payload.email.lower(),
+        phone=payload.phone,
+        location=payload.location,
+        work_authorization=payload.work_authorization,
+        years_experience=payload.years_experience,
+        active=True,
+    )
+    db.add(candidate)
+    db.flush()  # get candidate.id without committing
+
+    # Create the User login linked to this candidate
+    from app.services.auth import hash_password
+    user = User(
+        name=payload.name,
+        email=payload.email.lower(),
+        password_hash=hash_password(payload.password),
+        role="candidate",
+        is_active=True,
+        candidate_id=candidate.id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return TokenResponse(access_token=create_access_token(user), user=user)
+
+
+@router.get("/portal/me", response_model=CandidateRead)
+def portal_get_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_candidate_user),
+) -> CandidateRead:
+    """Return the authenticated candidate's own profile."""
+    candidate = db.get(Candidate, current_user.candidate_id)
+    if candidate is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
+    return candidate
+
+
+@router.patch("/portal/me", response_model=CandidateRead)
+def portal_update_profile(
+    payload: CandidateProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_candidate_user),
+) -> CandidateRead:
+    """Candidate updates their own profile fields (not name or email — admin controls those)."""
+    candidate = db.get(Candidate, current_user.candidate_id)
+    if candidate is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(candidate, key, value)
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+@router.get("/portal/matches", response_model=JobCandidateMatchPage)
+def portal_list_matches(
+    db: Session = Depends(get_db),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(require_candidate_user),
+) -> JobCandidateMatchPage:
+    """Return the candidate's own job matches sorted by score descending."""
+    total, items = crud.list_job_candidate_matches(
+        db,
+        limit=limit,
+        offset=offset,
+        sort_by="score",
+        sort_order="desc",
+        candidate_id=current_user.candidate_id,
+    )
+    return JobCandidateMatchPage(items=items, meta=PageMeta(total=total, limit=limit, offset=offset))
+
+
+@router.get("/portal/jobs/{job_id}", response_model=JobNormalizedRead)
+def portal_get_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_candidate_user),
+) -> JobNormalizedRead:
+    """Fetch a single job for the candidate portal detail view."""
+    job = db.get(JobNormalized, job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    return job
+
+
+@router.post("/portal/me/resume", response_model=CandidateRead)
+async def portal_upload_resume(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_candidate_user),
+) -> CandidateRead:
+    """Candidate uploads their own resume — same extraction logic as admin route."""
+    candidate = db.get(Candidate, current_user.candidate_id)
+    if candidate is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
+
+    allowed = {".pdf", ".doc", ".docx", ".txt"}
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {suffix}. Allowed: {allowed}")
+
+    _RESUME_DIR.mkdir(parents=True, exist_ok=True)
+    safe_name = f"candidate_{candidate.id}{suffix}"
+    dest = _RESUME_DIR / safe_name
+    content = await file.read()
+    dest.write_bytes(content)
+
+    resume_text: str | None = None
+    try:
+        if suffix == ".pdf":
+            import pypdf  # type: ignore
+            import io as _io
+            reader = pypdf.PdfReader(_io.BytesIO(content))
+            resume_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        elif suffix in {".doc", ".docx"}:
+            import mammoth  # type: ignore
+            result = mammoth.extract_raw_text({"bytes": content})
+            resume_text = result.value
+        else:
+            resume_text = content.decode("utf-8", errors="ignore")
+    except Exception:
+        resume_text = None
+
+    candidate.resume_filename = safe_name
+    candidate.resume_text = (resume_text or "").strip() or None
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+@router.get("/portal/me/resume")
+def portal_download_resume(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_candidate_user),
+) -> Response:
+    """Download the authenticated candidate's own resume file."""
+    from fastapi.responses import FileResponse
+    candidate = db.get(Candidate, current_user.candidate_id)
+    if candidate is None or not candidate.resume_filename:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No resume on file")
+    path = _RESUME_DIR / candidate.resume_filename
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume file not found on disk")
+    return FileResponse(str(path), filename=candidate.resume_filename)

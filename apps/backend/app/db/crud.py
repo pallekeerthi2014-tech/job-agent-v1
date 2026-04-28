@@ -136,6 +136,7 @@ def create_user(db: Session, payload: UserCreate) -> User:
         role=payload.role,
         is_active=payload.is_active,
         employee_id=payload.employee_id,
+        candidate_id=getattr(payload, "candidate_id", None),
     )
     db.add(user)
     db.commit()

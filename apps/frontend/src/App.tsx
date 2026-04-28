@@ -9,6 +9,7 @@ import { AdminWhatsappPage } from "./pages/AdminWhatsappPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { CandidateDetailPage } from "./pages/CandidateDetailPage";
 import { CandidateListPage } from "./pages/CandidateListPage";
+import { CandidatePortalPage } from "./pages/CandidatePortalPage";
 import { EmployeeWorkQueuePage } from "./pages/EmployeeWorkQueuePage";
 import { JobMatchDetailPage } from "./pages/JobMatchDetailPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -376,6 +377,11 @@ export default function App() {
         onResetPassword={handleSelfResetPassword}
       />
     );
+  }
+
+  // ── Candidate portal short-circuit ──────────────────────────────────────────
+  if (currentUser.role === "candidate") {
+    return <CandidatePortalPage currentUser={currentUser} onLogout={handleLogout} />;
   }
 
   const showFiltersBar = !ADMIN_ONLY_PAGES.includes(activePage);

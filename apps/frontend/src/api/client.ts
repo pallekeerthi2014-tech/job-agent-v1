@@ -8,6 +8,8 @@ import type {
   Candidate,
   CandidateCreatePayload,
   CandidatePreference,
+  CandidateProfileUpdatePayload,
+  CandidateSelfRegisterPayload,
   CandidateSkill,
   CandidateUpdatePayload,
   Employee,
@@ -216,5 +218,38 @@ export const apiClient = {
 
   // ── Phase 3: Analytics ───────────────────────────────────────────────────────
   getAnalyticsOverview: () =>
-    request<AnalyticsOverview>("/api/v1/analytics/overview")
+    request<AnalyticsOverview>("/api/v1/analytics/overview"),
+
+  // ── Candidate Portal ─────────────────────────────────────────────────────────
+  candidateRegister: (payload: CandidateSelfRegisterPayload) =>
+    request<LoginResponse>("/api/v1/portal/register", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  portalGetProfile: () =>
+    request<Candidate>("/api/v1/portal/me"),
+  portalUpdateProfile: (payload: CandidateProfileUpdatePayload) =>
+    request<Candidate>("/api/v1/portal/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+  portalGetMatches: (params?: { limit?: number; offset?: number }) =>
+    request<PaginatedResponse<Match>>(`/api/v1/portal/matches${buildQuery(params ?? {})}`),
+  portalGetJob: (jobId: number) =>
+    request<Job>(`/api/v1/portal/jobs/${jobId}`),
+  portalUploadResume: (file: File) => {
+    const token = getStoredAccessToken();
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`${API_BASE_URL}/api/v1/portal/me/resume`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      return res.json() as Promise<Candidate>;
+    });
+  },
+  portalResumeUrl: () =>
+    `${API_BASE_URL}/api/v1/portal/me/resume`
 };

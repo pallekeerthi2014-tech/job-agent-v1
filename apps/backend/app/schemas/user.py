@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
-RoleType = Literal["super_admin", "employee"]
+RoleType = Literal["super_admin", "employee", "candidate"]
 
 
 class UserBase(BaseModel):
@@ -15,6 +15,7 @@ class UserBase(BaseModel):
     role: RoleType = "employee"
     is_active: bool = True
     employee_id: int | None = None
+    candidate_id: int | None = None
 
 
 class UserCreate(UserBase):
@@ -26,6 +27,7 @@ class UserUpdate(BaseModel):
     role: RoleType | None = None
     is_active: bool | None = None
     employee_id: int | None = None
+    candidate_id: int | None = None
     password: str | None = None
 
 
@@ -34,6 +36,29 @@ class UserRead(UserBase):
 
     id: int
     last_login_at: datetime | None = None
+
+
+# ── Candidate self-registration ───────────────────────────────────────────────
+
+class CandidateSelfRegister(BaseModel):
+    """Payload for candidate self-registration via the portal."""
+    name: str
+    email: EmailStr
+    password: str
+    phone: str | None = None
+    location: str | None = None
+    work_authorization: str | None = None
+    years_experience: int | None = None
+
+
+class CandidateProfileUpdate(BaseModel):
+    """What a candidate can update about themselves."""
+    phone: str | None = None
+    location: str | None = None
+    work_authorization: str | None = None
+    years_experience: int | None = None
+    salary_min: int | None = None
+    salary_unit: str | None = None
 
 
 class LoginRequest(BaseModel):

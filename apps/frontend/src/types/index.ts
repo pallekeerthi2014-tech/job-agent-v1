@@ -30,7 +30,7 @@ export type Employee = {
   email: string;
 };
 
-export type UserRole = "super_admin" | "employee";
+export type UserRole = "super_admin" | "employee" | "candidate";
 
 export type User = {
   id: number;
@@ -39,6 +39,7 @@ export type User = {
   role: UserRole;
   is_active: boolean;
   employee_id?: number | null;
+  candidate_id?: number | null;
   last_login_at?: string | null;
 };
 
@@ -219,6 +220,27 @@ export type AlertRecipientUpdatePayload = {
 export type WorkQueueReportPayload = {
   report_status: "invalid" | "outdated" | "not_relevant";
   report_reason?: string | null;
+};
+
+// ── Candidate Portal types ────────────────────────────────────────────────────
+
+export type CandidateSelfRegisterPayload = {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string | null;
+  location?: string | null;
+  work_authorization?: string | null;
+  years_experience?: number | null;
+};
+
+export type CandidateProfileUpdatePayload = {
+  phone?: string | null;
+  location?: string | null;
+  work_authorization?: string | null;
+  years_experience?: number | null;
+  salary_min?: number | null;
+  salary_unit?: string | null;
 };
 
 export type AnalyticsOverview = {
