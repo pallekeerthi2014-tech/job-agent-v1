@@ -34,5 +34,5 @@ else:
 PY
 
 alembic upgrade head
-python scripts/seed.py
+python scripts/seed.py || echo "[warn] seed.py exited non-zero — continuing startup"
 uvicorn app.main:app --host "${API_HOST:-0.0.0.0}" --port "${API_PORT:-8000}"
