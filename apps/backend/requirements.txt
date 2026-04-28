@@ -10,12 +10,14 @@ email-validator==2.2.0
 python-dotenv==1.1.1
 httpx==0.28.1
 apscheduler==3.11.0
-redis==6.2.0
 pytest==8.4.2
 passlib==1.7.4
 python-jose==3.5.0
+tenacity==8.5.0             # Retry + exponential backoff for all external APIs
 # ── Phase 2 additions ─────────────────────────────────────────────────────────
-feedparser==6.0.11          # Indeed + Dice RSS feed parsing
 twilio==9.4.6               # WhatsApp alerts via Twilio API
 openai==1.84.0              # AI enrichment (GPT-4o-mini) — optional
 anthropic==0.53.0           # AI enrichment (Claude Haiku) — optional
+# ── Phase 3 additions ─────────────────────────────────────────────────────────
+pypdf>=4.0.0                # PDF text extraction for resume upload
+mammoth>=1.6.0              # DOCX text extraction for resume upload

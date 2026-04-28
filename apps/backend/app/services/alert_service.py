@@ -1,38 +1,19 @@
 """
-alert_service.py — WhatsApp (Twilio) + Email Job Alert Service (Phase 2)
-Path: apps/backend/app/services/alert_service.py
-
-Three public functions:
-  send_whatsapp_alert — Twilio WhatsApp broadcast to all team members
-  send_email_alert    — styled HTML email with full score breakdown
-  dispatch_job_alerts — single entry point called from the scheduler
-
-Both channels are independently togglable via env vars and default to OFF.
-If either channel fails, the other still fires.  No exceptions propagate up.
-
-WhatsApp setup (Twilio):
-  1. Create a Twilio account at twilio.com
-  2. Enable the WhatsApp sandbox (or apply for a production number)
-  3. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM in .env
-  4. Set WHATSAPP_TEAM_NUMBERS as a comma-separated list of +E.164 numbers
-     e.g. WHATSAPP_TEAM_NUMBERS=+14085551234,+14085555678
-  5. Set WHATSAPP_ALERTS_ENABLED=true
-
-Note: Twilio sends individual messages to each number. Because the whole team
-receives every alert simultaneously, this behaves like a broadcast group.
+alert_service.py — WhatsApp (Twilio) + Email Job Alert Service
+Production-hardened: reads all config from settings, retries Twilio sends,
+enforces WhatsApp 1600-char limit, validates credentials before attempting.
 """
 from __future__ import annotations
 
 import logging
-import os
 import smtplib
 import ssl
 from dataclasses import dataclass
-from email.message import EmailMessage
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from app.core.config import settings
 
@@ -44,48 +25,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_WHATSAPP_MAX_CHARS = 1_600
+
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Feature flags & config helpers
+# Team number resolution — DB first, env fallback
 # ──────────────────────────────────────────────────────────────────────────────
-
-def _whatsapp_enabled() -> bool:
-    return os.getenv("WHATSAPP_ALERTS_ENABLED", "false").lower() in {"true", "1", "yes"}
-
-
-def _email_enabled() -> bool:
-    return os.getenv("EMAIL_ALERTS_ENABLED", "false").lower() in {"true", "1", "yes"}
-
-
-def _alert_min_score() -> float:
-    try:
-        return float(os.getenv("ALERT_MIN_SCORE", "65"))
-    except ValueError:
-        return 65.0
-
-
-def _twilio_credentials() -> tuple[str, str, str]:
-    """Return (account_sid, auth_token, from_number) from env."""
-    return (
-        os.getenv("TWILIO_ACCOUNT_SID", ""),
-        os.getenv("TWILIO_AUTH_TOKEN", ""),
-        os.getenv("TWILIO_WHATSAPP_FROM", ""),  # e.g. whatsapp:+14155238886
-    )
-
 
 def _team_whatsapp_numbers(db: "Session | None" = None) -> list[str]:
-    """
-    Return list of active team WhatsApp numbers.
-
-    Priority order:
-      1. Active records in the alert_recipients DB table (if db session provided and table non-empty)
-      2. WHATSAPP_TEAM_NUMBERS env var as fallback (or supplement when DB is empty)
-
-    Numbers are automatically prefixed with 'whatsapp:' for Twilio.
-    """
     numbers: list[str] = []
-
-    # 1. Try DB first
     if db is not None:
         try:
             from app.models.alert_recipient import AlertRecipient
@@ -97,28 +45,21 @@ def _team_whatsapp_numbers(db: "Session | None" = None) -> list[str]:
                 if n:
                     numbers.append(n if n.startswith("whatsapp:") else f"whatsapp:{n}")
         except Exception as exc:
-            logger.warning("alert_service: failed to load numbers from DB: %s", exc)
+            logger.warning("alert_service: DB number load failed: %s", exc)
 
-    # 2. Fall back to (or supplement with) env var if DB gave nothing
     if not numbers:
-        raw = os.getenv("WHATSAPP_TEAM_NUMBERS", "")
-        for n in raw.split(","):
-            n = n.strip()
-            if n:
-                numbers.append(n if n.startswith("whatsapp:") else f"whatsapp:{n}")
+        numbers = settings.whatsapp_team_numbers_list
 
     return numbers
 
 
 def _dashboard_url(job_id: int | None = None) -> str:
     base = settings.public_app_url.rstrip("/")
-    if job_id:
-        return f"{base}/queue?job={job_id}"
-    return f"{base}/queue"
+    return f"{base}/queue?job={job_id}" if job_id else f"{base}/queue"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# WhatsApp alert (Twilio)
+# WhatsApp (Twilio) — with retry
 # ──────────────────────────────────────────────────────────────────────────────
 
 def send_whatsapp_alert(
@@ -132,38 +73,32 @@ def send_whatsapp_alert(
     job_id: int | None = None,
     db: "Session | None" = None,
 ) -> int:
-    """
-    Send a WhatsApp alert to every number in WHATSAPP_TEAM_NUMBERS via Twilio.
-
-    Each team member receives the same message simultaneously — this acts as a
-    broadcast to the whole team, equivalent to a shared group notification.
+    """Broadcast a WhatsApp alert to all active team numbers via Twilio.
 
     Returns the count of messages successfully sent (0 if disabled/unconfigured).
+    Retries each individual send up to 2 extra times on transient errors.
     """
-    if not _whatsapp_enabled():
+    if not settings.whatsapp_alerts_enabled:
         logger.debug("whatsapp_alert.skipped: WHATSAPP_ALERTS_ENABLED=false")
         return 0
 
     try:
         from twilio.rest import Client as TwilioClient  # type: ignore
+        from twilio.base.exceptions import TwilioRestException  # type: ignore
     except ImportError:
-        logger.warning("whatsapp_alert.skipped: twilio not installed. Run: pip install twilio")
+        logger.warning("whatsapp_alert.skipped: twilio package not installed")
         return 0
 
-    account_sid, auth_token, from_number = _twilio_credentials()
-    if not account_sid or not auth_token or not from_number:
-        logger.warning("whatsapp_alert.skipped: TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_WHATSAPP_FROM not set")
+    if not settings.twilio_account_sid or not settings.twilio_auth_token or not settings.twilio_whatsapp_from_formatted:
+        logger.warning("whatsapp_alert.skipped: incomplete Twilio credentials in config")
         return 0
 
     team_numbers = _team_whatsapp_numbers(db)
     if not team_numbers:
-        logger.warning("whatsapp_alert.skipped: no active numbers in DB or WHATSAPP_TEAM_NUMBERS")
+        logger.warning("whatsapp_alert.skipped: no active recipient numbers")
         return 0
 
-    # Ensure the from number has the whatsapp: prefix
-    wa_from = from_number if from_number.startswith("whatsapp:") else f"whatsapp:{from_number}"
-
-    # Build a concise, readable WhatsApp message (plain text — no markdown)
+    # Build message body
     score_bar = _score_bar(result.total_score)
     strengths = "\n".join(f"  • {s}" for s in result.ai_strengths[:3]) if result.ai_strengths else f"  {result.explanation[:120]}..."
     ai_line = f"\n📝 {result.ai_summary}" if result.ai_summary else ""
@@ -185,15 +120,34 @@ def send_whatsapp_alert(
         f"{dashboard_line}"
     )
 
-    client = TwilioClient(account_sid, auth_token)
+    # Enforce Twilio's 1600-character limit
+    if len(message_body) > _WHATSAPP_MAX_CHARS:
+        message_body = message_body[: _WHATSAPP_MAX_CHARS - 4] + "…"
+
+    client = TwilioClient(settings.twilio_account_sid, settings.twilio_auth_token)
+
+    @retry(
+        retry=retry_if_exception_type(Exception),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True,
+    )
+    def _send_one(to_number: str) -> None:
+        client.messages.create(
+            body=message_body,
+            from_=settings.twilio_whatsapp_from_formatted,
+            to=to_number,
+        )
+
     sent = 0
     for to_number in team_numbers:
         try:
-            client.messages.create(body=message_body, from_=wa_from, to=to_number)
+            _send_one(to_number)
             sent += 1
-            logger.info("whatsapp_alert.sent", extra={"to": to_number, "candidate": candidate_name, "score": result.total_score})
+            logger.info("whatsapp_alert.sent to=%s candidate=%s score=%.1f",
+                        to_number, candidate_name, result.total_score)
         except Exception as exc:
-            logger.warning("whatsapp_alert.failed: to=%s error=%s", to_number, exc)
+            logger.warning("whatsapp_alert.failed to=%s error=%s", to_number, exc)
 
     return sent
 
@@ -213,12 +167,10 @@ def send_email_alert(
     job_location: str,
     job_id: int | None = None,
 ) -> bool:
+    """Send an HTML email alert for a high-scoring job match.
+    Returns True on success, False on failure. Never raises.
     """
-    Send an HTML email alert for a high-scoring job match.
-    Uses the existing SMTP configuration from settings.
-    Returns True on success, False on failure.
-    """
-    if not _email_enabled():
+    if not settings.email_alerts_enabled:
         logger.debug("email_alert.skipped: EMAIL_ALERTS_ENABLED=false")
         return False
 
@@ -226,7 +178,10 @@ def send_email_alert(
         logger.warning("email_alert.skipped: SMTP not configured")
         return False
 
-    subject = f"[{result.priority_bucket} Match] {candidate_name} → {job_title} at {job_company} ({result.total_score:.0f}/100)"
+    subject = (
+        f"[{result.priority_bucket} Match] {candidate_name} → "
+        f"{job_title} at {job_company} ({result.total_score:.0f}/100)"
+    )
 
     gaps_html = (
         "<ul>" + "".join(f"<li>{g}</li>" for g in result.ai_gaps) + "</ul>"
@@ -255,35 +210,15 @@ def send_email_alert(
   <div style="border:1px solid #ddd;border-top:none;padding:20px;border-radius:0 0 6px 6px;">
     <p>Hi {recruiter_name},</p>
     <p>A new job has been matched to one of your candidates:</p>
-
     {ai_summary_html}
-
     <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-      <tr style="background:#f0f4f8;">
-        <td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Candidate</td>
-        <td style="padding:8px 12px;border:1px solid #ddd;">{candidate_name}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Job Title</td>
-        <td style="padding:8px 12px;border:1px solid #ddd;">{job_title}</td>
-      </tr>
-      <tr style="background:#f0f4f8;">
-        <td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Company</td>
-        <td style="padding:8px 12px;border:1px solid #ddd;">{job_company}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Location</td>
-        <td style="padding:8px 12px;border:1px solid #ddd;">{job_location or 'Not specified'}</td>
-      </tr>
-      <tr style="background:#f0f4f8;">
-        <td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Match Score</td>
-        <td style="padding:8px 12px;border:1px solid #ddd;">
-          <strong style="color:#1B6EC2;">{result.total_score:.1f}/100</strong>
-          &nbsp;({result.priority_bucket} priority)
-        </td>
-      </tr>
+      <tr style="background:#f0f4f8;"><td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Candidate</td><td style="padding:8px 12px;border:1px solid #ddd;">{candidate_name}</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Job Title</td><td style="padding:8px 12px;border:1px solid #ddd;">{job_title}</td></tr>
+      <tr style="background:#f0f4f8;"><td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Company</td><td style="padding:8px 12px;border:1px solid #ddd;">{job_company}</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Location</td><td style="padding:8px 12px;border:1px solid #ddd;">{job_location or 'Not specified'}</td></tr>
+      <tr style="background:#f0f4f8;"><td style="padding:8px 12px;font-weight:bold;border:1px solid #ddd;">Match Score</td>
+        <td style="padding:8px 12px;border:1px solid #ddd;"><strong style="color:#1B6EC2;">{result.total_score:.1f}/100</strong> ({result.priority_bucket} priority)</td></tr>
     </table>
-
     <h3 style="color:#1B6EC2;">Score Breakdown</h3>
     <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
       <tr style="background:#1B6EC2;color:#fff;">
@@ -293,92 +228,79 @@ def send_email_alert(
       </tr>
       {_score_table_rows(result)}
     </table>
-
-    <h3 style="color:#1B6EC2;">Key Strengths</h3>
-    {strengths_html}
-
-    <h3 style="color:#1B6EC2;">Gaps to Review</h3>
-    {gaps_html}
-
-    <div style="margin-top:24px;display:flex;gap:12px;">
+    <h3 style="color:#1B6EC2;">Key Strengths</h3>{strengths_html}
+    <h3 style="color:#1B6EC2;">Gaps to Review</h3>{gaps_html}
+    <div style="margin-top:24px;">
       {apply_button}
       &nbsp;&nbsp;
       <a href="{_dashboard_url(job_id)}" style="display:inline-block;padding:10px 20px;
         background:#f0f4f8;color:#1B6EC2;text-decoration:none;border-radius:4px;
         border:1px solid #1B6EC2;font-weight:bold;">View in Dashboard</a>
     </div>
-
     <p style="margin-top:24px;font-size:12px;color:#888;">
-      This alert was generated automatically by the ThinkSuccess Job Alert Platform.
-      Adjust your alert settings in the admin panel.
+      Generated automatically by the ThinkSuccess Job Alert Platform.
     </p>
   </div>
 </body>
 </html>"""
 
     try:
+        from email.message import EmailMessage
         msg = EmailMessage()
         msg["Subject"] = subject
         msg["From"] = settings.smtp_from_email
         msg["To"] = recruiter_email
-        msg.set_content(f"New {result.priority_bucket} priority match: {candidate_name} → {job_title} ({result.total_score:.0f}/100)")
+        msg.set_content(
+            f"New {result.priority_bucket} match: {candidate_name} → {job_title} ({result.total_score:.0f}/100)"
+        )
         msg.add_alternative(html, subtype="html")
 
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
             if settings.smtp_use_tls:
                 server.starttls(context=ssl.create_default_context())
             if settings.smtp_username and settings.smtp_password:
                 server.login(settings.smtp_username, settings.smtp_password)
             server.send_message(msg)
 
-        logger.info("email_alert.sent", extra={"to": recruiter_email, "candidate": candidate_name, "score": result.total_score})
+        logger.info("email_alert.sent to=%s candidate=%s score=%.1f",
+                    recruiter_email, candidate_name, result.total_score)
         return True
 
     except Exception as exc:
-        logger.warning("email_alert.failed: to=%s error=%s", recruiter_email, exc)
+        logger.warning("email_alert.failed to=%s error=%s", recruiter_email, exc)
         return False
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Dispatcher — called from the scheduler
+# Dispatcher
 # ──────────────────────────────────────────────────────────────────────────────
 
 @dataclass
 class AlertDispatchSummary:
     matches_evaluated: int = 0
-    whatsapp_sent: int = 0   # total individual WhatsApp messages delivered
+    whatsapp_sent: int = 0
     email_sent: int = 0
     skipped_below_threshold: int = 0
     failed: int = 0
 
 
 def dispatch_job_alerts(db: Session, new_job_ids: list[int]) -> AlertDispatchSummary:
-    """
-    Single entry point called by the scheduler after each pipeline cycle.
-
-    Queries JobCandidateMatch records for newly ingested jobs that score above
-    ALERT_MIN_SCORE, then fires WhatsApp (team broadcast) and email alerts.
-
-    Args:
-        db:          Active SQLAlchemy session.
-        new_job_ids: IDs of JobNormalized records added in this cycle.
-    """
+    """Called by the scheduler after each pipeline cycle."""
     from app.models.match_score import JobCandidateMatch
     from app.models.candidate import Candidate
     from app.models.job import JobNormalized
     from app.models.employee import Employee
 
     summary = AlertDispatchSummary()
-    threshold = _alert_min_score()
+    threshold = settings.alert_min_score
 
     if not new_job_ids:
         return summary
 
-    if not _whatsapp_enabled() and not _email_enabled():
+    if not settings.whatsapp_alerts_enabled and not settings.email_alerts_enabled:
         logger.debug("dispatch_job_alerts.skipped: no alert channels enabled")
         return summary
 
-    # Load all matches for newly added jobs, above threshold
     matches = list(
         db.execute(
             select(JobCandidateMatch)
@@ -408,7 +330,6 @@ def dispatch_job_alerts(db: Session, new_job_ids: list[int]) -> AlertDispatchSum
         recruiter_name = employee.name if employee else "Team"
         recruiter_email = employee.email if employee else None
 
-        # Reconstruct a lightweight MatchScoreResult for the alert functions
         from app.scoring.engine import MatchScoreResult, enrich_with_ai_explanation
         score_result = MatchScoreResult(
             total_score=match.score,
@@ -423,8 +344,6 @@ def dispatch_job_alerts(db: Session, new_job_ids: list[int]) -> AlertDispatchSum
             explanation=match.explanation or "",
             apply_url=job.apply_url or job.canonical_apply_url or "",
         )
-
-        # Optionally enrich with AI summary (honours AI_SCORING_ENABLED)
         score_result = enrich_with_ai_explanation(score_result, candidate, job)
 
         alert_kwargs = dict(
@@ -437,11 +356,9 @@ def dispatch_job_alerts(db: Session, new_job_ids: list[int]) -> AlertDispatchSum
             job_id=job.id,
         )
 
-        # WhatsApp — broadcast to the whole team (returns count of msgs sent)
         wa_sent = send_whatsapp_alert(**alert_kwargs, db=db)
         summary.whatsapp_sent += wa_sent
 
-        # Email — individual alert to the assigned recruiter
         email_ok = send_email_alert(**alert_kwargs, recruiter_email=recruiter_email) if recruiter_email else False
         if email_ok:
             summary.email_sent += 1
@@ -450,23 +367,15 @@ def dispatch_job_alerts(db: Session, new_job_ids: list[int]) -> AlertDispatchSum
             summary.failed += 1
 
     logger.info(
-        "dispatch_job_alerts.complete",
-        extra={
-            "evaluated": summary.matches_evaluated,
-            "whatsapp_sent": summary.whatsapp_sent,
-            "email_sent": summary.email_sent,
-            "failed": summary.failed,
-        },
+        "dispatch_job_alerts.complete evaluated=%d whatsapp=%d email=%d failed=%d",
+        summary.matches_evaluated, summary.whatsapp_sent, summary.email_sent, summary.failed,
     )
     return summary
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _score_bar(score: float, width: int = 10) -> str:
-    """Render a simple ASCII score bar for WhatsApp / plain-text messages."""
     filled = round((score / 100) * width)
     return "█" * filled + "░" * (width - filled)
 
@@ -483,15 +392,17 @@ def _score_table_rows(result: "MatchScoreResult") -> str:
     ]
     html_rows = ""
     for i, (label, score, max_score) in enumerate(rows):
-        bg = '#f0f4f8' if i % 2 == 0 else '#ffffff'
+        bg = "#f0f4f8" if i % 2 == 0 else "#ffffff"
         pct = (score / max_score * 100) if max_score else 0
-        bar = f'<div style="background:#e0e7ef;border-radius:3px;height:8px;width:80px;display:inline-block;vertical-align:middle;">' \
-              f'<div style="background:#1B6EC2;width:{pct:.0f}%;height:100%;border-radius:3px;"></div></div>'
+        bar = (
+            f'<div style="background:#e0e7ef;border-radius:3px;height:8px;width:80px;display:inline-block;vertical-align:middle;">'
+            f'<div style="background:#1B6EC2;width:{pct:.0f}%;height:100%;border-radius:3px;"></div></div>'
+        )
         html_rows += (
             f'<tr style="background:{bg};">'
             f'<td style="padding:6px 12px;border:1px solid #ddd;">{label}</td>'
             f'<td style="padding:6px 12px;text-align:center;border:1px solid #ddd;">{score:.1f}</td>'
             f'<td style="padding:6px 12px;text-align:center;border:1px solid #ddd;">{max_score} &nbsp;{bar}</td>'
-            f'</tr>'
+            f"</tr>"
         )
     return html_rows

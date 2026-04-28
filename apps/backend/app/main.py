@@ -10,7 +10,10 @@ from app.api.routes import router
 from app.core.config import settings
 from app.workers.scheduler import build_scheduler
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
 scheduler = build_scheduler()
 
@@ -24,7 +27,7 @@ async def lifespan(_: FastAPI):
         scheduler.shutdown(wait=False)
 
 
-app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
+app = FastAPI(title=settings.app_name, version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +40,17 @@ app.add_middleware(
 app.include_router(router)
 
 
-@app.get("/health")
-def healthcheck() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health", tags=["ops"])
+def healthcheck() -> dict:
+    """Liveness + readiness probe — checks DB connectivity."""
+    from app.db.session import SessionLocal
+    from sqlalchemy import text
+    db_ok = False
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+            db_ok = True
+    except Exception:
+        pass
+    status = "ok" if db_ok else "degraded"
+    return {"status": status, "db": "ok" if db_ok else "unreachable"}
