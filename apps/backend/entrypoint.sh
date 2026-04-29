@@ -34,5 +34,18 @@ else:
 PY
 
 alembic upgrade head
-python scripts/seed.py || echo "[warn] seed.py exited non-zero — continuing startup"
-uvicorn app.main:app --host "${API_HOST:-0.0.0.0}" --port "${API_PORT:-8000}"
+
+# Run seed in the background so it doesn't block uvicorn startup.
+# Railway's healthcheck on /health needs the port bound quickly; the seed
+# script can take minutes, so we let it populate data while the API serves.
+# Set SKIP_SEED=true on Railway to skip the background seed entirely.
+if [ "${SKIP_SEED:-false}" != "true" ]; then
+  (
+    echo "[seed] starting in background (pid $$)"
+    python scripts/seed.py \
+      && echo "[seed] completed successfully" \
+      || echo "[warn] seed.py exited non-zero — continuing"
+  ) &
+fi
+
+exec uvicorn app.main:app --host "${API_HOST:-0.0.0.0}" --port "${API_PORT:-8000}"
