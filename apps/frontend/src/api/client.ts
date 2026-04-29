@@ -26,6 +26,7 @@ import type {
   UserUpdatePayload,
   WorkQueueItem,
   WorkQueueReportPayload
+  AdapterTypeList,
   SourceCreate,
   SourceRead,
   SourceRunResult,
@@ -60,7 +61,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options
   });
 
-  // 204 No Content â return empty object (DELETE endpoints)
+  // 204 No Content Ã¢ÂÂ return empty object (DELETE endpoints)
   if (response.status === 204) {
     return {} as T;
   }
@@ -144,7 +145,7 @@ export const apiClient = {
       body: JSON.stringify(payload)
     }),
 
-  // ââ Phase 3: Candidate CRUD âââââââââââââââââââââââââââââââââââââââââââââââââ
+  // Ã¢ÂÂÃ¢ÂÂ Phase 3: Candidate CRUD Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   createCandidate: (payload: CandidateCreatePayload) =>
     request<Candidate>("/api/v1/candidates", {
       method: "POST",
@@ -158,7 +159,7 @@ export const apiClient = {
   deleteCandidate: (id: number) =>
     request<{ message: string }>(`/api/v1/candidates/${id}`, { method: "DELETE" }),
 
-  // ââ Phase 3: Candidate preferences & skills âââââââââââââââââââââââââââââââââ
+  // Ã¢ÂÂÃ¢ÂÂ Phase 3: Candidate preferences & skills Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   // Backend uses flat routes: GET /candidate-preferences (all), PUT /candidate-preferences/{id}
   getCandidatePreferences: (candidateId: number) =>
     request<CandidatePreference[]>("/api/v1/candidate-preferences").then(
@@ -173,7 +174,7 @@ export const apiClient = {
   getCandidateSkills: (candidateId: number) =>
     request<CandidateSkill[]>(`/api/v1/candidate-skills?candidate_id=${candidateId}`),
 
-  // ââ Phase 3: Resume upload ââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // Ã¢ÂÂÃ¢ÂÂ Phase 3: Resume upload Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   uploadResume: (candidateId: number, file: File) => {
     const token = getStoredAccessToken();
     const formData = new FormData();
@@ -190,14 +191,14 @@ export const apiClient = {
   getResumeUrl: (candidateId: number) =>
     `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
 
-  // ââ Phase 3: Work queue reporting âââââââââââââââââââââââââââââââââââââââââââ
+  // Ã¢ÂÂÃ¢ÂÂ Phase 3: Work queue reporting Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>
     request<WorkQueueItem>(`/api/v1/work-queues/${queueId}/report`, {
       method: "POST",
       body: JSON.stringify(payload)
     }),
 
-  // ââ Phase 3: WhatsApp recipient management âââââââââââââââââââââââââââââââââââ
+  // Ã¢ÂÂÃ¢ÂÂ Phase 3: WhatsApp recipient management Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   getWhatsappRecipients: () =>
     request<AlertRecipient[]>("/api/v1/admin/whatsapp-recipients"),
   createWhatsappRecipient: (payload: AlertRecipientCreatePayload) =>
@@ -213,7 +214,7 @@ export const apiClient = {
   deleteWhatsappRecipient: (id: number) =>
     request<{ message: string }>(`/api/v1/admin/whatsapp-recipients/${id}`, { method: "DELETE" }),
 
-  // ââ Phase 3: Employee management âââââââââââââââââââââââââââââââââââââââââââââ
+  // Ã¢ÂÂÃ¢ÂÂ Phase 3: Employee management Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   updateEmployee: (id: number, payload: { name?: string; email?: string }) =>
     request<Employee>(`/api/v1/admin/employees/${id}`, {
       method: "PUT",
@@ -222,11 +223,11 @@ export const apiClient = {
   deleteEmployee: (id: number) =>
     request<{ message: string }>(`/api/v1/admin/employees/${id}`, { method: "DELETE" }),
 
-  // ââ Phase 3: Analytics âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // Ã¢ÂÂÃ¢ÂÂ Phase 3: Analytics Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   getAnalyticsOverview: () =>
     request<AnalyticsOverview>("/api/v1/analytics/overview"),
 
-  // ââ Candidate Portal âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // Ã¢ÂÂÃ¢ÂÂ Candidate Portal Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   candidateRegister: (payload: CandidateSelfRegisterPayload) =>
     request<LoginResponse>("/api/v1/portal/register", {
       method: "POST",
@@ -259,7 +260,7 @@ export const apiClient = {
   portalResumeUrl: () =>
     `${API_BASE_URL}/api/v1/portal/me/resume`,
 
-  // ─── Source / Feed Management ─────────────────────────────────────────────
+  // âââ Source / Feed Management âââââââââââââââââââââââââââââââââââââââââââââ
   listSourceTypes: () =>
     request<AdapterTypeList>("/api/v1/admin/source-types"),
 
