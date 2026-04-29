@@ -11,18 +11,19 @@ type LayoutProps = {
 };
 
 const COMMON_NAV_ITEMS = [
-  { id: "operations-dashboard", label: "📋 Operations Dashboard" },
-  { id: "employee-work-queue", label: "🗂 Work Queue" },
-  { id: "candidate-list", label: "👥 Candidate List" },
-  { id: "candidate-detail", label: "🔍 Candidate Detail" },
-  { id: "job-match-detail", label: "🎯 Job Match Detail" }
+  { id: "operations-dashboard", label: "ð Operations Dashboard" },
+  { id: "employee-work-queue", label: "ð Work Queue" },
+  { id: "candidate-list", label: "ð¥ Candidate List" },
+  { id: "candidate-detail", label: "ð Candidate Detail" },
+  { id: "job-match-detail", label: "ð¯ Job Match Detail" }
 ];
 
 const ADMIN_NAV_ITEMS = [
-  { id: "admin-candidates", label: "➕ Manage Candidates" },
-  { id: "admin-users", label: "👤 User Admin" },
-  { id: "admin-whatsapp", label: "📱 WhatsApp Alerts" },
-  { id: "analytics", label: "📊 Analytics" }
+  { id: "admin-candidates", label: "â Manage Candidates" },
+  { id: "admin-users", label: "ð¤ User Admin" },
+  { id: "admin-whatsapp", label: "ð± WhatsApp Alerts" },
+  { id: "admin-sources", label: "⚡ Feed Sources" },
+  { id: "analytics", label: "ð Analytics" }
 ];
 
 export function Layout({ activePage, onNavigate, currentUser, onLogout, children }: LayoutProps) {
