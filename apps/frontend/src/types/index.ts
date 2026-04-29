@@ -165,7 +165,7 @@ export type UserUpdatePayload = {
   password?: string;
 };
 
-// ── Phase 3 types ─────────────────────────────────────────────────────────────
+// ââ Phase 3 types âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export type AlertRecipient = {
   id: number;
@@ -222,7 +222,7 @@ export type WorkQueueReportPayload = {
   report_reason?: string | null;
 };
 
-// ── Candidate Portal types ────────────────────────────────────────────────────
+// ââ Candidate Portal types ââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export type CandidateSelfRegisterPayload = {
   name: string;
@@ -255,4 +255,96 @@ export type AnalyticsOverview = {
   };
   reports_by_source: { source: string; total: number; invalid: number; outdated: number; not_relevant: number }[];
   top_candidates: { candidate_id: number; candidate_name: string; match_count: number; avg_score: number }[];
+};
+
+// ─── Phase 1: Source / Feed Management ──────────────────────────────────────
+
+export type FieldType =
+  | "string"
+  | "url"
+  | "secret"
+  | "number"
+  | "boolean"
+  | "string_list"
+  | "object";
+
+export type AdapterFieldSchema = {
+  name: string;
+  label: string;
+  field_type: FieldType;
+  required: boolean;
+  placeholder?: string;
+  default_value?: unknown;
+  options?: string[];
+  description?: string;
+};
+
+export type AdapterTypeMeta = {
+  adapter_type: string;
+  label: string;
+  description: string;
+  fields: AdapterFieldSchema[];
+};
+
+export type AdapterTypeList = {
+  adapter_types: AdapterTypeMeta[];
+};
+
+export type SourceRead = {
+  id: number;
+  name: string;
+  adapter_type: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  created_at: string;
+  last_run_at: string | null;
+  last_error: string | null;
+  jobs_total: number;
+  jobs_last_24h: number;
+  jobs_last_7d: number;
+};
+
+export type SourceCreate = {
+  name: string;
+  adapter_type: string;
+  config: Record<string, unknown>;
+  enabled?: boolean;
+};
+
+export type SourceUpdate = {
+  name?: string;
+  config?: Record<string, unknown>;
+  enabled?: boolean;
+};
+
+export type SourceJobSample = {
+  title: string;
+  company: string;
+  location: string | null;
+  url: string | null;
+};
+
+export type SourceTestResult = {
+  success: boolean;
+  adapter_type: string;
+  source_name: string;
+  jobs_found: number;
+  samples: SourceJobSample[];
+  duration_seconds: number;
+  error: string | null;
+};
+
+export type SourceRunResult = {
+  source_id: number;
+  source_name: string;
+  jobs_fetched: number;
+  jobs_stored: number;
+  duration_seconds: number;
+  error: string | null;
+};
+
+export type SourceTestRequest = {
+  adapter_type: string;
+  config: Record<string, unknown>;
+  sample_size?: number;
 };
