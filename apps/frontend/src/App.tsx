@@ -6,6 +6,7 @@ import { Layout } from "./components/Layout";
 import { AdminCandidatesPage } from "./pages/AdminCandidatesPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminWhatsappPage } from "./pages/AdminWhatsappPage";
+import { AdminSourcesPage } from "./pages/AdminSourcesPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { CandidateDetailPage } from "./pages/CandidateDetailPage";
 import { CandidateListPage } from "./pages/CandidateListPage";
@@ -97,7 +98,7 @@ export default function App() {
   const [candidateAdminBusy, setCandidateAdminBusy] = useState(false);
   const [candidateAdminError, setCandidateAdminError] = useState<string | null>(null);
 
-  // ── Auth bootstrap ──────────────────────────────────────────────────────────
+  // ââ Auth bootstrap ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   useEffect(() => {
     async function bootstrapAuth() {
       const existingToken = getStoredAccessToken();
@@ -124,7 +125,7 @@ export default function App() {
     }
   }, [activePage, currentUser]);
 
-  // ── Main data load ──────────────────────────────────────────────────────────
+  // ââ Main data load ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   async function loadData() {
     if (!currentUser) return;
     try {
@@ -190,7 +191,7 @@ export default function App() {
       .finally(() => setAnalyticsBusy(false));
   }, [activePage, currentUser]);
 
-  // ── Derived maps ────────────────────────────────────────────────────────────
+  // ââ Derived maps ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const candidateMap = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
   const employeeMap = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
   const jobMap = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
@@ -202,7 +203,7 @@ export default function App() {
   const candidateMatches = selectedCandidate ? matches.filter((m) => m.candidate_id === selectedCandidate.id) : [];
   const candidateApplications = selectedCandidate ? applications.filter((a) => a.candidate_id === selectedCandidate.id) : [];
 
-  // ── Auth handlers ───────────────────────────────────────────────────────────
+  // ââ Auth handlers âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   async function handleLogin(payload: { email: string; password: string }) {
     setAuthBusy(true); setAuthError(null); setAuthSuccess(null);
     try {
@@ -249,7 +250,7 @@ export default function App() {
     setSelectedCandidateId(null); setSelectedEmployeeId(null); setSelectedMatchId(null);
   }
 
-  // ── Navigation ──────────────────────────────────────────────────────────────
+  // ââ Navigation ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   function viewMatch(match: Match) {
     setSelectedMatchId(match.id);
     setSelectedCandidateId(match.candidate_id);
@@ -262,7 +263,7 @@ export default function App() {
     if (match) viewMatch(match);
   }
 
-  // ── Application / skip ──────────────────────────────────────────────────────
+  // ââ Application / skip ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   async function updateApplication(
     params: { candidateId: number; jobId: number; employeeId?: number | null; matchId?: number | null; queueId?: number | null },
     status: "applied" | "skipped"
@@ -284,7 +285,7 @@ export default function App() {
     }
   }
 
-  // ── Report work queue item ──────────────────────────────────────────────────
+  // ââ Report work queue item ââââââââââââââââââââââââââââââââââââââââââââââââââ
   async function handleReportQueueItem(queueItem: WorkQueueItem, payload: WorkQueueReportPayload) {
     setBusyQueueId(queueItem.id);
     try {
@@ -295,7 +296,7 @@ export default function App() {
     }
   }
 
-  // ── Admin: Users ────────────────────────────────────────────────────────────
+  // ââ Admin: Users ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   async function handleCreateUser(payload: UserCreatePayload) {
     setAdminBusy(true); setAdminError(null);
     try { await apiClient.createUser(payload); await loadData(); }
@@ -317,7 +318,7 @@ export default function App() {
     finally { setAdminBusy(false); }
   }
 
-  // ── Admin: Candidates ───────────────────────────────────────────────────────
+  // ââ Admin: Candidates âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   async function handleCreateCandidate(payload: CandidateCreatePayload) {
     setCandidateAdminBusy(true); setCandidateAdminError(null);
     try { await apiClient.createCandidate(payload); await loadData(); }
@@ -339,7 +340,7 @@ export default function App() {
     finally { setCandidateAdminBusy(false); }
   }
 
-  // ── Admin: WhatsApp ─────────────────────────────────────────────────────────
+  // ââ Admin: WhatsApp âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   async function handleAddWhatsapp(payload: AlertRecipientCreatePayload) {
     setWhatsappBusy(true); setWhatsappError(null);
     try { await apiClient.createWhatsappRecipient(payload); await loadData(); }
@@ -361,7 +362,7 @@ export default function App() {
     finally { setWhatsappBusy(false); }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ââ Render ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   if (!authReady) return <main className="login-shell">Loading...</main>;
 
   if (!currentUser) {
@@ -379,7 +380,7 @@ export default function App() {
     );
   }
 
-  // ── Candidate portal short-circuit ──────────────────────────────────────────
+  // ââ Candidate portal short-circuit ââââââââââââââââââââââââââââââââââââââââââ
   if (currentUser.role === "candidate") {
     return <CandidatePortalPage currentUser={currentUser} onLogout={handleLogout} />;
   }
@@ -533,6 +534,10 @@ export default function App() {
           onDelete={handleDeleteWhatsapp}
         />
       ) : null}
+
+{activePage === "admin-sources" ? (
+  <AdminSourcesPage />
+) : null}
 
       {activePage === "analytics" && currentUser.role === "super_admin" ? (
         <AnalyticsPage
