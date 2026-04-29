@@ -224,9 +224,19 @@ def seed_users() -> None:
 
 
 if __name__ == "__main__":
-    cleanup_legacy_demo_data()
-    seed_job_sources()
-    seed_employees()
-    seed_sample_candidates()
-    seed_users()
-    print("Seeded job sources, current employees, optional sample candidates, and auth users")
+    # Seed admin user FIRST so login works even if other seed steps fail
+    # (e.g. missing seed-data files in the container build context).
+    _steps = [
+        ("seed_users", seed_users),
+        ("cleanup_legacy_demo_data", cleanup_legacy_demo_data),
+        ("seed_job_sources", seed_job_sources),
+        ("seed_employees", seed_employees),
+        ("seed_sample_candidates", seed_sample_candidates),
+    ]
+    for _name, _fn in _steps:
+        try:
+            _fn()
+            print(f"[seed] {_name}: ok")
+        except Exception as _exc:
+            print(f"[seed] {_name}: FAILED — {_exc}")
+    print("Seed run complete (errors logged above if any)")
