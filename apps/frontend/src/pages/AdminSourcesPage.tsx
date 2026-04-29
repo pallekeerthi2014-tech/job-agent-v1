@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { apiClient } from "../api/client";
 import type {
   AdapterFieldSchema,
@@ -12,10 +12,10 @@ import type {
   SourceUpdate,
 } from "../types";
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ââ helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function fmtDate(dt: string | null): string {
-  if (!dt) return "—";
+  if (!dt) return "â";
   return new Date(dt).toLocaleString();
 }
 
@@ -23,7 +23,7 @@ function adapterLabel(type: string, types: AdapterTypeMeta[]): string {
   return types.find((t) => t.adapter_type === type)?.label ?? type;
 }
 
-function btnStyle(color: string): React.CSSProperties {
+function btnStyle(color: string): CSSProperties {
   return {
     background: color, color: "#fff", border: "none",
     borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12,
@@ -31,7 +31,7 @@ function btnStyle(color: string): React.CSSProperties {
   };
 }
 
-// ── result banners ────────────────────────────────────────────────────────────
+// ââ result banners ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function TestResultBanner({
   result, onClose,
@@ -47,23 +47,23 @@ function TestResultBanner({
       display: "flex", justifyContent: "space-between", alignItems: "flex-start",
     }}>
       <div>
-        <strong>{result.success ? "✅ Connection successful" : "❌ Connection failed"}</strong>
-        {" · "}{result.duration_seconds.toFixed(2)}s
+        <strong>{result.success ? "â Connection successful" : "â Connection failed"}</strong>
+        {" Â· "}{result.duration_seconds.toFixed(2)}s
         {result.error && <div style={{ color: "#ef4444", marginTop: 4 }}>{result.error}</div>}
         {result.success && result.samples.length > 0 && (
           <div style={{ marginTop: 8 }}>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>
-              {result.jobs_found} jobs found · Sample:
+              {result.jobs_found} jobs found Â· Sample:
             </div>
             {result.samples.map((s, i) => (
               <div key={i} style={{ fontSize: 12, color: "#555", marginBottom: 2 }}>
-                • {s.title} — {s.company}{s.location ? ` (${s.location})` : ""}
+                â¢ {s.title} â {s.company}{s.location ? ` (${s.location})` : ""}
               </div>
             ))}
           </div>
         )}
       </div>
-      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>✕</button>
+      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>â</button>
     </div>
   );
 }
@@ -83,8 +83,8 @@ function RunResultBanner({
       display: "flex", justifyContent: "space-between", alignItems: "flex-start",
     }}>
       <div>
-        <strong>{ok ? "✅ Run complete" : "❌ Run failed"}</strong>
-        {" — "}<em>{result.source_name}</em>{" · "}{result.duration_seconds.toFixed(2)}s
+        <strong>{ok ? "â Run complete" : "â Run failed"}</strong>
+        {" â "}<em>{result.source_name}</em>{" Â· "}{result.duration_seconds.toFixed(2)}s
         {ok && (
           <span style={{ marginLeft: 8 }}>
             {result.jobs_stored} new jobs stored ({result.jobs_fetched} fetched)
@@ -92,18 +92,18 @@ function RunResultBanner({
         )}
         {result.error && <div style={{ color: "#ef4444", marginTop: 4 }}>{result.error}</div>}
       </div>
-      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>✕</button>
+      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>â</button>
     </div>
   );
 }
 
-// ── source table ──────────────────────────────────────────────────────────────
+// ââ source table ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-const TH: React.CSSProperties = {
+const TH: CSSProperties = {
   padding: "10px 14px", textAlign: "left", fontWeight: 600,
   fontSize: 13, color: "#555", borderBottom: "2px solid #e5e7eb",
 };
-const TD: React.CSSProperties = {
+const TD: CSSProperties = {
   padding: "10px 14px", fontSize: 13,
   borderBottom: "1px solid #f3f4f6", verticalAlign: "middle",
 };
@@ -173,16 +173,16 @@ function SourceTable({
                 <td style={{ ...TD, textAlign: "center" }}>{src.jobs_last_7d}</td>
                 <td style={TD}>
                   {src.last_error ? (
-                    <span title={src.last_error} style={{ color: "#ef4444", fontSize: 11 }}>⚠ Error</span>
+                    <span title={src.last_error} style={{ color: "#ef4444", fontSize: 11 }}>â  Error</span>
                   ) : (
-                    <span style={{ color: "#22c55e", fontSize: 11 }}>✓ OK</span>
+                    <span style={{ color: "#22c55e", fontSize: 11 }}>â OK</span>
                   )}
                 </td>
                 <td style={TD}>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <button onClick={() => onEdit(src)} disabled={busy} style={btnStyle("#3b82f6")}>Edit</button>
-                    <button onClick={() => onTest(src)} disabled={busy} style={btnStyle("#8b5cf6")}>{busy ? "…" : "Test"}</button>
-                    <button onClick={() => onRunNow(src)} disabled={busy} style={btnStyle("#f59e0b")}>{busy ? "…" : "Run Now"}</button>
+                    <button onClick={() => onTest(src)} disabled={busy} style={btnStyle("#8b5cf6")}>{busy ? "â¦" : "Test"}</button>
+                    <button onClick={() => onRunNow(src)} disabled={busy} style={btnStyle("#f59e0b")}>{busy ? "â¦" : "Run Now"}</button>
                     <button onClick={() => onDelete(src)} disabled={busy} style={btnStyle("#ef4444")}>Delete</button>
                   </div>
                 </td>
@@ -195,9 +195,9 @@ function SourceTable({
   );
 }
 
-// ── field input ───────────────────────────────────────────────────────────────
+// ââ field input âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-const INPUT_STYLE: React.CSSProperties = {
+const INPUT_STYLE: CSSProperties = {
   width: "100%", padding: "8px 12px", border: "1px solid #d1d5db",
   borderRadius: 6, fontSize: 13, boxSizing: "border-box",
 };
@@ -275,7 +275,7 @@ function FieldInput({
           value={String(value ?? field.default_value ?? "")}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">— select —</option>
+          <option value="">â select â</option>
           {field.options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
       </div>
@@ -296,7 +296,7 @@ function FieldInput({
   );
 }
 
-// ── add/edit modal ────────────────────────────────────────────────────────────
+// ââ add/edit modal ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 type WizardStep = 1 | 2 | 3;
 
@@ -389,7 +389,7 @@ function SourceModal({
             onClick={onClose}
             style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#aaa", lineHeight: 1 }}
           >
-            ✕
+            â
           </button>
         </div>
 
@@ -403,7 +403,7 @@ function SourceModal({
             </div>
           )}
 
-          {/* ── Step 1: pick adapter type ── */}
+          {/* ââ Step 1: pick adapter type ââ */}
           {step === 1 && (
             <div>
               <h4 style={{ margin: "0 0 16px", color: "#374151" }}>Select Adapter Type</h4>
@@ -439,13 +439,13 @@ function SourceModal({
                     cursor: adapterType ? "pointer" : "not-allowed",
                   }}
                 >
-                  Next →
+                  Next â
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── Step 2: config fields ── */}
+          {/* ââ Step 2: config fields ââ */}
           {step === 2 && (
             <div>
               <h4 style={{ margin: "0 0 16px", color: "#374151" }}>
@@ -484,14 +484,14 @@ function SourceModal({
                   onChange={(e) => setEnabled(e.target.checked)}
                 />
                 <label htmlFor="src-enabled" style={{ fontSize: 13, cursor: "pointer" }}>
-                  Enabled — include in daily pipeline
+                  Enabled â include in daily pipeline
                 </label>
               </div>
 
               <div style={{ marginTop: 22, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 {!isEdit ? (
                   <button onClick={() => setStep(1)} style={{ ...btnStyle("#6b7280"), padding: "9px 20px", fontSize: 14 }}>
-                    ← Back
+                    â Back
                   </button>
                 ) : <span />}
                 <div style={{ display: "flex", gap: 10 }}>
@@ -500,7 +500,7 @@ function SourceModal({
                       onClick={() => { setSaveError(null); setStep(3); }}
                       style={{ ...btnStyle("#8b5cf6"), padding: "9px 20px", fontSize: 14 }}
                     >
-                      Test First →
+                      Test First â
                     </button>
                   )}
                   <button
@@ -508,14 +508,14 @@ function SourceModal({
                     disabled={busy}
                     style={{ ...btnStyle("#22c55e"), padding: "9px 22px", fontSize: 14 }}
                   >
-                    {busy ? "Saving…" : isEdit ? "Save Changes" : "Save Source"}
+                    {busy ? "Savingâ¦" : isEdit ? "Save Changes" : "Save Source"}
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Step 3: test connection ── */}
+          {/* ââ Step 3: test connection ââ */}
           {step === 3 && (
             <div>
               <h4 style={{ margin: "0 0 8px", color: "#374151" }}>Test Connection</h4>
@@ -529,7 +529,7 @@ function SourceModal({
                 disabled={busy}
                 style={{ ...btnStyle("#8b5cf6"), padding: "10px 26px", fontSize: 14 }}
               >
-                {busy ? "Testing…" : "▶ Run Test"}
+                {busy ? "Testingâ¦" : "â¶ Run Test"}
               </button>
 
               {testResult && (
@@ -540,14 +540,14 @@ function SourceModal({
 
               <div style={{ marginTop: 22, display: "flex", justifyContent: "space-between" }}>
                 <button onClick={() => setStep(2)} style={{ ...btnStyle("#6b7280"), padding: "9px 20px", fontSize: 14 }}>
-                  ← Back
+                  â Back
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={busy}
                   style={{ ...btnStyle("#22c55e"), padding: "9px 22px", fontSize: 14 }}
                 >
-                  {busy ? "Saving…" : "Save Source"}
+                  {busy ? "Savingâ¦" : "Save Source"}
                 </button>
               </div>
             </div>
@@ -558,7 +558,7 @@ function SourceModal({
   );
 }
 
-// ── main page ─────────────────────────────────────────────────────────────────
+// ââ main page âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export function AdminSourcesPage() {
   const [sources, setSources] = useState<SourceRead[]>([]);
@@ -632,7 +632,7 @@ export function AdminSourcesPage() {
         <div>
           <h2 style={{ margin: 0, fontSize: 22 }}>Feed Sources</h2>
           <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 14 }}>
-            Manage job ingestion sources · {sources.length} source{sources.length !== 1 ? "s" : ""} configured
+            Manage job ingestion sources Â· {sources.length} source{sources.length !== 1 ? "s" : ""} configured
           </p>
         </div>
         <button
@@ -654,7 +654,7 @@ export function AdminSourcesPage() {
           display: "flex", justifyContent: "space-between",
         }}>
           <span style={{ color: "#dc2626" }}>{pageError}</span>
-          <button onClick={() => setPageError(null)} style={{ background: "none", border: "none", cursor: "pointer" }}>✕</button>
+          <button onClick={() => setPageError(null)} style={{ background: "none", border: "none", cursor: "pointer" }}>â</button>
         </div>
       )}
       {runResult && <RunResultBanner result={runResult} onClose={() => setRunResult(null)} />}
@@ -662,7 +662,7 @@ export function AdminSourcesPage() {
 
       {/* table */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Loading sources…</div>
+        <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Loading sourcesâ¦</div>
       ) : (
         <SourceTable
           sources={sources}
