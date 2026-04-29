@@ -26,6 +26,12 @@ import type {
   UserUpdatePayload,
   WorkQueueItem,
   WorkQueueReportPayload
+  SourceCreate,
+  SourceRead,
+  SourceRunResult,
+  SourceTestRequest,
+  SourceTestResult,
+  SourceUpdate,
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -54,7 +60,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options
   });
 
-  // 204 No Content — return empty object (DELETE endpoints)
+  // 204 No Content â return empty object (DELETE endpoints)
   if (response.status === 204) {
     return {} as T;
   }
@@ -138,7 +144,7 @@ export const apiClient = {
       body: JSON.stringify(payload)
     }),
 
-  // ── Phase 3: Candidate CRUD ─────────────────────────────────────────────────
+  // ââ Phase 3: Candidate CRUD âââââââââââââââââââââââââââââââââââââââââââââââââ
   createCandidate: (payload: CandidateCreatePayload) =>
     request<Candidate>("/api/v1/candidates", {
       method: "POST",
@@ -152,7 +158,7 @@ export const apiClient = {
   deleteCandidate: (id: number) =>
     request<{ message: string }>(`/api/v1/candidates/${id}`, { method: "DELETE" }),
 
-  // ── Phase 3: Candidate preferences & skills ─────────────────────────────────
+  // ââ Phase 3: Candidate preferences & skills âââââââââââââââââââââââââââââââââ
   // Backend uses flat routes: GET /candidate-preferences (all), PUT /candidate-preferences/{id}
   getCandidatePreferences: (candidateId: number) =>
     request<CandidatePreference[]>("/api/v1/candidate-preferences").then(
@@ -167,7 +173,7 @@ export const apiClient = {
   getCandidateSkills: (candidateId: number) =>
     request<CandidateSkill[]>(`/api/v1/candidate-skills?candidate_id=${candidateId}`),
 
-  // ── Phase 3: Resume upload ──────────────────────────────────────────────────
+  // ââ Phase 3: Resume upload ââââââââââââââââââââââââââââââââââââââââââââââââââ
   uploadResume: (candidateId: number, file: File) => {
     const token = getStoredAccessToken();
     const formData = new FormData();
@@ -184,14 +190,14 @@ export const apiClient = {
   getResumeUrl: (candidateId: number) =>
     `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
 
-  // ── Phase 3: Work queue reporting ───────────────────────────────────────────
+  // ââ Phase 3: Work queue reporting âââââââââââââââââââââââââââââââââââââââââââ
   reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>
     request<WorkQueueItem>(`/api/v1/work-queues/${queueId}/report`, {
       method: "POST",
       body: JSON.stringify(payload)
     }),
 
-  // ── Phase 3: WhatsApp recipient management ───────────────────────────────────
+  // ââ Phase 3: WhatsApp recipient management âââââââââââââââââââââââââââââââââââ
   getWhatsappRecipients: () =>
     request<AlertRecipient[]>("/api/v1/admin/whatsapp-recipients"),
   createWhatsappRecipient: (payload: AlertRecipientCreatePayload) =>
@@ -207,7 +213,7 @@ export const apiClient = {
   deleteWhatsappRecipient: (id: number) =>
     request<{ message: string }>(`/api/v1/admin/whatsapp-recipients/${id}`, { method: "DELETE" }),
 
-  // ── Phase 3: Employee management ─────────────────────────────────────────────
+  // ââ Phase 3: Employee management âââââââââââââââââââââââââââââââââââââââââââââ
   updateEmployee: (id: number, payload: { name?: string; email?: string }) =>
     request<Employee>(`/api/v1/admin/employees/${id}`, {
       method: "PUT",
@@ -216,11 +222,11 @@ export const apiClient = {
   deleteEmployee: (id: number) =>
     request<{ message: string }>(`/api/v1/admin/employees/${id}`, { method: "DELETE" }),
 
-  // ── Phase 3: Analytics ───────────────────────────────────────────────────────
+  // ââ Phase 3: Analytics âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   getAnalyticsOverview: () =>
     request<AnalyticsOverview>("/api/v1/analytics/overview"),
 
-  // ── Candidate Portal ─────────────────────────────────────────────────────────
+  // ââ Candidate Portal âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   candidateRegister: (payload: CandidateSelfRegisterPayload) =>
     request<LoginResponse>("/api/v1/portal/register", {
       method: "POST",
@@ -251,5 +257,51 @@ export const apiClient = {
     });
   },
   portalResumeUrl: () =>
-    `${API_BASE_URL}/api/v1/portal/me/resume`
+    `${API_BASE_URL}/api/v1/portal/me/resume`,
+
+  // ─── Source / Feed Management ─────────────────────────────────────────────
+  listSourceTypes: () =>
+    request<AdapterTypeList>("/api/v1/admin/source-types"),
+
+  listSources: () =>
+    request<SourceRead[]>("/api/v1/admin/sources"),
+
+  getSource: (id: number) =>
+    request<SourceRead>(`/api/v1/admin/sources/${id}`),
+
+  createSource: (payload: SourceCreate) =>
+    request<SourceRead>("/api/v1/admin/sources", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+
+  updateSource: (id: number, payload: SourceUpdate) =>
+    request<SourceRead>(`/api/v1/admin/sources/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+
+  deleteSource: (id: number) =>
+    request<Record<string, never>>(`/api/v1/admin/sources/${id}`, {
+      method: "DELETE",
+    }),
+
+  testSourceConfig: (payload: SourceTestRequest) =>
+    request<SourceTestResult>("/api/v1/admin/sources/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+
+  testExistingSource: (id: number) =>
+    request<SourceTestResult>(`/api/v1/admin/sources/${id}/test`, {
+      method: "POST",
+    }),
+
+  runSourceNow: (id: number) =>
+    request<SourceRunResult>(`/api/v1/admin/sources/${id}/run-now`, {
+      method: "POST",
+    })
 };
