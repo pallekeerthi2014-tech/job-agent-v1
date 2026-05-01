@@ -58,13 +58,14 @@ from app.services.auth import (
 )
 from app.services.emailer import send_password_reset_email, smtp_enabled
 from app.services.pipeline import run_daily_pipeline
-
-# Resume storage directory ÃÂ¢ÃÂÃÂ mounted as a Docker volume in production
-_RESUME_DIR = Path(os.getenv("RESUME_STORAGE_PATH", "/app/resumes"))
-
 from app.schemas.source import (
-    AdapterTypeList, SourceCreate, SourceRead, SourceRunResult,
-    SourceTestRequest, SourceTestResult, SourceUpdate,
+    AdapterTypeList,
+    SourceCreate,
+    SourceRead,
+    SourceRunResult,
+    SourceTestRequest,
+    SourceTestResult,
+    SourceUpdate,
 )
 from app.services.source_management import (
     create_source as svc_create_source,
@@ -77,6 +78,9 @@ from app.services.source_management import (
     update_source as svc_update_source,
 )
 from app.services.source_adapters.form_schemas import get_adapter_form_schemas
+
+# Resume storage directory — mounted as a Docker volume in production
+_RESUME_DIR = Path(os.getenv("RESUME_STORAGE_PATH", "/app/resumes"))
 
 router = APIRouter(prefix="/api/v1")
 
@@ -540,7 +544,7 @@ def run_daily_pipeline_endpoint(
     }
 
 
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Employee CRUD (admin) ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# ── Employee CRUD (admin) ─────────────────────────────────────────────────────
 
 @router.put("/admin/employees/{employee_id}", response_model=EmployeeRead)
 def update_employee(
@@ -573,7 +577,7 @@ def delete_employee(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ WhatsApp Alert Recipients ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# ── WhatsApp Alert Recipients ─────────────────────────────────────────────────
 
 @router.get("/admin/whatsapp-recipients", response_model=list[AlertRecipientRead])
 def list_whatsapp_recipients(
@@ -636,7 +640,7 @@ def delete_whatsapp_recipient(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Candidate resume upload ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# ── Candidate resume upload ───────────────────────────────────────────────────
 
 @router.post("/candidates/{candidate_id}/resume", response_model=CandidateRead)
 async def upload_resume(
@@ -701,7 +705,7 @@ def download_resume(
     return FileResponse(str(path), filename=candidate.resume_filename)
 
 
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Work queue: report a job as invalid/outdated/not-relevant ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# ── Work queue: report a job as invalid/outdated/not-relevant ─────────────────
 
 @router.post("/work-queues/{queue_id}/report", response_model=dict)
 def report_work_queue_item(
@@ -730,7 +734,7 @@ def report_work_queue_item(
     return {"status": "ok", "report_status": item.report_status}
 
 
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Analytics ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# ── Analytics ─────────────────────────────────────────────────────────────────
 
 @router.get("/analytics/overview")
 def analytics_overview(
@@ -816,10 +820,10 @@ def analytics_overview(
     }
 
 
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# ─────────────────────────────────────────────────────────────────────────────
 # Candidate Self-Service Portal
-# Routes prefixed /api/v1/portal/... ÃÂ¢ÃÂÃÂ accessible only to role="candidate" users
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# Routes prefixed /api/v1/portal/... — accessible only to role="candidate" users
+# ─────────────────────────────────────────────────────────────────────────────
 
 @router.post("/portal/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def candidate_register(payload: CandidateSelfRegister, db: Session = Depends(get_db)) -> TokenResponse:
@@ -877,7 +881,7 @@ def portal_update_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_candidate_user),
 ) -> CandidateRead:
-    """Candidate updates their own profile fields (not name or email ÃÂ¢ÃÂÃÂ admin controls those)."""
+    """Candidate updates their own profile fields (not name or email — admin controls those)."""
     candidate = db.get(Candidate, current_user.candidate_id)
     if candidate is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
@@ -926,7 +930,7 @@ async def portal_upload_resume(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_candidate_user),
 ) -> CandidateRead:
-    """Candidate uploads their own resume ÃÂ¢ÃÂÃÂ same extraction logic as admin route."""
+    """Candidate uploads their own resume — same extraction logic as admin route."""
     candidate = db.get(Candidate, current_user.candidate_id)
     if candidate is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
@@ -981,127 +985,132 @@ def portal_download_resume(
     return FileResponse(str(path), filename=candidate.resume_filename)
 
 
-# Phase 1: Source / Feed Management
+# ── Admin: Source / Feed Management ──────────────────────────────────────────
+# These endpoints power the admin "Sources" page. All are super-admin only.
 
 @router.get("/admin/source-types", response_model=AdapterTypeList)
-def get_source_types(
-    _current_user: User = Depends(require_super_admin),
-):
-    return AdapterTypeList(adapter_types=get_adapter_form_schemas())
+def admin_list_source_types(
+    _: User = Depends(require_super_admin),
+) -> AdapterTypeList:
+    """Return form schemas for every adapter type so the wizard can render type-specific forms."""
+    return AdapterTypeList(types=get_adapter_form_schemas())
 
 
 @router.get("/admin/sources", response_model=list[SourceRead])
-def list_sources_endpoint(
+def admin_list_sources(
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_super_admin),
-):
-    stats = svc_source_stats(db)
+    _: User = Depends(require_super_admin),
+) -> list[SourceRead]:
     sources = svc_list_sources(db)
-    result = []
-    for src in sources:
-        s = SourceRead.model_validate(src)
-        row = stats.get(src.name, {})
-        s.jobs_total = row.get("total", 0)
-        s.jobs_last_24h = row.get("last_24h", 0)
-        s.jobs_last_7d = row.get("last_7d", 0)
-        result.append(s)
-    return result
+    stats = svc_source_stats(db)
+    out: list[SourceRead] = []
+    for s in sources:
+        item = SourceRead.model_validate(s)
+        bucket = stats.get(s.name, {})
+        item.jobs_total = bucket.get("total", 0)
+        item.jobs_last_24h = bucket.get("last_24h", 0)
+        item.jobs_last_7d = bucket.get("last_7d", 0)
+        out.append(item)
+    return out
 
 
 @router.get("/admin/sources/{source_id}", response_model=SourceRead)
-def get_source_endpoint(
+def admin_get_source(
     source_id: int,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_super_admin),
-):
-    src = svc_get_source(db, source_id)
-    if src is None:
-        raise HTTPException(status_code=404, detail="Source not found")
-    stats = svc_source_stats(db)
-    s = SourceRead.model_validate(src)
-    row = stats.get(src.name, {})
-    s.jobs_total = row.get("total", 0)
-    s.jobs_last_24h = row.get("last_24h", 0)
-    s.jobs_last_7d = row.get("last_7d", 0)
-    return s
+    _: User = Depends(require_super_admin),
+) -> SourceRead:
+    source = svc_get_source(db, source_id)
+    if source is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    item = SourceRead.model_validate(source)
+    bucket = svc_source_stats(db).get(source.name, {})
+    item.jobs_total = bucket.get("total", 0)
+    item.jobs_last_24h = bucket.get("last_24h", 0)
+    item.jobs_last_7d = bucket.get("last_7d", 0)
+    return item
 
 
 @router.post("/admin/sources", response_model=SourceRead, status_code=status.HTTP_201_CREATED)
-def create_source_endpoint(
+def admin_create_source(
     payload: SourceCreate,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_super_admin),
-):
+    _: User = Depends(require_super_admin),
+) -> SourceRead:
     try:
-        src = svc_create_source(db, payload)
+        source = svc_create_source(db, payload)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    return SourceRead.model_validate(src)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return SourceRead.model_validate(source)
 
 
 @router.put("/admin/sources/{source_id}", response_model=SourceRead)
-def update_source_endpoint(
+def admin_update_source(
     source_id: int,
     payload: SourceUpdate,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_super_admin),
-):
+    _: User = Depends(require_super_admin),
+) -> SourceRead:
     try:
-        src = svc_update_source(db, source_id, payload)
+        source = svc_update_source(db, source_id, payload)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    if src is None:
-        raise HTTPException(status_code=404, detail="Source not found")
-    return SourceRead.model_validate(src)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    if source is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    return SourceRead.model_validate(source)
 
 
 @router.delete("/admin/sources/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_source_endpoint(
+def admin_delete_source(
     source_id: int,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_super_admin),
-):
+    _: User = Depends(require_super_admin),
+) -> Response:
     deleted = svc_delete_source(db, source_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Source not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/admin/sources/test", response_model=SourceTestResult)
-def test_source_config_endpoint(
+def admin_test_source_config(
     payload: SourceTestRequest,
-    _current_user: User = Depends(require_super_admin),
-):
-    return svc_test_source_config(
-        adapter_type=payload.adapter_type,
-        config=payload.config,
-        sample_size=3,
-    )
+    _: User = Depends(require_super_admin),
+) -> SourceTestResult:
+    """Dry-run an adapter config — no DB writes. Used by the wizard before save."""
+    return svc_test_source_config(adapter_type=payload.adapter_type, config=payload.config or {})
 
 
 @router.post("/admin/sources/{source_id}/test", response_model=SourceTestResult)
-def test_existing_source_endpoint(
+def admin_test_existing_source(
     source_id: int,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_super_admin),
-):
-    src = svc_get_source(db, source_id)
-    if src is None:
-        raise HTTPException(status_code=404, detail="Source not found")
+    _: User = Depends(require_super_admin),
+) -> SourceTestResult:
+    """Test a saved source's config against its live endpoint — no DB writes."""
+    source = svc_get_source(db, source_id)
+    if source is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
     return svc_test_source_config(
-        adapter_type=src.adapter_type,
-        config=src.config or {},
-        sample_size=3,
+        adapter_type=source.adapter_type,
+        config=source.config or {},
+        source_name=source.name,
     )
 
 
 @router.post("/admin/sources/{source_id}/run-now", response_model=SourceRunResult)
-def run_source_now_endpoint(
+def admin_run_source_now(
     source_id: int,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_super_admin),
-):
-    try:
-        return svc_run_source_now(db, source_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+    _: User = Depends(require_super_admin),
+) -> SourceRunResult:
+    """Synchronously fetch + persist new raw jobs for one source.
+
+    Skips normalization / scoring / queue creation — those run on the next
+    POST /admin/run-daily-pipeline. Use this to quickly verify a source you
+    just created or edited.
+    """
+    result = svc_run_source_now(db, source_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    return result
