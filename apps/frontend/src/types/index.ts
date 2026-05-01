@@ -165,7 +165,7 @@ export type UserUpdatePayload = {
   password?: string;
 };
 
-// Ã¢ÂÂÃ¢ÂÂ Phase 3 types Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Phase 3 types ─────────────────────────────────────────────────────────────
 
 export type AlertRecipient = {
   id: number;
@@ -222,7 +222,7 @@ export type WorkQueueReportPayload = {
   report_reason?: string | null;
 };
 
-// Ã¢ÂÂÃ¢ÂÂ Candidate Portal types Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Candidate Portal types ────────────────────────────────────────────────────
 
 export type CandidateSelfRegisterPayload = {
   name: string;
@@ -257,71 +257,69 @@ export type AnalyticsOverview = {
   top_candidates: { candidate_id: number; candidate_name: string; match_count: number; avg_score: number }[];
 };
 
-// âââ Phase 1: Source / Feed Management ââââââââââââââââââââââââââââââââââââââ
+// ── Phase 4: Source / Feed Management ────────────────────────────────────────
 
-export type FieldType =
-  | "string"
-  | "url"
-  | "secret"
-  | "number"
-  | "boolean"
-  | "string_list"
-  | "object";
+export type AdapterFieldType = "string" | "url" | "secret" | "number" | "boolean" | "string_list" | "object";
 
 export type AdapterFieldSchema = {
   name: string;
   label: string;
-  field_type: FieldType;
+  type: AdapterFieldType;
   required: boolean;
-  placeholder?: string;
-  default_value?: unknown;
-  options?: string[];
-  description?: string;
+  description?: string | null;
+  placeholder?: string | null;
+  default?: unknown;
+  options?: string[] | null;
 };
 
 export type AdapterTypeMeta = {
   adapter_type: string;
   label: string;
+  category: string;
   description: string;
   fields: AdapterFieldSchema[];
 };
 
 export type AdapterTypeList = {
-  adapter_types: AdapterTypeMeta[];
+  types: AdapterTypeMeta[];
 };
 
-export type SourceRead = {
+export type Source = {
   id: number;
   name: string;
   adapter_type: string;
   config: Record<string, unknown>;
   enabled: boolean;
-  created_at: string;
   last_run_at: string | null;
   last_error: string | null;
-  jobs_total: number;
-  jobs_last_24h: number;
-  jobs_last_7d: number;
+  created_at: string;
+  updated_at: string;
+  jobs_total: number | null;
+  jobs_last_24h: number | null;
+  jobs_last_7d: number | null;
 };
 
 export type SourceCreate = {
   name: string;
   adapter_type: string;
   config: Record<string, unknown>;
-  enabled?: boolean;
+  enabled: boolean;
 };
 
 export type SourceUpdate = {
-  name?: string;
-  config?: Record<string, unknown>;
-  enabled?: boolean;
+  name?: string | null;
+  adapter_type?: string | null;
+  config?: Record<string, unknown> | null;
+  enabled?: boolean | null;
 };
 
 export type SourceJobSample = {
   title: string;
-  company: string | null;
-  location: string | null;
-  apply_url: string | null;
+  company?: string | null;
+  location?: string | null;
+  apply_url?: string | null;
+  posted_date?: string | null;
+  external_job_id?: string | null;
 };
 
 export type SourceTestResult = {
@@ -329,8 +327,8 @@ export type SourceTestResult = {
   adapter_type: string;
   raw_jobs_returned: number;
   sample_jobs: SourceJobSample[];
+  error?: string | null;
   duration_ms: number;
-  error: string | null;
 };
 
 export type SourceRunResult = {
@@ -339,11 +337,6 @@ export type SourceRunResult = {
   success: boolean;
   raw_jobs_stored: number;
   jobs_skipped_irrelevant: number;
+  error?: string | null;
   duration_ms: number;
-  error: string | null;
-};
-
-export type SourceTestRequest = {
-  adapter_type: string;
-  config: Record<string, unknown>;
 };
