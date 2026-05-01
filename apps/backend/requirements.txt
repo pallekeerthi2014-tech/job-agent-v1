@@ -21,3 +21,5 @@ anthropic==0.53.0           # AI enrichment (Claude Haiku) — optional
 # ── Phase 3 additions ─────────────────────────────────────────────────────────
 pypdf>=4.0.0                # PDF text extraction for resume upload
 mammoth>=1.6.0              # DOCX text extraction for resume upload
+# ── Phase 4 additions ─────────────────────────────────────────────────────────
+beautifulsoup4>=4.12.0      # HTML parsing for LinkedIn + SimplyHired adapters
