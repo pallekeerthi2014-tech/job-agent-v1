@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-# ââ Source CRUD schemas ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── Source CRUD schemas ──────────────────────────────────────────────────────
 
 class SourceBase(BaseModel):
     """Fields shared by create/update/read for a JobSource."""
@@ -22,7 +22,7 @@ class SourceCreate(SourceBase):
 
 
 class SourceUpdate(BaseModel):
-    """All fields optional â partial update."""
+    """All fields optional — partial update."""
 
     name: str | None = Field(default=None, min_length=1, max_length=255)
     adapter_type: str | None = Field(default=None, min_length=1, max_length=100)
@@ -41,13 +41,13 @@ class SourceRead(SourceBase):
     created_at: datetime
     updated_at: datetime
 
-    # Roll-up stats â populated by the service layer (NOT a DB column).
+    # Roll-up stats — populated by the service layer (NOT a DB column).
     jobs_total: int | None = None
     jobs_last_24h: int | None = None
     jobs_last_7d: int | None = None
 
 
-# ââ Test connection / Run now ââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── Test connection / Run now ────────────────────────────────────────────────
 
 class SourceJobSample(BaseModel):
     """A trimmed-down preview of a single job returned by Test Connection."""
@@ -83,7 +83,7 @@ class SourceRunResult(BaseModel):
     duration_ms: int
 
 
-# ââ Adapter form-schema metadata âââââââââââââââââââââââââââââââââââââââââââââ
+# ── Adapter form-schema metadata ─────────────────────────────────────────────
 
 FieldType = Literal[
     "string",
@@ -120,13 +120,13 @@ class AdapterTypeMeta(BaseModel):
 
 
 class AdapterTypeList(BaseModel):
-    adapter_types: list[AdapterTypeMeta]
+    types: list[AdapterTypeMeta]
 
 
-# ââ Misc request bodies ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── Misc request bodies ──────────────────────────────────────────────────────
 
 class SourceTestRequest(BaseModel):
-    """Body for POST /admin/sources/test â dry-run an adapter config."""
+    """Body for POST /admin/sources/test — dry-run an adapter config."""
 
     adapter_type: str
     config: dict[str, Any] = Field(default_factory=dict)
