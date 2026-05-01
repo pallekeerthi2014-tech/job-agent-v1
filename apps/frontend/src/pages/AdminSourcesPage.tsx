@@ -12,10 +12,10 @@ import type {
   SourceUpdate,
 } from "../types";
 
-// ââ helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ helpers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 function fmtDate(dt: string | null): string {
-  if (!dt) return "â";
+  if (!dt) return "Ã¢ÂÂ";
   return new Date(dt).toLocaleString();
 }
 
@@ -31,7 +31,7 @@ function btnStyle(color: string): CSSProperties {
   };
 }
 
-// ââ result banners ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ result banners Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 function TestResultBanner({
   result, onClose,
@@ -47,23 +47,23 @@ function TestResultBanner({
       display: "flex", justifyContent: "space-between", alignItems: "flex-start",
     }}>
       <div>
-        <strong>{result.success ? "â Connection successful" : "â Connection failed"}</strong>
-        {" Â· "}{result.duration_seconds.toFixed(2)}s
+        <strong>{result.success ? "Ã¢ÂÂ Connection successful" : "Ã¢ÂÂ Connection failed"}</strong>
+        {" ÃÂ· "}{(result.duration_ms / 1000).toFixed(2)}s
         {result.error && <div style={{ color: "#ef4444", marginTop: 4 }}>{result.error}</div>}
-        {result.success && result.samples.length > 0 && (
+        {result.success && result.sample_jobs.length > 0 && (
           <div style={{ marginTop: 8 }}>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>
-              {result.jobs_found} jobs found Â· Sample:
+              {result.raw_jobs_returned} jobs found ÃÂ· Sample:
             </div>
-            {result.samples.map((s, i) => (
+            {result.sample_jobs.map((s, i) => (
               <div key={i} style={{ fontSize: 12, color: "#555", marginBottom: 2 }}>
-                â¢ {s.title} â {s.company}{s.location ? ` (${s.location})` : ""}
+                Ã¢ÂÂ¢ {s.title} Ã¢ÂÂ {s.company}{s.location ? ` (${s.location})` : ""}
               </div>
             ))}
           </div>
         )}
       </div>
-      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>â</button>
+      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>Ã¢ÂÂ</button>
     </div>
   );
 }
@@ -83,21 +83,21 @@ function RunResultBanner({
       display: "flex", justifyContent: "space-between", alignItems: "flex-start",
     }}>
       <div>
-        <strong>{ok ? "â Run complete" : "â Run failed"}</strong>
-        {" â "}<em>{result.source_name}</em>{" Â· "}{result.duration_seconds.toFixed(2)}s
+        <strong>{ok ? "Ã¢ÂÂ Run complete" : "Ã¢ÂÂ Run failed"}</strong>
+        {" Ã¢ÂÂ "}<em>{result.source_name}</em>{" ÃÂ· "}{(result.duration_ms / 1000).toFixed(2)}s
         {ok && (
           <span style={{ marginLeft: 8 }}>
-            {result.jobs_stored} new jobs stored ({result.jobs_fetched} fetched)
+            {result.raw_jobs_stored} new jobs stored ({result.raw_jobs_stored} fetched)
           </span>
         )}
         {result.error && <div style={{ color: "#ef4444", marginTop: 4 }}>{result.error}</div>}
       </div>
-      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>â</button>
+      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>Ã¢ÂÂ</button>
     </div>
   );
 }
 
-// ââ source table ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ source table Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 const TH: CSSProperties = {
   padding: "10px 14px", textAlign: "left", fontWeight: 600,
@@ -173,16 +173,16 @@ function SourceTable({
                 <td style={{ ...TD, textAlign: "center" }}>{src.jobs_last_7d}</td>
                 <td style={TD}>
                   {src.last_error ? (
-                    <span title={src.last_error} style={{ color: "#ef4444", fontSize: 11 }}>â  Error</span>
+                    <span title={src.last_error} style={{ color: "#ef4444", fontSize: 11 }}>Ã¢ÂÂ  Error</span>
                   ) : (
-                    <span style={{ color: "#22c55e", fontSize: 11 }}>â OK</span>
+                    <span style={{ color: "#22c55e", fontSize: 11 }}>Ã¢ÂÂ OK</span>
                   )}
                 </td>
                 <td style={TD}>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <button onClick={() => onEdit(src)} disabled={busy} style={btnStyle("#3b82f6")}>Edit</button>
-                    <button onClick={() => onTest(src)} disabled={busy} style={btnStyle("#8b5cf6")}>{busy ? "â¦" : "Test"}</button>
-                    <button onClick={() => onRunNow(src)} disabled={busy} style={btnStyle("#f59e0b")}>{busy ? "â¦" : "Run Now"}</button>
+                    <button onClick={() => onTest(src)} disabled={busy} style={btnStyle("#8b5cf6")}>{busy ? "Ã¢ÂÂ¦" : "Test"}</button>
+                    <button onClick={() => onRunNow(src)} disabled={busy} style={btnStyle("#f59e0b")}>{busy ? "Ã¢ÂÂ¦" : "Run Now"}</button>
                     <button onClick={() => onDelete(src)} disabled={busy} style={btnStyle("#ef4444")}>Delete</button>
                   </div>
                 </td>
@@ -195,7 +195,7 @@ function SourceTable({
   );
 }
 
-// ââ field input âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ field input Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 const INPUT_STYLE: CSSProperties = {
   width: "100%", padding: "8px 12px", border: "1px solid #d1d5db",
@@ -275,7 +275,7 @@ function FieldInput({
           value={String(value ?? field.default_value ?? "")}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">â select â</option>
+          <option value="">Ã¢ÂÂ select Ã¢ÂÂ</option>
           {field.options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
       </div>
@@ -296,7 +296,7 @@ function FieldInput({
   );
 }
 
-// ââ add/edit modal ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ add/edit modal Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 type WizardStep = 1 | 2 | 3;
 
@@ -330,7 +330,7 @@ function SourceModal({
     setBusy(true);
     setTestResult(null);
     apiClient
-      .testSourceConfig({ adapter_type: adapterType, config, sample_size: 3 })
+      .testSourceConfig({ adapter_type: adapterType, config })
       .then(setTestResult)
       .catch((e: Error) => setSaveError(e.message))
       .finally(() => setBusy(false));
@@ -389,7 +389,7 @@ function SourceModal({
             onClick={onClose}
             style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#aaa", lineHeight: 1 }}
           >
-            â
+            Ã¢ÂÂ
           </button>
         </div>
 
@@ -403,7 +403,7 @@ function SourceModal({
             </div>
           )}
 
-          {/* ââ Step 1: pick adapter type ââ */}
+          {/* Ã¢ÂÂÃ¢ÂÂ Step 1: pick adapter type Ã¢ÂÂÃ¢ÂÂ */}
           {step === 1 && (
             <div>
               <h4 style={{ margin: "0 0 16px", color: "#374151" }}>Select Adapter Type</h4>
@@ -439,13 +439,13 @@ function SourceModal({
                     cursor: adapterType ? "pointer" : "not-allowed",
                   }}
                 >
-                  Next â
+                  Next Ã¢ÂÂ
                 </button>
               </div>
             </div>
           )}
 
-          {/* ââ Step 2: config fields ââ */}
+          {/* Ã¢ÂÂÃ¢ÂÂ Step 2: config fields Ã¢ÂÂÃ¢ÂÂ */}
           {step === 2 && (
             <div>
               <h4 style={{ margin: "0 0 16px", color: "#374151" }}>
@@ -484,14 +484,14 @@ function SourceModal({
                   onChange={(e) => setEnabled(e.target.checked)}
                 />
                 <label htmlFor="src-enabled" style={{ fontSize: 13, cursor: "pointer" }}>
-                  Enabled â include in daily pipeline
+                  Enabled Ã¢ÂÂ include in daily pipeline
                 </label>
               </div>
 
               <div style={{ marginTop: 22, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 {!isEdit ? (
                   <button onClick={() => setStep(1)} style={{ ...btnStyle("#6b7280"), padding: "9px 20px", fontSize: 14 }}>
-                    â Back
+                    Ã¢ÂÂ Back
                   </button>
                 ) : <span />}
                 <div style={{ display: "flex", gap: 10 }}>
@@ -500,7 +500,7 @@ function SourceModal({
                       onClick={() => { setSaveError(null); setStep(3); }}
                       style={{ ...btnStyle("#8b5cf6"), padding: "9px 20px", fontSize: 14 }}
                     >
-                      Test First â
+                      Test First Ã¢ÂÂ
                     </button>
                   )}
                   <button
@@ -508,14 +508,14 @@ function SourceModal({
                     disabled={busy}
                     style={{ ...btnStyle("#22c55e"), padding: "9px 22px", fontSize: 14 }}
                   >
-                    {busy ? "Savingâ¦" : isEdit ? "Save Changes" : "Save Source"}
+                    {busy ? "SavingÃ¢ÂÂ¦" : isEdit ? "Save Changes" : "Save Source"}
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ââ Step 3: test connection ââ */}
+          {/* Ã¢ÂÂÃ¢ÂÂ Step 3: test connection Ã¢ÂÂÃ¢ÂÂ */}
           {step === 3 && (
             <div>
               <h4 style={{ margin: "0 0 8px", color: "#374151" }}>Test Connection</h4>
@@ -529,7 +529,7 @@ function SourceModal({
                 disabled={busy}
                 style={{ ...btnStyle("#8b5cf6"), padding: "10px 26px", fontSize: 14 }}
               >
-                {busy ? "Testingâ¦" : "â¶ Run Test"}
+                {busy ? "TestingÃ¢ÂÂ¦" : "Ã¢ÂÂ¶ Run Test"}
               </button>
 
               {testResult && (
@@ -540,14 +540,14 @@ function SourceModal({
 
               <div style={{ marginTop: 22, display: "flex", justifyContent: "space-between" }}>
                 <button onClick={() => setStep(2)} style={{ ...btnStyle("#6b7280"), padding: "9px 20px", fontSize: 14 }}>
-                  â Back
+                  Ã¢ÂÂ Back
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={busy}
                   style={{ ...btnStyle("#22c55e"), padding: "9px 22px", fontSize: 14 }}
                 >
-                  {busy ? "Savingâ¦" : "Save Source"}
+                  {busy ? "SavingÃ¢ÂÂ¦" : "Save Source"}
                 </button>
               </div>
             </div>
@@ -558,7 +558,7 @@ function SourceModal({
   );
 }
 
-// ââ main page âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ main page Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 export function AdminSourcesPage() {
   const [sources, setSources] = useState<SourceRead[]>([]);
@@ -632,7 +632,7 @@ export function AdminSourcesPage() {
         <div>
           <h2 style={{ margin: 0, fontSize: 22 }}>Feed Sources</h2>
           <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 14 }}>
-            Manage job ingestion sources Â· {sources.length} source{sources.length !== 1 ? "s" : ""} configured
+            Manage job ingestion sources ÃÂ· {sources.length} source{sources.length !== 1 ? "s" : ""} configured
           </p>
         </div>
         <button
@@ -654,7 +654,7 @@ export function AdminSourcesPage() {
           display: "flex", justifyContent: "space-between",
         }}>
           <span style={{ color: "#dc2626" }}>{pageError}</span>
-          <button onClick={() => setPageError(null)} style={{ background: "none", border: "none", cursor: "pointer" }}>â</button>
+          <button onClick={() => setPageError(null)} style={{ background: "none", border: "none", cursor: "pointer" }}>Ã¢ÂÂ</button>
         </div>
       )}
       {runResult && <RunResultBanner result={runResult} onClose={() => setRunResult(null)} />}
@@ -662,7 +662,7 @@ export function AdminSourcesPage() {
 
       {/* table */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Loading sourcesâ¦</div>
+        <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Loading sourcesÃ¢ÂÂ¦</div>
       ) : (
         <SourceTable
           sources={sources}
