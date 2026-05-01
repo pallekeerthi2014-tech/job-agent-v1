@@ -7,7 +7,9 @@ from app.services.source_adapters.base import JobSourceAdapter
 from app.services.source_adapters.greenhouse import GreenhouseBoardAdapter
 from app.services.source_adapters.html_careers import GenericHTMLCareersPageAdapter
 from app.services.source_adapters.lever import LeverPostingsAdapter
-from app.services.source_adapters.live_feeds import LiveFeedAdapter  # Phase 2
+from app.services.source_adapters.linkedin import LinkedInJobsAdapter
+from app.services.source_adapters.live_feeds import LiveFeedAdapter
+from app.services.source_adapters.simplyhired import SimplyHiredAdapter
 from app.services.source_adapters.template import ConfigurableSourceAdapterTemplate
 from app.services.source_adapters.workday import WorkdayJobsAdapter
 
@@ -18,7 +20,9 @@ ADAPTER_REGISTRY: dict[str, type[JobSourceAdapter]] = {
     "configurable_template": ConfigurableSourceAdapterTemplate,
     "greenhouse_board": GreenhouseBoardAdapter,
     "lever_postings": LeverPostingsAdapter,
-    "live_feed": LiveFeedAdapter,  # Phase 2 — Indeed RSS, Dice RSS, USAJobs, RemoteOK
+    "linkedin_jobs": LinkedInJobsAdapter,
+    "live_feed": LiveFeedAdapter,
+    "simplyhired_jobs": SimplyHiredAdapter,
     "workday_jobs": WorkdayJobsAdapter,
 }
 
