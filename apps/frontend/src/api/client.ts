@@ -1,4 +1,5 @@
 import type {
+  AdapterTypeList,
   AlertRecipient,
   AlertRecipientCreatePayload,
   AlertRecipientUpdatePayload,
@@ -21,18 +22,16 @@ import type {
   Match,
   PaginatedResponse,
   ResetPasswordPayload,
+  Source,
+  SourceCreate,
+  SourceRunResult,
+  SourceTestResult,
+  SourceUpdate,
   User,
   UserCreatePayload,
   UserUpdatePayload,
   WorkQueueItem,
-  WorkQueueReportPayload,
-  AdapterTypeList,
-  SourceCreate,
-  SourceRead,
-  SourceRunResult,
-  SourceTestRequest,
-  SourceTestResult,
-  SourceUpdate,
+  WorkQueueReportPayload
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -61,7 +60,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options
   });
 
-  // 204 No Content ÃÂ¢ÃÂÃÂ return empty object (DELETE endpoints)
+  // 204 No Content — return empty object (DELETE endpoints)
   if (response.status === 204) {
     return {} as T;
   }
@@ -145,7 +144,7 @@ export const apiClient = {
       body: JSON.stringify(payload)
     }),
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Phase 3: Candidate CRUD ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ── Phase 3: Candidate CRUD ─────────────────────────────────────────────────
   createCandidate: (payload: CandidateCreatePayload) =>
     request<Candidate>("/api/v1/candidates", {
       method: "POST",
@@ -159,7 +158,7 @@ export const apiClient = {
   deleteCandidate: (id: number) =>
     request<{ message: string }>(`/api/v1/candidates/${id}`, { method: "DELETE" }),
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Phase 3: Candidate preferences & skills ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ── Phase 3: Candidate preferences & skills ─────────────────────────────────
   // Backend uses flat routes: GET /candidate-preferences (all), PUT /candidate-preferences/{id}
   getCandidatePreferences: (candidateId: number) =>
     request<CandidatePreference[]>("/api/v1/candidate-preferences").then(
@@ -174,7 +173,7 @@ export const apiClient = {
   getCandidateSkills: (candidateId: number) =>
     request<CandidateSkill[]>(`/api/v1/candidate-skills?candidate_id=${candidateId}`),
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Phase 3: Resume upload ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ── Phase 3: Resume upload ──────────────────────────────────────────────────
   uploadResume: (candidateId: number, file: File) => {
     const token = getStoredAccessToken();
     const formData = new FormData();
@@ -191,14 +190,14 @@ export const apiClient = {
   getResumeUrl: (candidateId: number) =>
     `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Phase 3: Work queue reporting ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ── Phase 3: Work queue reporting ───────────────────────────────────────────
   reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>
     request<WorkQueueItem>(`/api/v1/work-queues/${queueId}/report`, {
       method: "POST",
       body: JSON.stringify(payload)
     }),
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Phase 3: WhatsApp recipient management ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ── Phase 3: WhatsApp recipient management ───────────────────────────────────
   getWhatsappRecipients: () =>
     request<AlertRecipient[]>("/api/v1/admin/whatsapp-recipients"),
   createWhatsappRecipient: (payload: AlertRecipientCreatePayload) =>
@@ -214,7 +213,7 @@ export const apiClient = {
   deleteWhatsappRecipient: (id: number) =>
     request<{ message: string }>(`/api/v1/admin/whatsapp-recipients/${id}`, { method: "DELETE" }),
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Phase 3: Employee management ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ── Phase 3: Employee management ─────────────────────────────────────────────
   updateEmployee: (id: number, payload: { name?: string; email?: string }) =>
     request<Employee>(`/api/v1/admin/employees/${id}`, {
       method: "PUT",
@@ -223,11 +222,11 @@ export const apiClient = {
   deleteEmployee: (id: number) =>
     request<{ message: string }>(`/api/v1/admin/employees/${id}`, { method: "DELETE" }),
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Phase 3: Analytics ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ── Phase 3: Analytics ───────────────────────────────────────────────────────
   getAnalyticsOverview: () =>
     request<AnalyticsOverview>("/api/v1/analytics/overview"),
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Candidate Portal ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ── Candidate Portal ─────────────────────────────────────────────────────────
   candidateRegister: (payload: CandidateSelfRegisterPayload) =>
     request<LoginResponse>("/api/v1/portal/register", {
       method: "POST",
@@ -260,49 +259,32 @@ export const apiClient = {
   portalResumeUrl: () =>
     `${API_BASE_URL}/api/v1/portal/me/resume`,
 
-  // Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Source / Feed Management Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+  // ── Phase 4: Source / Feed Management ─────────────────────────────────────
   listSourceTypes: () =>
     request<AdapterTypeList>("/api/v1/admin/source-types"),
-
   listSources: () =>
-    request<SourceRead[]>("/api/v1/admin/sources"),
-
+    request<Source[]>("/api/v1/admin/sources"),
   getSource: (id: number) =>
-    request<SourceRead>(`/api/v1/admin/sources/${id}`),
-
+    request<Source>(`/api/v1/admin/sources/${id}`),
   createSource: (payload: SourceCreate) =>
-    request<SourceRead>("/api/v1/admin/sources", {
+    request<Source>("/api/v1/admin/sources", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     }),
-
   updateSource: (id: number, payload: SourceUpdate) =>
-    request<SourceRead>(`/api/v1/admin/sources/${id}`, {
+    request<Source>(`/api/v1/admin/sources/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     }),
-
   deleteSource: (id: number) =>
-    request<Record<string, never>>(`/api/v1/admin/sources/${id}`, {
-      method: "DELETE",
-    }),
-
-  testSourceConfig: (payload: SourceTestRequest) =>
+    request<{ message: string }>(`/api/v1/admin/sources/${id}`, { method: "DELETE" }),
+  testSourceConfig: (adapter_type: string, config: Record<string, unknown>) =>
     request<SourceTestResult>("/api/v1/admin/sources/test", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ adapter_type, config })
     }),
-
   testExistingSource: (id: number) =>
-    request<SourceTestResult>(`/api/v1/admin/sources/${id}/test`, {
-      method: "POST",
-    }),
-
+    request<SourceTestResult>(`/api/v1/admin/sources/${id}/test`, { method: "POST" }),
   runSourceNow: (id: number) =>
-    request<SourceRunResult>(`/api/v1/admin/sources/${id}/run-now`, {
-      method: "POST",
-    })
+    request<SourceRunResult>(`/api/v1/admin/sources/${id}/run`, { method: "POST" })
 };
