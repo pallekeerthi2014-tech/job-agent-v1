@@ -3,6 +3,8 @@ from app.services.source_adapters.base import JobRecord, JobSourceAdapter
 from app.services.source_adapters.greenhouse import GreenhouseBoardAdapter
 from app.services.source_adapters.html_careers import GenericHTMLCareersPageAdapter
 from app.services.source_adapters.lever import LeverPostingsAdapter
+from app.services.source_adapters.linkedin import LinkedInJobsAdapter
+from app.services.source_adapters.simplyhired import SimplyHiredAdapter
 from app.services.source_adapters.template import ConfigurableSourceAdapterTemplate
 from app.services.source_adapters.workday import WorkdayJobsAdapter
 
@@ -14,5 +16,7 @@ __all__ = [
     "JobRecord",
     "JobSourceAdapter",
     "LeverPostingsAdapter",
+    "LinkedInJobsAdapter",
+    "SimplyHiredAdapter",
     "WorkdayJobsAdapter",
 ]
