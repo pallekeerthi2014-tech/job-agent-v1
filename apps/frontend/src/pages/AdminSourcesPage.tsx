@@ -1,690 +1,835 @@
-import { type CSSProperties, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
 import { apiClient } from "../api/client";
 import type {
   AdapterFieldSchema,
   AdapterTypeMeta,
-  AdapterTypeList,
-  SourceCreate,
-  SourceRead,
+  Source,
+  SourceJobSample,
   SourceRunResult,
-  SourceTestRequest,
   SourceTestResult,
-  SourceUpdate,
 } from "../types";
 
-// Ã¢ÂÂÃ¢ÂÂ helpers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtDate(dt: string | null): string {
-  if (!dt) return "Ã¢ÂÂ";
-  return new Date(dt).toLocaleString();
+function fmtDate(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
 }
 
-function adapterLabel(type: string, types: AdapterTypeMeta[]): string {
-  return types.find((t) => t.adapter_type === type)?.label ?? type;
+function fmtMs(ms: number) {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
 }
 
-function btnStyle(color: string): CSSProperties {
-  return {
-    background: color, color: "#fff", border: "none",
-    borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12,
-    opacity: 1,
-  };
-}
+// Filter fields that go in step 3 (title filters) out of step 2 (core config)
+const TITLE_FILTER_NAMES = new Set(["include_titles", "exclude_titles"]);
 
-// Ã¢ÂÂÃ¢ÂÂ result banners Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-
-function TestResultBanner({
-  result, onClose,
-}: {
-  result: SourceTestResult;
-  onClose: () => void;
-}) {
-  return (
-    <div style={{
-      background: result.success ? "#f0fdf4" : "#fef2f2",
-      border: `1px solid ${result.success ? "#86efac" : "#fca5a5"}`,
-      borderRadius: 8, padding: "12px 16px", marginBottom: 16,
-      display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-    }}>
-      <div>
-        <strong>{result.success ? "Ã¢ÂÂ Connection successful" : "Ã¢ÂÂ Connection failed"}</strong>
-        {" ÃÂ· "}{(result.duration_ms / 1000).toFixed(2)}s
-        {result.error && <div style={{ color: "#ef4444", marginTop: 4 }}>{result.error}</div>}
-        {result.success && result.sample_jobs.length > 0 && (
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>
-              {result.raw_jobs_returned} jobs found ÃÂ· Sample:
-            </div>
-            {result.sample_jobs.map((s, i) => (
-              <div key={i} style={{ fontSize: 12, color: "#555", marginBottom: 2 }}>
-                Ã¢ÂÂ¢ {s.title} Ã¢ÂÂ {s.company}{s.location ? ` (${s.location})` : ""}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>Ã¢ÂÂ</button>
-    </div>
-  );
-}
-
-function RunResultBanner({
-  result, onClose,
-}: {
-  result: SourceRunResult;
-  onClose: () => void;
-}) {
-  const ok = !result.error;
-  return (
-    <div style={{
-      background: ok ? "#f0fdf4" : "#fef2f2",
-      border: `1px solid ${ok ? "#86efac" : "#fca5a5"}`,
-      borderRadius: 8, padding: "12px 16px", marginBottom: 16,
-      display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-    }}>
-      <div>
-        <strong>{ok ? "Ã¢ÂÂ Run complete" : "Ã¢ÂÂ Run failed"}</strong>
-        {" Ã¢ÂÂ "}<em>{result.source_name}</em>{" ÃÂ· "}{(result.duration_ms / 1000).toFixed(2)}s
-        {ok && (
-          <span style={{ marginLeft: 8 }}>
-            {result.raw_jobs_stored} new jobs stored ({result.raw_jobs_stored} fetched)
-          </span>
-        )}
-        {result.error && <div style={{ color: "#ef4444", marginTop: 4 }}>{result.error}</div>}
-      </div>
-      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>Ã¢ÂÂ</button>
-    </div>
-  );
-}
-
-// Ã¢ÂÂÃ¢ÂÂ source table Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-
-const TH: CSSProperties = {
-  padding: "10px 14px", textAlign: "left", fontWeight: 600,
-  fontSize: 13, color: "#555", borderBottom: "2px solid #e5e7eb",
-};
-const TD: CSSProperties = {
-  padding: "10px 14px", fontSize: 13,
-  borderBottom: "1px solid #f3f4f6", verticalAlign: "middle",
-};
-
-function SourceTable({
-  sources, adapterTypes, actionBusy, onEdit, onToggle, onDelete, onTest, onRunNow,
-}: {
-  sources: SourceRead[];
-  adapterTypes: AdapterTypeMeta[];
-  actionBusy: number | null;
-  onEdit: (s: SourceRead) => void;
-  onToggle: (s: SourceRead) => void;
-  onDelete: (s: SourceRead) => void;
-  onTest: (s: SourceRead) => void;
-  onRunNow: (s: SourceRead) => void;
-}) {
-  if (sources.length === 0) {
-    return (
-      <div style={{ textAlign: "center", padding: 60, color: "#888" }}>
-        No sources configured yet. Click <strong>+ Add Source</strong> to get started.
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{
-        width: "100%", borderCollapse: "collapse", background: "#fff",
-        borderRadius: 8, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-      }}>
-        <thead style={{ background: "#f9fafb" }}>
-          <tr>
-            {["Name","Adapter","Enabled","Last Run","Total","24h","7d","Status","Actions"].map(h => (
-              <th key={h} style={TH}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sources.map((src) => {
-            const busy = actionBusy === src.id;
-            return (
-              <tr key={src.id} style={{ opacity: busy ? 0.6 : 1 }}>
-                <td style={{ ...TD, fontWeight: 600 }}>{src.name}</td>
-                <td style={TD}>
-                  <span style={{
-                    background: "#e0e7ff", color: "#3730a3",
-                    padding: "2px 8px", borderRadius: 12, fontSize: 11,
-                  }}>
-                    {adapterLabel(src.adapter_type, adapterTypes)}
-                  </span>
-                </td>
-                <td style={TD}>
-                  <button
-                    onClick={() => onToggle(src)}
-                    style={{
-                      background: src.enabled ? "#22c55e" : "#d1d5db",
-                      color: "#fff", border: "none", borderRadius: 12,
-                      padding: "3px 10px", cursor: "pointer", fontSize: 12,
-                    }}
-                  >
-                    {src.enabled ? "On" : "Off"}
-                  </button>
-                </td>
-                <td style={{ ...TD, color: "#888", fontSize: 12 }}>{fmtDate(src.last_run_at)}</td>
-                <td style={{ ...TD, textAlign: "center" }}>{src.jobs_total}</td>
-                <td style={{ ...TD, textAlign: "center" }}>{src.jobs_last_24h}</td>
-                <td style={{ ...TD, textAlign: "center" }}>{src.jobs_last_7d}</td>
-                <td style={TD}>
-                  {src.last_error ? (
-                    <span title={src.last_error} style={{ color: "#ef4444", fontSize: 11 }}>Ã¢ÂÂ  Error</span>
-                  ) : (
-                    <span style={{ color: "#22c55e", fontSize: 11 }}>Ã¢ÂÂ OK</span>
-                  )}
-                </td>
-                <td style={TD}>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => onEdit(src)} disabled={busy} style={btnStyle("#3b82f6")}>Edit</button>
-                    <button onClick={() => onTest(src)} disabled={busy} style={btnStyle("#8b5cf6")}>{busy ? "Ã¢ÂÂ¦" : "Test"}</button>
-                    <button onClick={() => onRunNow(src)} disabled={busy} style={btnStyle("#f59e0b")}>{busy ? "Ã¢ÂÂ¦" : "Run Now"}</button>
-                    <button onClick={() => onDelete(src)} disabled={busy} style={btnStyle("#ef4444")}>Delete</button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// Ã¢ÂÂÃ¢ÂÂ field input Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-
-const INPUT_STYLE: CSSProperties = {
-  width: "100%", padding: "8px 12px", border: "1px solid #d1d5db",
-  borderRadius: 6, fontSize: 13, boxSizing: "border-box",
-};
+// ── Field renderer ───────────────────────────────────────────────────────────
 
 function FieldInput({
-  field, value, onChange,
+  field,
+  value,
+  onChange,
 }: {
   field: AdapterFieldSchema;
   value: unknown;
-  onChange: (v: unknown) => void;
+  onChange: (val: unknown) => void;
 }) {
-  const label = (
-    <label style={{ display: "block", fontWeight: 600, fontSize: 13, marginBottom: 4 }}>
-      {field.label}
-      {field.required && <span style={{ color: "#ef4444" }}> *</span>}
-      {field.description && (
-        <span style={{ fontWeight: 400, color: "#888", marginLeft: 6, fontSize: 12 }}>
-          {field.description}
-        </span>
-      )}
-    </label>
-  );
+  const strVal = value == null ? "" : String(value);
 
-  if (field.field_type === "boolean") {
+  if (field.type === "boolean") {
     return (
-      <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
         <input
           type="checkbox"
-          checked={Boolean(value ?? field.default_value ?? false)}
+          checked={Boolean(value)}
           onChange={(e) => onChange(e.target.checked)}
         />
-        {label}
-      </div>
+        <span style={{ fontSize: "0.9rem" }}>{field.description ?? field.label}</span>
+      </label>
     );
   }
 
-  if (field.field_type === "string_list") {
-    const arr = Array.isArray(value) ? (value as string[]).join(", ") : String(value ?? "");
+  if (field.type === "string_list") {
+    const listVal = Array.isArray(value) ? (value as string[]).join("\n") : strVal;
     return (
-      <div style={{ marginBottom: 14 }}>
-        {label}
-        <input
-          style={INPUT_STYLE}
-          value={arr}
-          placeholder={field.placeholder ?? "comma-separated values"}
-          onChange={(e) =>
-            onChange(e.target.value.split(",").map((s) => s.trim()).filter(Boolean))
+      <textarea
+        rows={3}
+        value={listVal}
+        placeholder={field.placeholder ?? "One value per line"}
+        onChange={(e) =>
+          onChange(
+            e.target.value
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          )
+        }
+        style={textareaStyle}
+      />
+    );
+  }
+
+  if (field.type === "object") {
+    return (
+      <textarea
+        rows={4}
+        value={typeof value === "object" ? JSON.stringify(value, null, 2) : strVal}
+        placeholder={field.placeholder ?? '{"key": "value"}'}
+        onChange={(e) => {
+          try {
+            onChange(JSON.parse(e.target.value));
+          } catch {
+            onChange(e.target.value);
           }
-        />
-      </div>
+        }}
+        style={textareaStyle}
+      />
     );
   }
 
-  if (field.field_type === "number") {
-    return (
-      <div style={{ marginBottom: 14 }}>
-        {label}
-        <input
-          type="number"
-          style={INPUT_STYLE}
-          value={String(value ?? field.default_value ?? "")}
-          placeholder={field.placeholder}
-          onChange={(e) => onChange(Number(e.target.value))}
-        />
-      </div>
-    );
-  }
-
-  if (field.options && field.options.length > 0) {
-    return (
-      <div style={{ marginBottom: 14 }}>
-        {label}
-        <select
-          style={INPUT_STYLE}
-          value={String(value ?? field.default_value ?? "")}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          <option value="">Ã¢ÂÂ select Ã¢ÂÂ</option>
-          {field.options.map((o) => <option key={o} value={o}>{o}</option>)}
-        </select>
-      </div>
-    );
-  }
+  const inputType =
+    field.type === "secret"
+      ? "password"
+      : field.type === "url"
+        ? "url"
+        : field.type === "number"
+          ? "number"
+          : "text";
 
   return (
-    <div style={{ marginBottom: 14 }}>
-      {label}
-      <input
-        type={field.field_type === "secret" ? "password" : "text"}
-        style={INPUT_STYLE}
-        value={String(value ?? field.default_value ?? "")}
-        placeholder={field.placeholder}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
+    <input
+      type={inputType}
+      value={strVal}
+      placeholder={field.placeholder ?? ""}
+      required={field.required}
+      onChange={(e) =>
+        onChange(field.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value)
+      }
+      style={inputStyle}
+    />
   );
 }
 
-// Ã¢ÂÂÃ¢ÂÂ add/edit modal Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+const inputStyle: React.CSSProperties = {
+  padding: "10px 14px",
+  borderRadius: 12,
+  border: "1px solid var(--brand-border)",
+  background: "rgba(255,255,255,0.9)",
+  width: "100%",
+  fontSize: "0.95rem",
+};
 
-type WizardStep = 1 | 2 | 3;
+const textareaStyle: React.CSSProperties = {
+  ...inputStyle,
+  resize: "vertical",
+  fontFamily: "inherit",
+};
 
-function SourceModal({
-  source, adapterTypes, onClose, onSaved,
-}: {
-  source: SourceRead | null;
-  adapterTypes: AdapterTypeMeta[];
+// ── Wizard ───────────────────────────────────────────────────────────────────
+
+type WizardMode = "add" | "edit";
+
+type WizardProps = {
+  mode: WizardMode;
+  sourceTypes: AdapterTypeMeta[];
+  initialSource?: Source | null;
   onClose: () => void;
   onSaved: () => void;
-}) {
-  const isEdit = !!source;
-  const [step, setStep] = useState<WizardStep>(isEdit ? 2 : 1);
-  const [adapterType, setAdapterType] = useState(source?.adapter_type ?? "");
-  const [name, setName] = useState(source?.name ?? "");
+};
+
+function SourceWizard({ mode, sourceTypes, initialSource, onClose, onSaved }: WizardProps) {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(mode === "edit" ? 2 : 1);
+  const [selectedType, setSelectedType] = useState<string>(initialSource?.adapter_type ?? "");
+  const [sourceName, setSourceName] = useState(initialSource?.name ?? "");
+  const [enabled, setEnabled] = useState(initialSource?.enabled ?? true);
   const [config, setConfig] = useState<Record<string, unknown>>(
-    source?.config ?? {}
+    (initialSource?.config as Record<string, unknown>) ?? {}
   );
-  const [enabled, setEnabled] = useState(source?.enabled ?? true);
   const [busy, setBusy] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<SourceTestResult | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const selectedMeta = adapterTypes.find((t) => t.adapter_type === adapterType);
+  const meta = sourceTypes.find((t) => t.adapter_type === selectedType);
+  const coreFields = meta?.fields.filter((f) => !TITLE_FILTER_NAMES.has(f.name)) ?? [];
+  const filterFields = meta?.fields.filter((f) => TITLE_FILTER_NAMES.has(f.name)) ?? [];
 
-  const handleFieldChange = (fieldName: string, val: unknown) =>
-    setConfig((prev) => ({ ...prev, [fieldName]: val }));
+  function setField(name: string, val: unknown) {
+    setConfig((prev) => ({ ...prev, [name]: val }));
+  }
 
-  const handleTest = () => {
-    if (!adapterType) return;
+  async function handleTest() {
+    if (!meta) return;
     setBusy(true);
+    setSaveError(null);
     setTestResult(null);
-    apiClient
-      .testSourceConfig({ adapter_type: adapterType, config })
-      .then(setTestResult)
-      .catch((e: Error) => setSaveError(e.message))
-      .finally(() => setBusy(false));
-  };
-
-  const handleSave = () => {
-    if (!name.trim() || !adapterType) {
-      setSaveError("Source name and adapter type are required.");
-      return;
+    try {
+      const result = await apiClient.testSourceConfig(selectedType, config);
+      setTestResult(result);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Test failed");
+    } finally {
+      setBusy(false);
     }
-    setBusy(true);
-    const p: Promise<SourceRead> = isEdit
-      ? apiClient.updateSource(source!.id, { name: name.trim(), config, enabled } as SourceUpdate)
-      : apiClient.createSource({ name: name.trim(), adapter_type: adapterType, config, enabled } as SourceCreate);
-    p.then(() => onSaved())
-      .catch((e: Error) => setSaveError(e.message))
-      .finally(() => setBusy(false));
-  };
+  }
 
-  const stepLabel = (s: WizardStep) =>
-    s === 1 ? "Adapter" : s === 2 ? "Config" : "Test";
+  async function handleSave() {
+    setBusy(true);
+    setSaveError(null);
+    try {
+      if (mode === "add") {
+        await apiClient.createSource({ name: sourceName, adapter_type: selectedType, config, enabled });
+      } else if (initialSource) {
+        await apiClient.updateSource(initialSource.id, { name: sourceName, config, enabled });
+      }
+      onSaved();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-    }}>
-      <div style={{
-        background: "#fff", borderRadius: 12, width: 660, maxWidth: "95vw",
-        maxHeight: "90vh", overflowY: "auto",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-      }}>
-        {/* header */}
-        <div style={{
-          padding: "20px 24px 16px", borderBottom: "1px solid #e5e7eb",
-          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-        }}>
+    <div style={overlayStyle}>
+      <div style={modalStyle}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>
-            <h3 style={{ margin: 0 }}>{isEdit ? `Edit: ${source!.name}` : "Add Source"}</h3>
-            {!isEdit && (
-              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                {([1, 2, 3] as WizardStep[]).map((s) => (
-                  <span key={s} style={{
-                    fontSize: 12, padding: "2px 12px", borderRadius: 12,
-                    background: step === s ? "#3b82f6" : step > s ? "#bbf7d0" : "#e5e7eb",
-                    color: step === s ? "#fff" : step > s ? "#166534" : "#555",
-                    fontWeight: step === s ? 600 : 400,
-                  }}>
-                    {s}. {stepLabel(s)}
-                  </span>
-                ))}
-              </div>
-            )}
+            <p className="eyebrow" style={{ marginBottom: 2 }}>
+              {mode === "add" ? "Add Source" : `Edit — ${initialSource?.name}`}
+            </p>
+            <h3 style={{ margin: 0, fontSize: "1.15rem" }}>
+              {step === 1
+                ? "Choose adapter type"
+                : step === 2
+                  ? "Configure connection"
+                  : step === 3
+                    ? "Title filters"
+                    : "Test & save"}
+            </h3>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#aaa", lineHeight: 1 }}
-          >
-            Ã¢ÂÂ
-          </button>
+          <button onClick={onClose} style={closeBtnStyle}>✕</button>
         </div>
 
-        <div style={{ padding: "20px 24px" }}>
-          {saveError && (
-            <div style={{
-              background: "#fef2f2", border: "1px solid #fca5a5",
-              borderRadius: 8, padding: "10px 14px", marginBottom: 16, color: "#dc2626",
-            }}>
-              {saveError}
-            </div>
-          )}
-
-          {/* Ã¢ÂÂÃ¢ÂÂ Step 1: pick adapter type Ã¢ÂÂÃ¢ÂÂ */}
-          {step === 1 && (
-            <div>
-              <h4 style={{ margin: "0 0 16px", color: "#374151" }}>Select Adapter Type</h4>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
-                gap: 10,
-              }}>
-                {adapterTypes.map((t) => (
-                  <div
-                    key={t.adapter_type}
-                    onClick={() => setAdapterType(t.adapter_type)}
-                    style={{
-                      border: `2px solid ${adapterType === t.adapter_type ? "#3b82f6" : "#e5e7eb"}`,
-                      borderRadius: 8, padding: "12px 14px", cursor: "pointer",
-                      background: adapterType === t.adapter_type ? "#eff6ff" : "#fff",
-                      transition: "border-color 0.1s",
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{t.label}</div>
-                    <div style={{ fontSize: 11, color: "#888", lineHeight: 1.4 }}>{t.description}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-                <button
-                  onClick={() => adapterType && setStep(2)}
-                  disabled={!adapterType}
+        {/* Step 1 — Pick adapter type */}
+        {step === 1 && (
+          <div>
+            <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
+              {sourceTypes.map((t) => (
+                <label
+                  key={t.adapter_type}
                   style={{
-                    ...btnStyle("#3b82f6"),
-                    padding: "9px 22px", fontSize: 14,
-                    opacity: adapterType ? 1 : 0.4,
-                    cursor: adapterType ? "pointer" : "not-allowed",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    padding: "14px 16px",
+                    borderRadius: 14,
+                    border: `2px solid ${selectedType === t.adapter_type ? "var(--brand-green)" : "var(--brand-border)"}`,
+                    background: selectedType === t.adapter_type ? "var(--brand-green-soft)" : "rgba(255,255,255,0.9)",
+                    cursor: "pointer",
                   }}
                 >
-                  Next Ã¢ÂÂ
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Ã¢ÂÂÃ¢ÂÂ Step 2: config fields Ã¢ÂÂÃ¢ÂÂ */}
-          {step === 2 && (
-            <div>
-              <h4 style={{ margin: "0 0 16px", color: "#374151" }}>
-                Configure: {selectedMeta?.label ?? adapterType}
-              </h4>
-
-              {/* source name */}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontWeight: 600, fontSize: 13, marginBottom: 4 }}>
-                  Source Name <span style={{ color: "#ef4444" }}>*</span>
+                  <input
+                    type="radio"
+                    name="adapter_type"
+                    value={t.adapter_type}
+                    checked={selectedType === t.adapter_type}
+                    onChange={() => setSelectedType(t.adapter_type)}
+                    style={{ marginTop: 3 }}
+                  />
+                  <div>
+                    <strong style={{ fontSize: "0.95rem" }}>{t.label}</strong>
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        fontSize: "0.72rem",
+                        padding: "2px 7px",
+                        borderRadius: 8,
+                        background: "var(--brand-green-soft)",
+                        color: "var(--brand-green-dark)",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.1em",
+                      }}
+                    >
+                      {t.category}
+                    </span>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.85rem", color: "var(--brand-muted)" }}>{t.description}</p>
+                  </div>
                 </label>
+              ))}
+            </div>
+            <div style={footerStyle}>
+              <button onClick={onClose} style={secondaryBtnStyle}>Cancel</button>
+              <button
+                className="primary-button"
+                disabled={!selectedType}
+                onClick={() => setStep(2)}
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2 — Core config fields */}
+        {step === 2 && meta && (
+          <div>
+            <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
+              <div style={fieldGroupStyle}>
+                <label style={labelStyle}>Source name *</label>
                 <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Clover Health Greenhouse"
-                  style={INPUT_STYLE}
+                  type="text"
+                  value={sourceName}
+                  placeholder={`e.g. ${meta.label}`}
+                  required
+                  onChange={(e) => setSourceName(e.target.value)}
+                  style={inputStyle}
                 />
+                <small style={{ color: "var(--brand-muted)" }}>Unique display name for this feed.</small>
               </div>
 
-              {/* dynamic adapter fields */}
-              {selectedMeta?.fields.map((field) => (
-                <FieldInput
-                  key={field.name}
-                  field={field}
-                  value={config[field.name]}
-                  onChange={(v) => handleFieldChange(field.name, v)}
-                />
+              {coreFields.map((field) => (
+                <div key={field.name} style={fieldGroupStyle}>
+                  <label style={labelStyle}>
+                    {field.label}
+                    {field.required ? " *" : ""}
+                  </label>
+                  <FieldInput
+                    field={field}
+                    value={config[field.name] ?? field.default ?? ""}
+                    onChange={(val) => setField(field.name, val)}
+                  />
+                  {field.description && field.type !== "boolean" && (
+                    <small style={{ color: "var(--brand-muted)" }}>{field.description}</small>
+                  )}
+                </div>
               ))}
 
-              {/* enabled */}
-              <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
                 <input
                   type="checkbox"
-                  id="src-enabled"
                   checked={enabled}
                   onChange={(e) => setEnabled(e.target.checked)}
                 />
-                <label htmlFor="src-enabled" style={{ fontSize: 13, cursor: "pointer" }}>
-                  Enabled Ã¢ÂÂ include in daily pipeline
-                </label>
-              </div>
-
-              <div style={{ marginTop: 22, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {!isEdit ? (
-                  <button onClick={() => setStep(1)} style={{ ...btnStyle("#6b7280"), padding: "9px 20px", fontSize: 14 }}>
-                    Ã¢ÂÂ Back
-                  </button>
-                ) : <span />}
-                <div style={{ display: "flex", gap: 10 }}>
-                  {!isEdit && (
-                    <button
-                      onClick={() => { setSaveError(null); setStep(3); }}
-                      style={{ ...btnStyle("#8b5cf6"), padding: "9px 20px", fontSize: 14 }}
-                    >
-                      Test First Ã¢ÂÂ
-                    </button>
-                  )}
-                  <button
-                    onClick={handleSave}
-                    disabled={busy}
-                    style={{ ...btnStyle("#22c55e"), padding: "9px 22px", fontSize: 14 }}
-                  >
-                    {busy ? "SavingÃ¢ÂÂ¦" : isEdit ? "Save Changes" : "Save Source"}
-                  </button>
-                </div>
-              </div>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Enabled</span>
+                <small style={{ color: "var(--brand-muted)" }}>Uncheck to save but skip in scheduled runs.</small>
+              </label>
             </div>
-          )}
 
-          {/* Ã¢ÂÂÃ¢ÂÂ Step 3: test connection Ã¢ÂÂÃ¢ÂÂ */}
-          {step === 3 && (
-            <div>
-              <h4 style={{ margin: "0 0 8px", color: "#374151" }}>Test Connection</h4>
-              <p style={{ color: "#6b7280", fontSize: 13, margin: "0 0 20px" }}>
-                Dry-run the adapter to confirm it returns valid jobs before saving.
-                Nothing is written to the database.
-              </p>
-
-              <button
-                onClick={handleTest}
-                disabled={busy}
-                style={{ ...btnStyle("#8b5cf6"), padding: "10px 26px", fontSize: 14 }}
-              >
-                {busy ? "TestingÃ¢ÂÂ¦" : "Ã¢ÂÂ¶ Run Test"}
-              </button>
-
-              {testResult && (
-                <div style={{ marginTop: 16 }}>
-                  <TestResultBanner result={testResult} onClose={() => setTestResult(null)} />
-                </div>
+            <div style={footerStyle}>
+              {mode === "add" ? (
+                <button onClick={() => setStep(1)} style={secondaryBtnStyle}>← Back</button>
+              ) : (
+                <button onClick={onClose} style={secondaryBtnStyle}>Cancel</button>
               )}
-
-              <div style={{ marginTop: 22, display: "flex", justifyContent: "space-between" }}>
-                <button onClick={() => setStep(2)} style={{ ...btnStyle("#6b7280"), padding: "9px 20px", fontSize: 14 }}>
-                  Ã¢ÂÂ Back
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={busy}
-                  style={{ ...btnStyle("#22c55e"), padding: "9px 22px", fontSize: 14 }}
-                >
-                  {busy ? "SavingÃ¢ÂÂ¦" : "Save Source"}
-                </button>
-              </div>
+              <button
+                className="primary-button"
+                disabled={!sourceName.trim()}
+                onClick={() => setStep(3)}
+              >
+                Next →
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Step 3 — Title filters */}
+        {step === 3 && (
+          <div>
+            <p style={{ margin: "0 0 16px", color: "var(--brand-muted)", fontSize: "0.9rem" }}>
+              Control which job titles are ingested. Leave both lists empty to use the adapter's built-in defaults.
+            </p>
+            <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
+              {filterFields.length === 0 ? (
+                <p style={{ color: "var(--brand-muted)" }}>This adapter has no title filters.</p>
+              ) : (
+                filterFields.map((field) => (
+                  <div key={field.name} style={fieldGroupStyle}>
+                    <label style={labelStyle}>{field.label}</label>
+                    <FieldInput
+                      field={field}
+                      value={config[field.name] ?? []}
+                      onChange={(val) => setField(field.name, val)}
+                    />
+                    {field.description && (
+                      <small style={{ color: "var(--brand-muted)" }}>{field.description}</small>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={footerStyle}>
+              <button onClick={() => setStep(2)} style={secondaryBtnStyle}>← Back</button>
+              <button className="primary-button" onClick={() => setStep(4)}>
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 — Test & save */}
+        {step === 4 && (
+          <div>
+            <p style={{ margin: "0 0 16px", color: "var(--brand-muted)", fontSize: "0.9rem" }}>
+              Run a dry-run against the live source to verify the connection before saving. You can skip and save directly.
+            </p>
+
+            {saveError && <div className="error-banner" style={{ marginBottom: 12 }}>{saveError}</div>}
+
+            {testResult && (
+              <div style={testResultBoxStyle}>
+                {testResult.success ? (
+                  <>
+                    <p style={{ margin: "0 0 8px", fontWeight: 700, color: "var(--brand-green)" }}>
+                      ✅ Connection OK — {testResult.raw_jobs_returned} jobs returned in {fmtMs(testResult.duration_ms)}
+                    </p>
+                    {testResult.sample_jobs.length > 0 && (
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {testResult.sample_jobs.slice(0, 5).map((j, i) => (
+                          <SampleJobRow key={i} job={j} />
+                        ))}
+                        {testResult.raw_jobs_returned > 5 && (
+                          <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--brand-muted)" }}>
+                            …and {testResult.raw_jobs_returned - 5} more
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p style={{ margin: 0, fontWeight: 700, color: "#8a2b1f" }}>
+                    ❌ {testResult.error ?? "Connection failed"}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+              <button
+                className="secondary-button"
+                disabled={busy}
+                onClick={() => void handleTest()}
+                style={{ flex: 1 }}
+              >
+                {busy ? "Testing…" : "🔌 Test Connection"}
+              </button>
+            </div>
+
+            <div style={footerStyle}>
+              <button onClick={() => setStep(3)} style={secondaryBtnStyle}>← Back</button>
+              <button
+                className="primary-button"
+                disabled={busy}
+                onClick={() => void handleSave()}
+              >
+                {busy ? "Saving…" : "💾 Save Source"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Ã¢ÂÂÃ¢ÂÂ main page Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+function SampleJobRow({ job }: { job: SourceJobSample }) {
+  return (
+    <div
+      style={{
+        padding: "8px 12px",
+        borderRadius: 10,
+        background: "rgba(0,122,61,0.04)",
+        border: "1px solid var(--brand-border)",
+        fontSize: "0.85rem",
+      }}
+    >
+      <strong>{job.title}</strong>
+      {job.company ? <span style={{ color: "var(--brand-muted)", marginLeft: 6 }}>@ {job.company}</span> : null}
+      {job.location ? <span style={{ color: "var(--brand-muted)", marginLeft: 6 }}>· {job.location}</span> : null}
+    </div>
+  );
+}
+
+// ── Shared modal styles ───────────────────────────────────────────────────────
+
+const overlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(16,19,20,0.45)",
+  zIndex: 100,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 20,
+};
+
+const modalStyle: React.CSSProperties = {
+  background: "var(--brand-surface)",
+  borderRadius: 24,
+  padding: 28,
+  width: "100%",
+  maxWidth: 560,
+  maxHeight: "90vh",
+  overflowY: "auto",
+  boxShadow: "0 32px 80px rgba(7,58,35,0.18)",
+  border: "1px solid var(--brand-border)",
+};
+
+const closeBtnStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  fontSize: "1.2rem",
+  cursor: "pointer",
+  color: "var(--brand-muted)",
+  padding: "4px 8px",
+};
+
+const footerStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: 10,
+  marginTop: 4,
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "10px 20px",
+  borderRadius: 12,
+  border: "1px solid var(--brand-border)",
+  background: "white",
+  cursor: "pointer",
+  fontSize: "0.9rem",
+};
+
+const fieldGroupStyle: React.CSSProperties = { display: "grid", gap: 6 };
+const labelStyle: React.CSSProperties = { fontWeight: 600, fontSize: "0.9rem" };
+
+const testResultBoxStyle: React.CSSProperties = {
+  padding: "14px 16px",
+  borderRadius: 14,
+  background: "rgba(255,255,255,0.8)",
+  border: "1px solid var(--brand-border)",
+  marginBottom: 16,
+};
+
+// ── Status pill ───────────────────────────────────────────────────────────────
+
+function StatusPill({ source }: { source: Source }) {
+  if (!source.enabled) {
+    return (
+      <span className="queue-status-pill queue-status-skipped">Paused</span>
+    );
+  }
+  if (source.last_error) {
+    return <span className="queue-status-pill" style={{ background: "#fff0ee", color: "#8a2b1f", border: "1px solid #f1c3bb" }}>Error</span>;
+  }
+  if (source.last_run_at) {
+    return <span className="queue-status-pill queue-status-pending">Active</span>;
+  }
+  return <span className="queue-status-pill" style={{ background: "#f5f5f5", color: "#666" }}>New</span>;
+}
+
+// ── Run result toast ──────────────────────────────────────────────────────────
+
+function RunResultBanner({ result, onClose }: { result: SourceRunResult; onClose: () => void }) {
+  return (
+    <div
+      style={{
+        padding: "14px 18px",
+        borderRadius: 16,
+        background: result.success ? "var(--brand-green-soft)" : "#fff3f1",
+        border: `1px solid ${result.success ? "rgba(0,122,61,0.2)" : "#f1c3bb"}`,
+        color: result.success ? "var(--brand-green-dark)" : "#8a2b1f",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 12,
+      }}
+    >
+      <div>
+        <strong>
+          {result.success ? "✅" : "❌"} Run Now — {result.source_name}
+        </strong>
+        {result.success ? (
+          <p style={{ margin: "4px 0 0", fontSize: "0.85rem" }}>
+            {result.raw_jobs_stored} jobs stored · {result.jobs_skipped_irrelevant} skipped · {fmtMs(result.duration_ms)}
+          </p>
+        ) : (
+          <p style={{ margin: "4px 0 0", fontSize: "0.85rem" }}>{result.error}</p>
+        )}
+      </div>
+      <button onClick={onClose} style={{ ...closeBtnStyle, fontSize: "1rem" }}>✕</button>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export function AdminSourcesPage() {
-  const [sources, setSources] = useState<SourceRead[]>([]);
-  const [adapterTypes, setAdapterTypes] = useState<AdapterTypeMeta[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
+  const [sourceTypes, setSourceTypes] = useState<AdapterTypeMeta[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pageError, setPageError] = useState<string | null>(null);
-  const [editSource, setEditSource] = useState<SourceRead | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [testResult, setTestResult] = useState<SourceTestResult | null>(null);
-  const [runResult, setRunResult] = useState<SourceRunResult | null>(null);
-  const [actionBusy, setActionBusy] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const loadAll = useCallback(() => {
-    setLoading(true);
-    Promise.all([
-      apiClient.listSources(),
-      apiClient.listSourceTypes(),
-    ])
-      .then(([srcs, types]: [SourceRead[], AdapterTypeList]) => {
-        setSources(srcs);
-        setAdapterTypes(types.adapter_types);
-        setPageError(null);
-      })
-      .catch((e: Error) => setPageError(e.message))
-      .finally(() => setLoading(false));
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingSource, setEditingSource] = useState<Source | null>(null);
+
+  const [busySourceId, setBusySourceId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [runResult, setRunResult] = useState<SourceRunResult | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const loadAll = useCallback(async () => {
+    setLoadError(null);
+    try {
+      const [typesResp, sourcesResp] = await Promise.all([
+        apiClient.listSourceTypes(),
+        apiClient.listSources(),
+      ]);
+      setSourceTypes(typesResp.types);
+      setSources(sourcesResp);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Failed to load sources");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { void loadAll(); }, [loadAll]);
 
-  const handleToggle = (src: SourceRead) => {
-    apiClient
-      .updateSource(src.id, { enabled: !src.enabled })
-      .then(loadAll)
-      .catch((e: Error) => setPageError(e.message));
-  };
+  async function handleToggleEnabled(source: Source) {
+    setBusySourceId(source.id);
+    setActionError(null);
+    try {
+      await apiClient.updateSource(source.id, { enabled: !source.enabled });
+      await loadAll();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setBusySourceId(null);
+    }
+  }
 
-  const handleDelete = (src: SourceRead) => {
-    if (!window.confirm(`Delete "${src.name}"? This cannot be undone.`)) return;
-    apiClient.deleteSource(src.id).then(loadAll).catch((e: Error) => setPageError(e.message));
-  };
+  async function handleDelete(id: number) {
+    setBusySourceId(id);
+    setActionError(null);
+    try {
+      await apiClient.deleteSource(id);
+      setDeleteConfirmId(null);
+      await loadAll();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setBusySourceId(null);
+    }
+  }
 
-  const handleRunNow = (src: SourceRead) => {
-    setActionBusy(src.id);
+  async function handleRunNow(source: Source) {
+    setBusySourceId(source.id);
+    setActionError(null);
     setRunResult(null);
-    setTestResult(null);
-    apiClient
-      .runSourceNow(src.id)
-      .then((r: SourceRunResult) => { setRunResult(r); loadAll(); })
-      .catch((e: Error) => setPageError(e.message))
-      .finally(() => setActionBusy(null));
-  };
+    try {
+      const result = await apiClient.runSourceNow(source.id);
+      setRunResult(result);
+      await loadAll();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Run failed");
+    } finally {
+      setBusySourceId(null);
+    }
+  }
 
-  const handleTestExisting = (src: SourceRead) => {
-    setActionBusy(src.id);
-    setTestResult(null);
-    setRunResult(null);
-    apiClient
-      .testExistingSource(src.id)
-      .then(setTestResult)
-      .catch((e: Error) => setPageError(e.message))
-      .finally(() => setActionBusy(null));
-  };
+  function openAdd() {
+    setEditingSource(null);
+    setWizardOpen(true);
+  }
+
+  function openEdit(source: Source) {
+    setEditingSource(source);
+    setWizardOpen(true);
+  }
+
+  function closeWizard() {
+    setWizardOpen(false);
+    setEditingSource(null);
+  }
+
+  async function onWizardSaved() {
+    closeWizard();
+    await loadAll();
+  }
+
+  const typeLabel = (adapterType: string) =>
+    sourceTypes.find((t) => t.adapter_type === adapterType)?.label ?? adapterType;
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1200 }}>
-      {/* page header */}
-      <div style={{
-        display: "flex", justifyContent: "space-between",
-        alignItems: "center", marginBottom: 24,
-      }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 22 }}>Feed Sources</h2>
-          <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 14 }}>
-            Manage job ingestion sources ÃÂ· {sources.length} source{sources.length !== 1 ? "s" : ""} configured
-          </p>
+    <section className="dashboard-stack">
+      {/* ── Header panel ────────────────────────────────────────────────────── */}
+      <section className="panel">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+          <div className="section-heading" style={{ margin: 0 }}>
+            <h3>Job Sources</h3>
+            <p>Manage the external feeds that the daily pipeline ingests. Runs automatically at 6 AM UTC.</p>
+          </div>
+          <button className="primary-button" onClick={openAdd}>
+            + Add Source
+          </button>
         </div>
-        <button
-          onClick={() => { setShowAddModal(true); setTestResult(null); setRunResult(null); }}
-          style={{
-            ...btnStyle("#3b82f6"),
-            padding: "10px 20px", fontSize: 14, fontWeight: 600, borderRadius: 8,
-          }}
-        >
-          + Add Source
-        </button>
-      </div>
 
-      {/* banners */}
-      {pageError && (
-        <div style={{
-          background: "#fef2f2", border: "1px solid #fca5a5",
-          borderRadius: 8, padding: "12px 16px", marginBottom: 16,
-          display: "flex", justifyContent: "space-between",
-        }}>
-          <span style={{ color: "#dc2626" }}>{pageError}</span>
-          <button onClick={() => setPageError(null)} style={{ background: "none", border: "none", cursor: "pointer" }}>Ã¢ÂÂ</button>
-        </div>
-      )}
-      {runResult && <RunResultBanner result={runResult} onClose={() => setRunResult(null)} />}
-      {testResult && <TestResultBanner result={testResult} onClose={() => setTestResult(null)} />}
+        {actionError && (
+          <div className="error-banner" style={{ marginTop: 12 }}>{actionError}</div>
+        )}
+        {runResult && (
+          <div style={{ marginTop: 12 }}>
+            <RunResultBanner result={runResult} onClose={() => setRunResult(null)} />
+          </div>
+        )}
+      </section>
 
-      {/* table */}
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Loading sourcesÃ¢ÂÂ¦</div>
-      ) : (
-        <SourceTable
-          sources={sources}
-          adapterTypes={adapterTypes}
-          actionBusy={actionBusy}
-          onEdit={(src) => { setEditSource(src); setTestResult(null); setRunResult(null); }}
-          onToggle={handleToggle}
-          onDelete={handleDelete}
-          onTest={handleTestExisting}
-          onRunNow={handleRunNow}
+      {/* ── Sources table ────────────────────────────────────────────────────── */}
+      <section className="panel">
+        {loading ? (
+          <p style={{ color: "var(--brand-muted)" }}>Loading sources…</p>
+        ) : loadError ? (
+          <div className="error-banner">{loadError}</div>
+        ) : sources.length === 0 ? (
+          <div className="empty-state">
+            <p>No sources configured yet. Click <strong>+ Add Source</strong> to add the first feed.</p>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Last Run</th>
+                  <th style={{ textAlign: "right" }}>Total</th>
+                  <th style={{ textAlign: "right" }}>24h</th>
+                  <th>Last Error</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sources.map((source) => {
+                  const busy = busySourceId === source.id;
+                  return (
+                    <tr key={source.id}>
+                      <td>
+                        <strong style={{ fontSize: "0.92rem" }}>{source.name}</strong>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: "0.82rem", color: "var(--brand-muted)" }}>
+                          {typeLabel(source.adapter_type)}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => void handleToggleEnabled(source)}
+                          disabled={busy}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: busy ? "default" : "pointer",
+                            padding: 0,
+                          }}
+                          title={source.enabled ? "Click to pause" : "Click to enable"}
+                        >
+                          <StatusPill source={source} />
+                        </button>
+                      </td>
+                      <td style={{ fontSize: "0.82rem", color: "var(--brand-muted)" }}>
+                        {fmtDate(source.last_run_at)}
+                      </td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                        {source.jobs_total ?? "—"}
+                      </td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                        {source.jobs_last_24h ?? "—"}
+                      </td>
+                      <td
+                        style={{
+                          fontSize: "0.78rem",
+                          color: "#8a2b1f",
+                          maxWidth: 180,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={source.last_error ?? undefined}
+                      >
+                        {source.last_error ? source.last_error.slice(0, 60) + (source.last_error.length > 60 ? "…" : "") : "—"}
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
+                          <button
+                            className="secondary-button"
+                            style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                            disabled={busy}
+                            onClick={() => openEdit(source)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="secondary-button"
+                            style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                            disabled={busy}
+                            onClick={() => void handleRunNow(source)}
+                          >
+                            {busy ? "…" : "▶ Run"}
+                          </button>
+                          {deleteConfirmId === source.id ? (
+                            <>
+                              <button
+                                className="danger-button"
+                                style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                                disabled={busy}
+                                onClick={() => void handleDelete(source.id)}
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                className="secondary-button"
+                                style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                                onClick={() => setDeleteConfirmId(null)}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="danger-button"
+                              style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                              disabled={busy}
+                              onClick={() => setDeleteConfirmId(source.id)}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ── Wizard modal ─────────────────────────────────────────────────────── */}
+      {wizardOpen && (
+        <SourceWizard
+          mode={editingSource ? "edit" : "add"}
+          sourceTypes={sourceTypes}
+          initialSource={editingSource}
+          onClose={closeWizard}
+          onSaved={() => void onWizardSaved()}
         />
       )}
-
-      {/* modal */}
-      {(showAddModal || editSource !== null) && (
-        <SourceModal
-          source={editSource}
-          adapterTypes={adapterTypes}
-          onClose={() => { setShowAddModal(false); setEditSource(null); }}
-          onSaved={() => { setShowAddModal(false); setEditSource(null); loadAll(); }}
-        />
-      )}
-    </div>
+    </section>
   );
 }
