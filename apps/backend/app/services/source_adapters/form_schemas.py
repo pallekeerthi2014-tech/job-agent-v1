@@ -221,6 +221,50 @@ CONFIGURABLE_TEMPLATE = AdapterTypeMeta(
 )
 
 
+
+LINKEDIN_JOBS = AdapterTypeMeta(
+    adapter_type="linkedin_jobs",
+    label="LinkedIn Jobs (guest API)",
+    category="Aggregator",
+    description="Scrapes LinkedIn public job search — no login or API key required. Supports multiple search queries and pagination.",
+    fields=[
+        AdapterFieldSchema(
+            name="search_queries", label="Search queries", type="string_list", required=True,
+            description="One search keyword per line. Multiple queries = more unique results.",
+            placeholder="healthcare business analyst\nclinical data analyst\nepic analyst\npayer business analyst",
+        ),
+        AdapterFieldSchema(name="location", label="Location", type="string", required=False,
+            placeholder="United States", default="United States",
+            description="Geographic filter passed to LinkedIn search."),
+        AdapterFieldSchema(name="days_back", label="Days back", type="number", required=False, default=30,
+            description="Only fetch jobs posted within this many days."),
+        AdapterFieldSchema(name="max_pages_per_query", label="Max pages per query", type="number", required=False, default=4,
+            description="Each page = up to 25 results. 4 pages × N queries = good coverage without rate limiting."),
+        AdapterFieldSchema(name="delay_seconds", label="Delay between requests (s)", type="number", required=False, default=2.0,
+            description="Sleep between page fetches. LinkedIn rate limit ~5 req/min. Recommend >= 2."),
+        _INCLUDE_TITLES, _EXCLUDE_TITLES,
+    ],
+)
+
+SIMPLYHIRED_JOBS = AdapterTypeMeta(
+    adapter_type="simplyhired_jobs",
+    label="SimplyHired",
+    category="Aggregator",
+    description="Scrapes SimplyHired job search — 20 results per page, reliable structured HTML, no API key needed.",
+    fields=[
+        AdapterFieldSchema(name="search_query", label="Search query", type="string", required=True,
+            placeholder="healthcare business analyst", default="healthcare business analyst",
+            description="Job title or keywords to search for."),
+        AdapterFieldSchema(name="location", label="Location", type="string", required=False,
+            placeholder="united states", default="united states"),
+        AdapterFieldSchema(name="days_back", label="Days back", type="number", required=False, default=30),
+        AdapterFieldSchema(name="max_pages", label="Max pages", type="number", required=False, default=5,
+            description="Each page = ~20 results. 5 pages = ~100 results."),
+        AdapterFieldSchema(name="delay_seconds", label="Delay between pages (s)", type="number", required=False, default=2.5),
+        _INCLUDE_TITLES, _EXCLUDE_TITLES,
+    ],
+)
+
 # ── Public registry ──────────────────────────────────────────────────────────
 
 ADAPTER_FORM_SCHEMAS: dict[str, AdapterTypeMeta] = {
@@ -230,6 +274,8 @@ ADAPTER_FORM_SCHEMAS: dict[str, AdapterTypeMeta] = {
     LIVE_FEED.adapter_type: LIVE_FEED,
     GENERIC_HTML_CAREERS.adapter_type: GENERIC_HTML_CAREERS,
     GENERIC_ATS_JSON.adapter_type: GENERIC_ATS_JSON,
+    LINKEDIN_JOBS.adapter_type: LINKEDIN_JOBS,
+    SIMPLYHIRED_JOBS.adapter_type: SIMPLYHIRED_JOBS,
     CONFIGURABLE_TEMPLATE.adapter_type: CONFIGURABLE_TEMPLATE,
 }
 
