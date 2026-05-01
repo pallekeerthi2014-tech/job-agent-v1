@@ -301,21 +301,59 @@ def _fetch_remoteok(tag: str = "healthcare") -> list[dict[str, Any]]:
     return results
 
 
+def _fetch_remotive(search: str = "healthcare analyst", category: str = "business") -> list[dict[str, Any]]:
+    """Fetch from Remotive.com public API — free, no auth, structured JSON."""
+    results: list[dict[str, Any]] = []
+
+    @retry(**_RETRY_POLICY)
+    def _get() -> dict:
+        with httpx.Client(timeout=20, headers={"User-Agent": "ThinkSuccess-JobAgent/1.0"}) as client:
+            resp = client.get(
+                "https://remotive.com/api/remote-jobs",
+                params={"category": category, "search": search, "limit": "100"},
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    try:
+        data = _get()
+        for job in data.get("jobs", []):
+            results.append({
+                "_feed_source": "remotive",
+                "title": job.get("title", ""),
+                "company": job.get("company_name", "Unknown"),
+                "location": job.get("candidate_required_location", "Remote"),
+                "url": job.get("url", ""),
+                "description": _clean_html(job.get("description", ""))[:3000],
+                "published": (job.get("publication_date") or "")[:10],
+                "id": str(job.get("id", "")),
+                "employment_type": job.get("job_type", ""),
+                "salary_text": job.get("salary", ""),
+                "is_remote": True,
+            })
+        logger.info("remotive.fetched count=%d", len(results))
+    except Exception as exc:
+        logger.warning("remotive.failed: %s", exc)
+
+    return results
+
+
 # ── Adapter class ─────────────────────────────────────────────────────────────
 
 class LiveFeedAdapter(JobSourceAdapter):
     """
-    Aggregates four live job feed sources into the standard adapter interface.
+    Aggregates five live job feed sources into the standard adapter interface.
     Each feed is isolated — one failing never blocks the others.
     All HTTP calls use tenacity retry with exponential backoff (max 3 attempts).
 
     Config keys (all optional):
         themuse_query, themuse_category, arbeitnow_query,
-        usajobs_keyword, remoteok_tag,
+        usajobs_keyword, remoteok_tag, remotive_search, remotive_category,
         enable_themuse (bool, default True)
         enable_arbeitnow (bool, default True)
         enable_usajobs (bool, default False — requires USAJOBS_API_KEY)
         enable_remoteok (bool, default True)
+        enable_remotive (bool, default True)
     """
 
     def __init__(self, source_name: str, config: dict[str, Any] | None = None) -> None:
@@ -325,10 +363,13 @@ class LiveFeedAdapter(JobSourceAdapter):
         self._arbeitnow_query  = self.config.get("arbeitnow_query", "healthcare business analyst")
         self._usajobs_keyword  = self.config.get("usajobs_keyword", "Healthcare Business Analyst")
         self._remoteok_tag     = self.config.get("remoteok_tag", "healthcare")
+        self._remotive_search  = self.config.get("remotive_search", "healthcare analyst")
+        self._remotive_category= self.config.get("remotive_category", "business")
         self._enable_themuse   = self.config.get("enable_themuse", True)
         self._enable_arbeitnow = self.config.get("enable_arbeitnow", True)
         self._enable_usajobs   = self.config.get("enable_usajobs", bool(settings.usajobs_api_key))
         self._enable_remoteok  = self.config.get("enable_remoteok", True)
+        self._enable_remotive  = self.config.get("enable_remotive", True)
 
     def fetch_jobs(self) -> list[dict[str, Any]]:
         all_jobs: list[dict[str, Any]] = []
@@ -340,6 +381,8 @@ class LiveFeedAdapter(JobSourceAdapter):
             all_jobs.extend(_fetch_usajobs(self._usajobs_keyword))
         if self._enable_remoteok:
             all_jobs.extend(_fetch_remoteok(self._remoteok_tag))
+        if self._enable_remotive:
+            all_jobs.extend(_fetch_remotive(self._remotive_search, self._remotive_category))
         logger.info("live_feeds.fetch_complete source=%s total=%d", self.source_name, len(all_jobs))
         return all_jobs
 
@@ -367,6 +410,7 @@ class LiveFeedAdapter(JobSourceAdapter):
         _source_label_map = {
             "themuse": "The Muse", "arbeitnow": "Arbeitnow",
             "remoteok": "RemoteOK", "usajobs": "USAJobs",
+            "remotive": "Remotive",
         }
 
         return JobRecord(
