@@ -286,5 +286,5 @@ export const apiClient = {
   testExistingSource: (id: number) =>
     request<SourceTestResult>(`/api/v1/admin/sources/${id}/test`, { method: "POST" }),
   runSourceNow: (id: number) =>
-    request<SourceRunResult>(`/api/v1/admin/sources/${id}/run`, { method: "POST" })
+    request<SourceRunResult>(`/api/v1/admin/sources/${id}/run-now`, { method: "POST" })
 };
