@@ -97,3 +97,17 @@ class TokenResponse(BaseModel):
 class GoogleAuthRequest(BaseModel):
     """Frontend sends the Google credential (ID token) from Google Identity Services."""
     credential: str
+
+
+# ── Candidate invitation ──────────────────────────────────────────────────────
+
+class InviteCandidateRequest(BaseModel):
+    email: EmailStr
+    name: str | None = None  # optional pre-fill for the register form
+
+
+class InviteCandidateResponse(BaseModel):
+    message: str
+    delivery: Literal["email", "preview"]
+    invite_url: str | None = None
+    invite_token: str | None = None
