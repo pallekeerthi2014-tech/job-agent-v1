@@ -1,16 +1,19 @@
 [
   {
-    "name": "Live Feed \u2014 The Muse, Arbeitnow, RemoteOK",
+    "name": "Live Feed — The Muse, Arbeitnow, RemoteOK, Remotive",
     "adapter_type": "live_feed",
     "config": {
       "themuse_query": "Business Analyst",
       "themuse_category": "Data and Analytics",
       "arbeitnow_query": "healthcare business analyst",
       "remoteok_tag": "healthcare",
+      "remotive_search": "healthcare analyst",
+      "remotive_category": "business",
       "enable_themuse": true,
       "enable_arbeitnow": true,
       "enable_usajobs": false,
       "enable_remoteok": true,
+      "enable_remotive": true,
       "include_titles": [
         "business analyst",
         "healthcare analyst",
@@ -23,7 +26,11 @@
         "payer",
         "provider",
         "revenue cycle",
-        "managed care"
+        "managed care",
+        "operations analyst",
+        "data analyst",
+        "informatics",
+        "implementation"
       ],
       "exclude_titles": [
         "data engineer",
@@ -32,7 +39,8 @@
         "qa engineer",
         "marketing analyst",
         "financial analyst",
-        "sales analyst"
+        "sales analyst",
+        "actuar"
       ]
     },
     "enabled": true
@@ -138,6 +146,246 @@
       ]
     },
     "enabled": true
+  },
+  {
+    "name": "Inovalon Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "inovalon",
+      "company_name": "Inovalon",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "clinical analyst",
+        "implementation",
+        "project",
+        "informatics",
+        "product analyst",
+        "customer success",
+        "solutions engineer"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Komodo Health Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "komodohealth",
+      "company_name": "Komodo Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "clinical analyst",
+        "customer success",
+        "implementation",
+        "project",
+        "informatics",
+        "solutions"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Definitive Healthcare Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "definitivehc",
+      "company_name": "Definitive Healthcare",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "customer success",
+        "implementation",
+        "solutions",
+        "account",
+        "project"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Oscar Health Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "oscar",
+      "company_name": "Oscar Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "clinical analyst",
+        "informatics",
+        "project",
+        "implementation",
+        "product analyst",
+        "associate",
+        "business intelligence",
+        "reporting"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "sales",
+        "marketing",
+        "engineer",
+        "developer",
+        "physician",
+        "nurse",
+        "medical director",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Cohere Health Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "coherehealth",
+      "company_name": "Cohere Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "business intelligence",
+        "data analytics",
+        "data governance",
+        "program strategy",
+        "information specialist",
+        "solutions",
+        "implementation",
+        "project"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "medical director",
+        "physician",
+        "nurse",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "LinkedIn Healthcare BA Search",
+    "adapter_type": "linkedin_jobs",
+    "config": {
+      "search_queries": [
+        "healthcare business analyst",
+        "health IT business analyst",
+        "clinical analyst",
+        "payer business analyst",
+        "EHR business analyst",
+        "Epic business analyst",
+        "healthcare data analyst",
+        "revenue cycle analyst",
+        "managed care analyst"
+      ],
+      "location": "United States",
+      "days_back": 30,
+      "max_pages_per_query": 3,
+      "delay_seconds": 4.0,
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "clinical analyst",
+        "healthcare analyst",
+        "health it",
+        "ehr",
+        "epic",
+        "cerner",
+        "payer",
+        "revenue cycle",
+        "managed care",
+        "informatics",
+        "implementation",
+        "operations analyst"
+      ],
+      "exclude_titles": [
+        "data engineer",
+        "software engineer",
+        "devops",
+        "marketing analyst",
+        "financial analyst",
+        "sales analyst",
+        "actuar"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "SimplyHired — Healthcare BA (US)",
+    "adapter_type": "simplyhired_jobs",
+    "config": {
+      "search_query": "healthcare business analyst",
+      "location": "united states",
+      "days_back": 30,
+      "max_pages": 5,
+      "delay_seconds": 2.5
+    },
+    "enabled": false
+  },
+  {
+    "name": "SimplyHired — Clinical Analyst (US)",
+    "adapter_type": "simplyhired_jobs",
+    "config": {
+      "search_query": "clinical analyst healthcare",
+      "location": "united states",
+      "days_back": 30,
+      "max_pages": 5,
+      "delay_seconds": 2.5
+    },
+    "enabled": false
+  },
+  {
+    "name": "SimplyHired — Epic EHR Analyst (US)",
+    "adapter_type": "simplyhired_jobs",
+    "config": {
+      "search_query": "epic ehr analyst",
+      "location": "united states",
+      "days_back": 30,
+      "max_pages": 5,
+      "delay_seconds": 2.5
+    },
+    "enabled": false
   },
   {
     "name": "Example Greenhouse Board",
