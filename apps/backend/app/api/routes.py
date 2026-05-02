@@ -16,6 +16,7 @@ from app.models.candidate import Candidate
 from app.models.employee import Employee
 from app.models.job import JobNormalized
 from app.models.match_score import JobCandidateMatch
+from app.models.resume_tailoring import ResumeTailoringDraft
 from app.models.user import User
 from app.models.work_queue import EmployeeWorkQueue
 from app.schemas.alert_recipient import AlertRecipientCreate, AlertRecipientRead, AlertRecipientUpdate
@@ -35,6 +36,11 @@ from app.schemas.employee import EmployeeCreate, EmployeeRead
 from app.schemas.job import JobNormalizedCreate, JobNormalizedPage, JobNormalizedRead, JobRawCreate, JobRawRead
 from app.schemas.match import JobCandidateMatchCreate, JobCandidateMatchPage, JobCandidateMatchRead
 from app.schemas.pagination import PageMeta
+from app.schemas.resume_tailoring import (
+    ResumeTailoringDownloadRequest,
+    ResumeTailoringDraftCreate,
+    ResumeTailoringDraftRead,
+)
 from app.schemas.user import (
     CandidateProfileUpdate,
     CandidateSelfRegister,
@@ -59,6 +65,7 @@ from app.services.auth import (
 )
 from app.services.emailer import send_password_reset_email, smtp_enabled
 from app.services.pipeline import run_daily_pipeline
+from app.services.resume_tailoring import create_tailoring_draft, generate_tailored_docx
 from app.schemas.source import (
     AdapterTypeList,
     SourceCreate,
@@ -705,6 +712,90 @@ def download_resume(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Resume file not found on disk")
     return FileResponse(str(path), filename=candidate.resume_filename)
+
+
+# ── Resume tailoring drafts ──────────────────────────────────────────────────
+
+@router.post("/resume-tailoring/drafts", response_model=ResumeTailoringDraftRead, status_code=status.HTTP_201_CREATED)
+def create_resume_tailoring_draft(
+    payload: ResumeTailoringDraftCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> ResumeTailoringDraftRead:
+    candidate = _get_candidate_or_404(db, payload.candidate_id)
+    _ensure_candidate_access(current_user, candidate)
+
+    job = db.get(JobNormalized, payload.job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    if payload.match_id is not None:
+        match = db.get(JobCandidateMatch, payload.match_id)
+        if match is None or match.candidate_id != candidate.id or match.job_id != job.id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Match does not belong to this candidate/job")
+
+    if not candidate.resume_filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Upload a master resume before tailoring")
+    if Path(candidate.resume_filename).suffix.lower() != ".docx":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tailored Word download requires a DOCX master resume")
+
+    return create_tailoring_draft(
+        db,
+        candidate=candidate,
+        job=job,
+        match_id=payload.match_id,
+        recruiter_context=payload.recruiter_context,
+        created_by_user_id=current_user.id,
+    )
+
+
+@router.get("/resume-tailoring/drafts/{draft_id}", response_model=ResumeTailoringDraftRead)
+def get_resume_tailoring_draft(
+    draft_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> ResumeTailoringDraftRead:
+    draft = db.get(ResumeTailoringDraft, draft_id)
+    if draft is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume tailoring draft not found")
+    candidate = _get_candidate_or_404(db, draft.candidate_id)
+    _ensure_candidate_access(current_user, candidate)
+    return draft
+
+
+@router.post("/resume-tailoring/drafts/{draft_id}/download")
+def download_tailored_resume(
+    draft_id: int,
+    payload: ResumeTailoringDownloadRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> Response:
+    from fastapi.responses import FileResponse
+
+    draft = db.get(ResumeTailoringDraft, draft_id)
+    if draft is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume tailoring draft not found")
+
+    candidate = _get_candidate_or_404(db, draft.candidate_id)
+    _ensure_candidate_access(current_user, candidate)
+
+    job = db.get(JobNormalized, draft.job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    try:
+        path = generate_tailored_docx(
+            db,
+            draft=draft,
+            candidate=candidate,
+            job=job,
+            approved_suggestion_ids=payload.approved_suggestion_ids,
+            confirmed_skills=payload.confirmed_skills,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return FileResponse(str(path), filename=path.name, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 
 # ── Work queue: report a job as invalid/outdated/not-relevant ─────────────────

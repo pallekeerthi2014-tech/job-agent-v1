@@ -94,6 +94,49 @@ export type Application = {
   applied_at: string;
 };
 
+export type ResumeTailoringSuggestion = {
+  id: string;
+  section: string;
+  text: string;
+  skill_tags: string[];
+  evidence?: string | null;
+  status: "supported" | "confirmed" | "needs_confirmation" | string;
+};
+
+export type ResumeTailoringSkillGap = {
+  skill: string;
+  reason: string;
+  source: string;
+};
+
+export type ResumeTailoringDraft = {
+  id: number;
+  candidate_id: number;
+  job_id: number;
+  match_id?: number | null;
+  recruiter_context?: string | null;
+  status: string;
+  suggested_edits: ResumeTailoringSuggestion[];
+  skill_gaps: ResumeTailoringSkillGap[];
+  approved_edits: ResumeTailoringSuggestion[];
+  confirmed_skills: string[];
+  generated_filename?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ResumeTailoringDraftCreatePayload = {
+  candidate_id: number;
+  job_id: number;
+  match_id?: number | null;
+  recruiter_context?: string | null;
+};
+
+export type ResumeTailoringDownloadPayload = {
+  approved_suggestion_ids: string[];
+  confirmed_skills: string[];
+};
+
 export type WorkQueueItem = {
   id: number;
   employee_id: number;

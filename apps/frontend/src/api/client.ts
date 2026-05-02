@@ -23,6 +23,9 @@ import type {
   Match,
   PaginatedResponse,
   ResetPasswordPayload,
+  ResumeTailoringDownloadPayload,
+  ResumeTailoringDraft,
+  ResumeTailoringDraftCreatePayload,
   Source,
   SourceCreate,
   SourceHealth,
@@ -72,6 +75,30 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+async function requestBlob(path: string, options?: RequestInit): Promise<{ blob: Blob; filename: string }> {
+  const token = getStoredAccessToken();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers ?? {})
+    },
+    ...options
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(errorText || `API request failed: ${response.status}`);
+  }
+
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  return {
+    blob: await response.blob(),
+    filename: match?.[1] ?? "tailored-resume.docx"
+  };
 }
 
 function buildQuery(params: Record<string, string | number | undefined | null>) {
@@ -142,6 +169,19 @@ export const apiClient = {
   }) => request<PaginatedResponse<WorkQueueItem>>(`/api/v1/work-queues${buildQuery(params ?? {})}`),
   createApplication: (payload: ApplicationCreatePayload) =>
     request<Application>("/api/v1/applications", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
+  createResumeTailoringDraft: (payload: ResumeTailoringDraftCreatePayload) =>
+    request<ResumeTailoringDraft>("/api/v1/resume-tailoring/drafts", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  getResumeTailoringDraft: (draftId: number) =>
+    request<ResumeTailoringDraft>(`/api/v1/resume-tailoring/drafts/${draftId}`),
+  downloadTailoredResume: (draftId: number, payload: ResumeTailoringDownloadPayload) =>
+    requestBlob(`/api/v1/resume-tailoring/drafts/${draftId}/download`, {
       method: "POST",
       body: JSON.stringify(payload)
     }),
