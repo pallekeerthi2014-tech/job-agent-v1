@@ -40,6 +40,7 @@ from app.schemas.user import (
     CandidateSelfRegister,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
+    GoogleAuthRequest,
     LoginRequest,
     MessageResponse,
     ResetPasswordRequest,
@@ -859,6 +860,89 @@ def candidate_register(payload: CandidateSelfRegister, db: Session = Depends(get
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    return TokenResponse(access_token=create_access_token(user), user=user)
+
+
+@router.post("/portal/auth/google", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+def portal_google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)) -> TokenResponse:
+    """Authenticate or register a candidate via Google OAuth credential (ID token).
+
+    Flow:
+    1. Frontend passes the credential string from Google Identity Services.
+    2. Backend verifies it against GOOGLE_CLIENT_ID.
+    3. If user exists (matched by google_id or email) — return JWT.
+    4. If user is new — create Candidate + User records, then return JWT.
+    """
+    from app.core.config import settings
+
+    if not settings.google_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google OAuth is not configured on this server.",
+        )
+
+    try:
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+
+        idinfo = google_id_token.verify_oauth2_token(
+            payload.credential,
+            google_requests.Request(),
+            settings.google_client_id,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Google credential: {exc}",
+        )
+
+    google_sub = idinfo["sub"]
+    google_email = idinfo.get("email", "").lower()
+    google_name = idinfo.get("name") or google_email.split("@")[0]
+
+    if not google_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google account does not have a verified email address.",
+        )
+
+    # Try to find an existing user by google_id first, then by email
+    user = db.query(User).filter(User.google_id == google_sub).first()
+    if user is None:
+        user = db.query(User).filter(User.email == google_email).first()
+
+    if user is None:
+        # New user — create Candidate + User in one transaction
+        import secrets
+        from app.services.auth import hash_password
+
+        candidate = Candidate(
+            name=google_name,
+            email=google_email,
+            active=True,
+        )
+        db.add(candidate)
+        db.flush()  # get candidate.id
+
+        user = User(
+            name=google_name,
+            email=google_email,
+            password_hash=hash_password(secrets.token_hex(32)),  # not usable directly
+            role="candidate",
+            is_active=True,
+            candidate_id=candidate.id,
+            google_id=google_sub,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        # Existing user — link google_id if not yet set
+        if user.google_id != google_sub:
+            user.google_id = google_sub
+            db.commit()
+            db.refresh(user)
 
     return TokenResponse(access_token=create_access_token(user), user=user)
 
