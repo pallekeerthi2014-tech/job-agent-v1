@@ -340,3 +340,35 @@ export type SourceRunResult = {
   error?: string | null;
   duration_ms: number;
 };
+
+// ── Phase 7: Source Health & Ingestion Run History ────────────────────────────
+
+export type IngestionRun = {
+  id: number;
+  source_id: number;
+  source_name: string;
+  started_at: string;
+  completed_at: string | null;
+  status: "success" | "error";
+  raw_fetched: number;
+  raw_stored: number;
+  jobs_skipped: number;
+  error_message: string | null;
+};
+
+export type IngestionRunPage = {
+  items: IngestionRun[];
+  total: number;
+};
+
+export type SourceHealth = {
+  source_id: number;
+  source_name: string;
+  enabled: boolean;
+  last_run_at: string | null;
+  last_successful_run_at: string | null;
+  last_error: string | null;
+  health_status: "healthy" | "warning" | "critical" | "paused";
+  recent_error_rate: number;
+  runs_last_24h: number;
+};
