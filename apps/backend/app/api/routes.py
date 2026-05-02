@@ -14,7 +14,7 @@ from app.db import crud
 from app.models.alert_recipient import AlertRecipient
 from app.models.candidate import Candidate
 from app.models.employee import Employee
-from app.models.job import JobNormalized
+from app.models.job import JobNormalized, JobRaw
 from app.models.match_score import JobCandidateMatch
 from app.models.user import User
 from app.models.work_queue import EmployeeWorkQueue
@@ -41,6 +41,8 @@ from app.schemas.user import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     GoogleAuthRequest,
+    InviteCandidateRequest,
+    InviteCandidateResponse,
     LoginRequest,
     MessageResponse,
     ResetPasswordRequest,
@@ -210,6 +212,54 @@ def update_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
+
+
+@router.post("/admin/invite-candidate", response_model=InviteCandidateResponse)
+def admin_invite_candidate(
+    payload: InviteCandidateRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> InviteCandidateResponse:
+    """Generate a 72-hour candidate registration invite link.
+
+    The link pre-fills the email on the portal Register tab.
+    If SMTP is configured the email is sent; otherwise the URL is returned
+    in the response so the admin can share it manually.
+    """
+    from datetime import datetime, timezone, timedelta
+    from jose import jwt
+    from app.core.config import settings
+
+    expire = datetime.now(timezone.utc) + timedelta(hours=72)
+    token = jwt.encode(
+        {"sub": payload.email, "name": payload.name or "", "type": "candidate_invite", "exp": expire},
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+    invite_url = f"{settings.public_app_url}?invite={token}"
+
+    # Try SMTP — fall back to preview if not configured
+    if smtp_enabled():
+        try:
+            from app.services.emailer import send_candidate_invite_email
+            send_candidate_invite_email(
+                to_email=payload.email,
+                invite_url=invite_url,
+                inviter_name="Think Success Consulting",
+            )
+            return InviteCandidateResponse(
+                message=f"Invite sent to {payload.email}",
+                delivery="email",
+            )
+        except Exception:
+            pass  # fall through to preview
+
+    return InviteCandidateResponse(
+        message=f"SMTP not configured — share this link manually with {payload.email}",
+        delivery="preview",
+        invite_url=invite_url,
+        invite_token=token,
+    )
 
 
 @router.get("/candidates", response_model=CandidatePage)
@@ -472,7 +522,6 @@ def create_application(
     current_user: User = Depends(require_authenticated_user),
 ) -> ApplicationRead:
     candidate = _get_candidate_or_404(db, payload.candidate_id)
-    _ensure_candidate_access(current_user, candidate)
 
     employee_id = payload.employee_id
     if current_user.role != "super_admin":
@@ -481,6 +530,18 @@ def create_application(
         if employee_id is not None and employee_id != current_user.employee_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot apply on behalf of another employee")
         employee_id = current_user.employee_id
+
+        # Allow if candidate is assigned to this employee OR if employee has a queue item for this candidate
+        # (queue items can exist for candidates not formally "assigned" when pipeline auto-assigns)
+        has_queue_item = (db.scalar(
+            select(func.count()).select_from(EmployeeWorkQueue)
+            .where(EmployeeWorkQueue.employee_id == current_user.employee_id)
+            .where(EmployeeWorkQueue.candidate_id == payload.candidate_id)
+        ) or 0) > 0
+        if not has_queue_item:
+            _ensure_candidate_access(current_user, candidate)
+    else:
+        _ensure_candidate_access(current_user, candidate)
 
     return crud.create_application(
         db,
@@ -743,82 +804,100 @@ def analytics_overview(
     db: Session = Depends(get_db),
     _: User = Depends(require_super_admin),
 ) -> dict[str, Any]:
-    # Jobs by source
-    jobs_by_source = [
-        {"source": src, "count": cnt}
-        for src, cnt in db.execute(
-            select(JobNormalized.source, func.count().label("cnt"))
-            .where(JobNormalized.is_active.is_(True))
-            .group_by(JobNormalized.source)
-            .order_by(func.count().desc())
-        ).all()
-    ]
+    from app.models.job import JobNormalized as JN
+    from sqlalchemy import case
 
-    # Freshness breakdown
-    freshness_rows = db.execute(
-        select(JobNormalized.freshness_status, func.count().label("cnt"))
-        .group_by(JobNormalized.freshness_status)
-    ).all()
-    freshness = {row.freshness_status: row.cnt for row in freshness_rows}
-
-    # Application funnel
-    total_queue = db.scalar(select(func.count()).select_from(EmployeeWorkQueue)) or 0
-    applied = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "applied")) or 0
-    skipped = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "skipped")) or 0
-    pending = db.scalar(select(func.count()).select_from(EmployeeWorkQueue).where(EmployeeWorkQueue.status == "pending")) or 0
-
-    # Reported job issues by source
-    reported_rows = db.execute(
-        select(JobNormalized.source, EmployeeWorkQueue.report_status, func.count().label("cnt"))
-        .join(JobNormalized, EmployeeWorkQueue.job_id == JobNormalized.id)
-        .where(EmployeeWorkQueue.report_status.isnot(None))
-        .group_by(JobNormalized.source, EmployeeWorkQueue.report_status)
+    # ── Jobs by source (with latest_posted) ────────────────────────────────
+    jbs_rows = db.execute(
+        select(
+            JN.source,
+            func.count().label("cnt"),
+            func.max(JN.posted_date).label("latest_posted"),
+        )
+        .where(JN.is_active.is_(True))
+        .group_by(JN.source)
         .order_by(func.count().desc())
     ).all()
-    reports_by_source = [
-        {"source": row.source, "report_status": row.report_status, "count": row.cnt}
-        for row in reported_rows
+    jobs_by_source = [
+        {
+            "source": row.source,
+            "count": row.cnt,
+            "latest_posted": row.latest_posted.isoformat() if row.latest_posted else None,
+        }
+        for row in jbs_rows
     ]
 
-    # Top match scores by candidate
-    top_matches = db.execute(
-        select(Candidate.name, func.max(JobCandidateMatch.score).label("top_score"), func.count().label("match_count"))
+    # ── Freshness — array of {status, count} ───────────────────────────────
+    fresh_rows = db.execute(
+        select(JN.freshness_status, func.count().label("cnt"))
+        .group_by(JN.freshness_status)
+    ).all()
+    freshness = [{"status": row.freshness_status or "unknown", "count": row.cnt} for row in fresh_rows]
+
+    # ── Pipeline funnel ─────────────────────────────────────────────────────
+    total_raw        = db.scalar(select(func.count()).select_from(JobRaw)) or 0
+    total_normalized = db.scalar(select(func.count()).select_from(JN)) or 0
+    total_matched    = db.scalar(select(func.count()).select_from(JobCandidateMatch)) or 0
+    total_queued     = db.scalar(select(func.count()).select_from(EmployeeWorkQueue)) or 0
+    total_applied    = db.scalar(
+        select(func.count()).select_from(EmployeeWorkQueue)
+        .where(EmployeeWorkQueue.status == "applied")
+    ) or 0
+
+    # ── Reports by source — pivot on report_status ──────────────────────────
+    rpt_rows = db.execute(
+        select(JN.source, EmployeeWorkQueue.report_status, func.count().label("cnt"))
+        .join(JN, EmployeeWorkQueue.job_id == JN.id)
+        .where(EmployeeWorkQueue.report_status.isnot(None))
+        .group_by(JN.source, EmployeeWorkQueue.report_status)
+    ).all()
+    rpt_map: dict[str, dict[str, int]] = {}
+    for row in rpt_rows:
+        src = row.source
+        if src not in rpt_map:
+            rpt_map[src] = {"total": 0, "invalid": 0, "outdated": 0, "not_relevant": 0}
+        rpt_map[src]["total"] += row.cnt
+        if row.report_status in rpt_map[src]:
+            rpt_map[src][row.report_status] += row.cnt
+    reports_by_source = [
+        {"source": src, **counts} for src, counts in sorted(rpt_map.items(), key=lambda x: -x[1]["total"])
+    ]
+
+    # ── Top candidates by match volume / avg score ──────────────────────────
+    top_rows = db.execute(
+        select(
+            Candidate.id.label("candidate_id"),
+            Candidate.name.label("candidate_name"),
+            func.count(JobCandidateMatch.id).label("match_count"),
+            func.avg(JobCandidateMatch.score).label("avg_score"),
+        )
         .join(JobCandidateMatch, JobCandidateMatch.candidate_id == Candidate.id)
         .group_by(Candidate.id, Candidate.name)
-        .order_by(func.max(JobCandidateMatch.score).desc())
+        .order_by(func.count(JobCandidateMatch.id).desc())
         .limit(10)
     ).all()
-    candidate_stats = [
-        {"name": row.name, "top_score": round(row.top_score, 1), "match_count": row.match_count}
-        for row in top_matches
+    top_candidates = [
+        {
+            "candidate_id": row.candidate_id,
+            "candidate_name": row.candidate_name,
+            "match_count": row.match_count,
+            "avg_score": round(float(row.avg_score), 1),
+        }
+        for row in top_rows
     ]
-
-    # Source quality: jobs applied vs reported
-    source_quality = db.execute(
-        select(
-            JobNormalized.source,
-            func.count().label("total"),
-            func.sum(
-                func.cast(EmployeeWorkQueue.status == "applied", db.bind.dialect.name == "sqlite" and "INTEGER" or "INT")
-            ).label("applied_count"),
-        )
-        .join(JobNormalized, EmployeeWorkQueue.job_id == JobNormalized.id)
-        .group_by(JobNormalized.source)
-        .order_by(func.count().desc())
-    ).all()
 
     return {
         "jobs_by_source": jobs_by_source,
         "freshness": freshness,
         "funnel": {
-            "total": total_queue,
-            "pending": pending,
-            "applied": applied,
-            "skipped": skipped,
-            "apply_rate_pct": round(applied / total_queue * 100, 1) if total_queue else 0,
+            "total_raw": total_raw,
+            "total_normalized": total_normalized,
+            "total_matched": total_matched,
+            "total_queued": total_queued,
+            "total_applied": total_applied,
         },
         "reports_by_source": reports_by_source,
-        "top_candidates": candidate_stats,
+        "top_candidates": top_candidates,
     }
 
 
