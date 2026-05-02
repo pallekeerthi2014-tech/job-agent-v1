@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.types import JSON_VARIANT
@@ -18,6 +18,7 @@ class JobSource(Base):
     config: Mapped[dict] = mapped_column(JSON_VARIANT, default=dict, nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_successful_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -25,4 +26,11 @@ class JobSource(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+    ingestion_runs = relationship(
+        "IngestionRun",
+        back_populates="source",
+        cascade="all, delete-orphan",
+        order_by="IngestionRun.started_at.desc()",
     )
