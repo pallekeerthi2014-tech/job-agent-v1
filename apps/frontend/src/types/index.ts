@@ -206,6 +206,32 @@ export type CandidateCreatePayload = {
 
 export type CandidateUpdatePayload = Partial<CandidateCreatePayload>;
 
+export type CandidateMailbox = {
+  id: number;
+  candidate_id: number;
+  email: string;
+  status: string;
+  gmail_connected: boolean;
+  calendar_connected: boolean;
+  last_email_scan_at?: string | null;
+  last_calendar_scan_at?: string | null;
+  last_successful_scan_at?: string | null;
+  last_error?: string | null;
+};
+
+export type GmailOAuthUrlResponse = {
+  candidate_id: number;
+  authorization_url: string;
+};
+
+export type GmailAnalyticsRunResponse = {
+  mailboxes_scanned: number;
+  email_events_created: number;
+  calendar_events_upserted: number;
+  sheets_published: boolean;
+  failures: number;
+};
+
 export type AlertRecipientCreatePayload = {
   phone_number: string;
   label?: string | null;

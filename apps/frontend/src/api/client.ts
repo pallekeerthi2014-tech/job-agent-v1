@@ -13,9 +13,12 @@ import type {
   CandidateSelfRegisterPayload,
   CandidateSkill,
   CandidateUpdatePayload,
+  CandidateMailbox,
   Employee,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
+  GmailAnalyticsRunResponse,
+  GmailOAuthUrlResponse,
   IngestionRunPage,
   InviteCandidatePayload,
   InviteCandidateResponse,
@@ -232,6 +235,21 @@ export const apiClient = {
   // ── Phase 3: Analytics ───────────────────────────────────────────────────────
   getAnalyticsOverview: () =>
     request<AnalyticsOverview>("/api/v1/analytics/overview"),
+
+  // ── Gmail candidate analytics ───────────────────────────────────────────────
+  getCandidateMailboxes: () =>
+    request<CandidateMailbox[]>("/api/v1/admin/gmail/mailboxes"),
+  createCandidateMailbox: (payload: { candidate_id: number; email: string }) =>
+    request<CandidateMailbox>("/api/v1/admin/gmail/mailboxes", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  getCandidateGmailOAuthUrl: (candidateId: number) =>
+    request<GmailOAuthUrlResponse>(`/api/v1/admin/gmail/oauth-url?candidate_id=${candidateId}`),
+  runGmailAnalytics: (publishSheets = true) =>
+    request<GmailAnalyticsRunResponse>(`/api/v1/admin/gmail/run?publish_sheets=${publishSheets ? "true" : "false"}`, {
+      method: "POST"
+    }),
 
   // ── Candidate Portal ─────────────────────────────────────────────────────────
   candidateRegister: (payload: CandidateSelfRegisterPayload) =>
