@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import json
 import logging
 import hmac
 import hashlib
-from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import google.auth
 from google.auth.transport.requests import AuthorizedSession, Request
 from google.oauth2.credentials import Credentials
-from google.oauth2 import service_account
 from google_auth_oauthlib.flow import Flow
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -164,11 +162,7 @@ def rebuild_daily_metrics(db: Session, *, days: int = 30) -> int:
 
 
 def publish_google_sheet_report(db: Session) -> None:
-    if not settings.google_service_account_json:
-        raise RuntimeError("GOOGLE_SERVICE_ACCOUNT_JSON is required to publish Google Sheets reports")
-
-    credentials_info = _service_account_info()
-    creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SHEETS_SCOPE)
+    creds = _sheets_credentials()
     session = AuthorizedSession(creds)
     spreadsheet_id = settings.google_sheets_report_id
 
@@ -319,14 +313,9 @@ def _credentials_for_mailbox(mailbox: CandidateMailbox) -> Credentials:
     return creds
 
 
-def _service_account_info() -> dict[str, Any]:
-    raw = settings.google_service_account_json.strip()
-    if raw.startswith("{"):
-        return json.loads(raw)
-    path = Path(raw)
-    if path.exists():
-        return json.loads(path.read_text())
-    raise RuntimeError("GOOGLE_SERVICE_ACCOUNT_JSON must be a JSON object string or a readable file path")
+def _sheets_credentials() -> Any:
+    creds, _ = google.auth.default(scopes=SHEETS_SCOPE)
+    return creds
 
 
 def _persist_refreshed_tokens(mailbox: CandidateMailbox, creds: Credentials) -> None:

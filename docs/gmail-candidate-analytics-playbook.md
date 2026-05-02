@@ -13,7 +13,7 @@ For cloud deployment, use [google-cloud-gmail-analytics-deployment.md](google-cl
 5. Create an OAuth web client and set the redirect URL to:
    `https://YOUR_BACKEND_DOMAIN/api/v1/admin/gmail/oauth/callback`
 6. Create a Google Sheet owned by `Thinksuccess.ITConsultants@gmail.com`.
-7. Create a service account, share the Google Sheet with the service account email as Editor, and store either the service account JSON string or a readable JSON file path in `GOOGLE_SERVICE_ACCOUNT_JSON`.
+7. Share the Google Sheet with the Cloud Run service account email as Editor.
 8. Generate a token encryption key:
    `python scripts/generate_google_token_key.py`
 9. Set these backend environment variables:
@@ -23,7 +23,6 @@ For cloud deployment, use [google-cloud-gmail-analytics-deployment.md](google-cl
    - `GOOGLE_OAUTH_REDIRECT_URI=https://YOUR_BACKEND_DOMAIN/api/v1/admin/gmail/oauth/callback`
    - `GOOGLE_TOKEN_ENCRYPTION_KEY=...`
    - `GOOGLE_SHEETS_REPORT_ID=...`
-   - `GOOGLE_SERVICE_ACCOUNT_JSON=...`
 
 ## Candidate Connection
 
