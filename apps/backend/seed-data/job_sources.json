@@ -352,6 +352,42 @@
     "enabled": true
   },
   {
+    "name": "SimplyHired — Healthcare Business Analyst",
+    "adapter_type": "simplyhired_jobs",
+    "config": {
+      "search_query": "healthcare business analyst",
+      "location": "united states",
+      "days_back": 30,
+      "max_pages": 5,
+      "delay_seconds": 2.5
+    },
+    "enabled": false
+  },
+  {
+    "name": "SimplyHired — Clinical Data Analyst",
+    "adapter_type": "simplyhired_jobs",
+    "config": {
+      "search_query": "clinical data analyst healthcare",
+      "location": "united states",
+      "days_back": 30,
+      "max_pages": 5,
+      "delay_seconds": 2.5
+    },
+    "enabled": false
+  },
+  {
+    "name": "SimplyHired — EHR Systems Analyst",
+    "adapter_type": "simplyhired_jobs",
+    "config": {
+      "search_query": "ehr systems analyst",
+      "location": "united states",
+      "days_back": 30,
+      "max_pages": 5,
+      "delay_seconds": 2.5
+    },
+    "enabled": false
+  },
+  {
     "name": "SimplyHired — Healthcare BA (US)",
     "adapter_type": "simplyhired_jobs",
     "config": {
