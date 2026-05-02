@@ -12,6 +12,7 @@ import { CandidateDetailPage } from "./pages/CandidateDetailPage";
 import { CandidateListPage } from "./pages/CandidateListPage";
 import { CandidatePortalPage } from "./pages/CandidatePortalPage";
 import { EmployeeWorkQueuePage } from "./pages/EmployeeWorkQueuePage";
+import { GmailAnalyticsAdminPage } from "./pages/GmailAnalyticsAdminPage";
 import { JobMatchDetailPage } from "./pages/JobMatchDetailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OperationsDashboardPage } from "./pages/OperationsDashboardPage";
@@ -40,6 +41,7 @@ type ActivePage =
   | "job-match-detail"
   | "admin-users"
   | "admin-candidates"
+  | "gmail-analytics"
   | "admin-whatsapp"
   | "admin-sources"
   | "analytics";
@@ -51,7 +53,7 @@ const PRIORITY_TO_NUM: Record<Exclude<PriorityFilter, "All">, number> = {
 };
 
 const DASHBOARD_PAGE_LIMIT = 200;
-const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "admin-whatsapp", "admin-sources", "analytics"];
+const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "gmail-analytics", "admin-whatsapp", "admin-sources", "analytics"];
 
 export default function App() {
   const initialResetToken = new URLSearchParams(window.location.search).get("reset_token");
@@ -547,6 +549,15 @@ export default function App() {
           onCreateUser={handleCreateUser}
           onToggleUser={handleToggleUser}
           onResetPassword={handleResetPassword}
+        />
+      ) : null}
+
+      {activePage === "gmail-analytics" && currentUser.role === "super_admin" ? (
+        <GmailAnalyticsAdminPage
+          candidates={candidates}
+          employees={employees}
+          onCreateCandidate={handleCreateCandidate}
+          onRefreshCandidates={loadData}
         />
       ) : null}
 
