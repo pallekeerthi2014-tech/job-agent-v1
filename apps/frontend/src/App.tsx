@@ -217,6 +217,28 @@ export default function App() {
     } finally { setAuthBusy(false); }
   }
 
+  async function handleRegister(payload: { name: string; email: string; password: string }) {
+    setAuthBusy(true); setAuthError(null); setAuthSuccess(null);
+    try {
+      const response = await apiClient.candidateRegister(payload);
+      setStoredAccessToken(response.access_token);
+      setCurrentUser(response.user);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Registration failed");
+    } finally { setAuthBusy(false); }
+  }
+
+  async function handleGoogleAuth(credential: string) {
+    setAuthBusy(true); setAuthError(null); setAuthSuccess(null);
+    try {
+      const response = await apiClient.portalGoogleAuth(credential);
+      setStoredAccessToken(response.access_token);
+      setCurrentUser(response.user);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Google sign-in failed");
+    } finally { setAuthBusy(false); }
+  }
+
   async function handleForgotPassword(payload: { email: string }) {
     setAuthBusy(true); setAuthError(null); setAuthSuccess(null);
     try {
@@ -374,7 +396,10 @@ export default function App() {
         isSubmitting={authBusy}
         initialResetToken={initialResetToken}
         forgotPasswordPreview={forgotPasswordPreview}
+        googleClientId={import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined}
         onLogin={handleLogin}
+        onRegister={handleRegister}
+        onGoogleAuth={handleGoogleAuth}
         onForgotPassword={handleForgotPassword}
         onResetPassword={handleSelfResetPassword}
       />
