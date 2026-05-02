@@ -18,12 +18,14 @@ from dataclasses import asdict, dataclass
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+from datetime import timedelta
+
 from sqlalchemy import select
 
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.job import JobNormalized
-from app.services.alert_service import AlertDispatchSummary, dispatch_job_alerts
+from app.services.alert_service import AlertDispatchSummary, dispatch_job_alerts, send_source_silence_alerts
 from app.services.dedupe import mark_probable_duplicates
 from app.services.ingestion import fetch_jobs_from_enabled_sources
 from app.services.logging_utils import log_event
@@ -118,12 +120,45 @@ def run_realtime_pipeline_job() -> None:
 
         log_event(logging.INFO, "scheduler.realtime.completed", **asdict(summary))
 
+        # Step 8: Check for silent sources (enabled but no successful run in 24 h)
+        _check_and_alert_silent_sources(db)
+
     except Exception as exc:
         db.rollback()
         log_event(logging.ERROR, "scheduler.realtime.failed", error=str(exc))
         logger.exception("Realtime pipeline job failed")
     finally:
         db.close()
+
+
+def _check_and_alert_silent_sources(db: "Session") -> None:  # type: ignore[name-defined]
+    """Alert the team about any enabled source with no successful run in the past 24 h."""
+    from app.models.source import JobSource
+    from datetime import datetime, timezone
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    sources = db.scalars(select(JobSource).where(JobSource.enabled.is_(True))).all()
+
+    silent: list[tuple[str, str | None]] = []
+    for s in sources:
+        last_ok = s.last_successful_run_at
+        if last_ok is None or last_ok < cutoff:
+            last_ok_str = last_ok.strftime("%Y-%m-%d %H:%M UTC") if last_ok else None
+            silent.append((s.name, last_ok_str))
+
+    if silent:
+        log_event(
+            logging.WARNING,
+            "scheduler.silence_check.silent_sources",
+            count=len(silent),
+            names=[n for n, _ in silent],
+        )
+        try:
+            send_source_silence_alerts(silent, db=db)
+        except Exception as exc:
+            logger.warning("scheduler.silence_alert.failed: %s", exc)
+    else:
+        log_event(logging.INFO, "scheduler.silence_check.all_healthy")
 
 
 def run_midnight_cleanup_job() -> None:
