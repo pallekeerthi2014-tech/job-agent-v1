@@ -98,7 +98,6 @@ class Settings(BaseSettings):
     gmail_scan_lookback_days: int = Field(default=14, alias="GMAIL_SCAN_LOOKBACK_DAYS")
     gmail_calendar_lookahead_days: int = Field(default=30, alias="GMAIL_CALENDAR_LOOKAHEAD_DAYS")
     google_sheets_report_id: str = Field(default="", alias="GOOGLE_SHEETS_REPORT_ID")
-    google_service_account_json: str = Field(default="", alias="GOOGLE_SERVICE_ACCOUNT_JSON")
 
     # ── USAJobs ───────────────────────────────────────────────────────────────
     usajobs_api_key: str = Field(default="", alias="USAJOBS_API_KEY")
@@ -167,9 +166,6 @@ class Settings(BaseSettings):
                 issues.append("GMAIL_ANALYTICS_ENABLED=true but GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET are incomplete.")
             if not self.google_token_encryption_key:
                 issues.append("GMAIL_ANALYTICS_ENABLED=true but GOOGLE_TOKEN_ENCRYPTION_KEY is not set.")
-            if self.google_sheets_report_id and not self.google_service_account_json:
-                issues.append("GOOGLE_SHEETS_REPORT_ID is set but GOOGLE_SERVICE_ACCOUNT_JSON is not set.")
-
         for issue in issues:
             warnings.warn(f"[config] {issue}", stacklevel=2)
 
