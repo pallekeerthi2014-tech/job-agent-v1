@@ -16,6 +16,7 @@ import type {
   Employee,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
+  IngestionRunPage,
   Job,
   LoginPayload,
   LoginResponse,
@@ -24,6 +25,7 @@ import type {
   ResetPasswordPayload,
   Source,
   SourceCreate,
+  SourceHealth,
   SourceRunResult,
   SourceTestResult,
   SourceUpdate,
@@ -291,5 +293,11 @@ export const apiClient = {
   testExistingSource: (id: number) =>
     request<SourceTestResult>(`/api/v1/admin/sources/${id}/test`, { method: "POST" }),
   runSourceNow: (id: number) =>
-    request<SourceRunResult>(`/api/v1/admin/sources/${id}/run-now`, { method: "POST" })
+    request<SourceRunResult>(`/api/v1/admin/sources/${id}/run-now`, { method: "POST" }),
+
+  // ── Phase 7: Source health & run history ─────────────────────────────────
+  listSourceRuns: (sourceId: number, params?: { limit?: number; offset?: number }) =>
+    request<IngestionRunPage>(`/api/v1/admin/sources/${sourceId}/runs${buildQuery(params ?? {})}`),
+  getSourcesHealth: () =>
+    request<SourceHealth[]>("/api/v1/admin/sources/health")
 };
