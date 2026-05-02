@@ -88,6 +88,9 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
 
+    # ── Google OAuth ──────────────────────────────────────────────────────────
+    google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
+
     # ── USAJobs ───────────────────────────────────────────────────────────────
     usajobs_api_key: str = Field(default="", alias="USAJOBS_API_KEY")
     usajobs_user_agent_email: str = Field(
