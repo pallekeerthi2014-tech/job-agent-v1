@@ -4,7 +4,10 @@ import { apiClient } from "../api/client";
 import type {
   AdapterFieldSchema,
   AdapterTypeMeta,
+  IngestionRun,
+  IngestionRunPage,
   Source,
+  SourceHealth,
   SourceJobSample,
   SourceRunResult,
   SourceTestResult,
@@ -531,6 +534,108 @@ function StatusPill({ source }: { source: Source }) {
   return <span className="queue-status-pill" style={{ background: "#f5f5f5", color: "#666" }}>New</span>;
 }
 
+// ── Health pill (Phase 7) ─────────────────────────────────────────────────────
+
+function HealthPill({ status }: { status: SourceHealth["health_status"] }) {
+  const styles: Record<string, React.CSSProperties> = {
+    healthy:  { background: "var(--brand-green-soft)", color: "var(--brand-green-dark)", border: "1px solid rgba(0,122,61,0.25)" },
+    warning:  { background: "#fff8e1", color: "#7a5c00", border: "1px solid #ffe082" },
+    critical: { background: "#fff0ee", color: "#8a2b1f", border: "1px solid #f1c3bb" },
+    paused:   { background: "#f5f5f5", color: "#666",    border: "1px solid #ddd" },
+  };
+  const labels = { healthy: "✅ Healthy", warning: "⚠️ Warning", critical: "🔴 Critical", paused: "⏸ Paused" };
+  return (
+    <span style={{ ...styles[status], padding: "3px 10px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+      {labels[status]}
+    </span>
+  );
+}
+
+// ── Run history drawer (Phase 7) ──────────────────────────────────────────────
+
+function RunHistoryDrawer({ sourceId, sourceName, onClose }: { sourceId: number; sourceName: string; onClose: () => void }) {
+  const [page, setPage] = useState<IngestionRunPage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const limit = 10;
+
+  useEffect(() => {
+    setLoading(true);
+    apiClient.listSourceRuns(sourceId, { limit, offset })
+      .then(setPage)
+      .catch(() => setPage(null))
+      .finally(() => setLoading(false));
+  }, [sourceId, offset]);
+
+  return (
+    <div style={overlayStyle}>
+      <div style={{ ...modalStyle, maxWidth: 680 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <div>
+            <p className="eyebrow" style={{ marginBottom: 2 }}>Run History</p>
+            <h3 style={{ margin: 0, fontSize: "1.1rem" }}>{sourceName}</h3>
+          </div>
+          <button onClick={onClose} style={closeBtnStyle}>✕</button>
+        </div>
+
+        {loading ? (
+          <p style={{ color: "var(--brand-muted)" }}>Loading…</p>
+        ) : !page || page.items.length === 0 ? (
+          <p style={{ color: "var(--brand-muted)" }}>No runs recorded yet. Runs are tracked from the next pipeline cycle onward.</p>
+        ) : (
+          <>
+            <div className="table-wrap" style={{ maxHeight: 420, overflowY: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Started</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: "right" }}>Fetched</th>
+                    <th style={{ textAlign: "right" }}>Stored</th>
+                    <th style={{ textAlign: "right" }}>Skipped</th>
+                    <th>Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {page.items.map((run: IngestionRun) => (
+                    <tr key={run.id}>
+                      <td style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>{fmtDate(run.started_at)}</td>
+                      <td>
+                        <span style={{
+                          padding: "2px 8px", borderRadius: 12, fontSize: "0.75rem", fontWeight: 600,
+                          background: run.status === "success" ? "var(--brand-green-soft)" : "#fff0ee",
+                          color: run.status === "success" ? "var(--brand-green-dark)" : "#8a2b1f",
+                          border: run.status === "success" ? "1px solid rgba(0,122,61,0.25)" : "1px solid #f1c3bb",
+                        }}>
+                          {run.status === "success" ? "✅ OK" : "❌ Error"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{run.raw_fetched}</td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{run.raw_stored}</td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{run.jobs_skipped}</td>
+                      <td style={{ fontSize: "0.75rem", color: "#8a2b1f", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          title={run.error_message ?? undefined}>
+                        {run.error_message ? run.error_message.slice(0, 50) + (run.error_message.length > 50 ? "…" : "") : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, fontSize: "0.85rem", color: "var(--brand-muted)" }}>
+              <span>{page.total} total runs</span>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="secondary-button" style={{ padding: "4px 10px", fontSize: "0.8rem" }} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))}>← Prev</button>
+                <button className="secondary-button" style={{ padding: "4px 10px", fontSize: "0.8rem" }} disabled={offset + limit >= page.total} onClick={() => setOffset(offset + limit)}>Next →</button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Run result toast ──────────────────────────────────────────────────────────
 
 function RunResultBanner({ result, onClose }: { result: SourceRunResult; onClose: () => void }) {
@@ -570,6 +675,7 @@ function RunResultBanner({ result, onClose }: { result: SourceRunResult; onClose
 export function AdminSourcesPage() {
   const [sources, setSources] = useState<Source[]>([]);
   const [sourceTypes, setSourceTypes] = useState<AdapterTypeMeta[]>([]);
+  const [healthMap, setHealthMap] = useState<Map<number, SourceHealth>>(new Map());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -581,15 +687,20 @@ export function AdminSourcesPage() {
   const [runResult, setRunResult] = useState<SourceRunResult | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Phase 7: run history drawer
+  const [historySource, setHistorySource] = useState<Source | null>(null);
+
   const loadAll = useCallback(async () => {
     setLoadError(null);
     try {
-      const [typesResp, sourcesResp] = await Promise.all([
+      const [typesResp, sourcesResp, healthResp] = await Promise.all([
         apiClient.listSourceTypes(),
         apiClient.listSources(),
+        apiClient.getSourcesHealth().catch(() => [] as SourceHealth[]),
       ]);
       setSourceTypes(typesResp.types);
       setSources(sourcesResp);
+      setHealthMap(new Map(healthResp.map((h) => [h.source_id, h])));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to load sources");
     } finally {
@@ -688,6 +799,23 @@ export function AdminSourcesPage() {
         )}
       </section>
 
+      {/* ── Health summary (Phase 7) ─────────────────────────────────────────── */}
+      {healthMap.size > 0 && (() => {
+        const healths = Array.from(healthMap.values()).filter(h => h.enabled);
+        const counts = { healthy: 0, warning: 0, critical: 0 };
+        healths.forEach(h => { if (h.health_status in counts) counts[h.health_status as keyof typeof counts]++; });
+        return (
+          <section className="panel" style={{ padding: "14px 20px" }}>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ fontSize: "0.85rem", color: "var(--brand-muted)", marginRight: 4 }}>Source health:</span>
+              {counts.healthy > 0 && <span style={{ background: "var(--brand-green-soft)", color: "var(--brand-green-dark)", border: "1px solid rgba(0,122,61,0.25)", padding: "4px 12px", borderRadius: 20, fontSize: "0.8rem", fontWeight: 600 }}>✅ {counts.healthy} healthy</span>}
+              {counts.warning > 0 && <span style={{ background: "#fff8e1", color: "#7a5c00", border: "1px solid #ffe082", padding: "4px 12px", borderRadius: 20, fontSize: "0.8rem", fontWeight: 600 }}>⚠️ {counts.warning} warning</span>}
+              {counts.critical > 0 && <span style={{ background: "#fff0ee", color: "#8a2b1f", border: "1px solid #f1c3bb", padding: "4px 12px", borderRadius: 20, fontSize: "0.8rem", fontWeight: 600 }}>🔴 {counts.critical} critical</span>}
+            </div>
+          </section>
+        );
+      })()}
+
       {/* ── Sources table ────────────────────────────────────────────────────── */}
       <section className="panel">
         {loading ? (
@@ -706,6 +834,7 @@ export function AdminSourcesPage() {
                   <th>Name</th>
                   <th>Type</th>
                   <th>Status</th>
+                  <th>Health</th>
                   <th>Last Run</th>
                   <th style={{ textAlign: "right" }}>Total</th>
                   <th style={{ textAlign: "right" }}>24h</th>
@@ -740,6 +869,12 @@ export function AdminSourcesPage() {
                         >
                           <StatusPill source={source} />
                         </button>
+                      </td>
+                      <td>
+                        {healthMap.has(source.id)
+                          ? <HealthPill status={healthMap.get(source.id)!.health_status} />
+                          : <span style={{ fontSize: "0.78rem", color: "var(--brand-muted)" }}>—</span>
+                        }
                       </td>
                       <td style={{ fontSize: "0.82rem", color: "var(--brand-muted)" }}>
                         {fmtDate(source.last_run_at)}
@@ -780,6 +915,13 @@ export function AdminSourcesPage() {
                             onClick={() => void handleRunNow(source)}
                           >
                             {busy ? "…" : "▶ Run"}
+                          </button>
+                          <button
+                            className="secondary-button"
+                            style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                            onClick={() => setHistorySource(source)}
+                          >
+                            History
                           </button>
                           {deleteConfirmId === source.id ? (
                             <>
@@ -828,6 +970,15 @@ export function AdminSourcesPage() {
           initialSource={editingSource}
           onClose={closeWizard}
           onSaved={() => void onWizardSaved()}
+        />
+      )}
+
+      {/* ── Run history drawer (Phase 7) ─────────────────────────────────────── */}
+      {historySource && (
+        <RunHistoryDrawer
+          sourceId={historySource.id}
+          sourceName={historySource.name}
+          onClose={() => setHistorySource(null)}
         />
       )}
     </section>
