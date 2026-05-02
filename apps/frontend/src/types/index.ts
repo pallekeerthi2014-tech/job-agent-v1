@@ -341,6 +341,20 @@ export type SourceRunResult = {
   duration_ms: number;
 };
 
+// ── Candidate invitation ──────────────────────────────────────────────────────
+
+export type InviteCandidatePayload = {
+  email: string;
+  name?: string | null;
+};
+
+export type InviteCandidateResponse = {
+  message: string;
+  delivery: "email" | "preview";
+  invite_url?: string | null;
+  invite_token?: string | null;
+};
+
 // ── Phase 7: Source Health & Ingestion Run History ────────────────────────────
 
 export type IngestionRun = {
@@ -371,4 +385,27 @@ export type SourceHealth = {
   health_status: "healthy" | "warning" | "critical" | "paused";
   recent_error_rate: number;
   runs_last_24h: number;
+};
+
+// ── Phase 8: Resume Tailoring ─────────────────────────────────────────────────
+
+export type TailoredResumeRead = {
+  id: number;
+  candidate_id: number;
+  job_id: number;
+  status: "pending" | "processing" | "ready" | "error";
+  filename: string | null;
+  notes: string | null;
+  created_at: string;
+  error_message: string | null;
+};
+
+export type TailoredResumeReadWithFlags = TailoredResumeRead & {
+  flagged_skills: string[];
+};
+
+export type TailorResumeRequest = {
+  candidate_id: number;
+  notes?: string | null;
+  confirm_flagged_skills?: string[] | null;
 };
