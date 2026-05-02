@@ -90,3 +90,10 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserRead
+
+
+# ── Google OAuth ──────────────────────────────────────────────────────────────
+
+class GoogleAuthRequest(BaseModel):
+    """Frontend sends the Google credential (ID token) from Google Identity Services."""
+    credential: str
