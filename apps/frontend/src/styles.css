@@ -2075,3 +2075,71 @@ button:disabled {
   .portal-v2-main { padding: 16px; }
   .portal-v2-cards { grid-template-columns: 1fr; }
 }
+
+/* ── Phase 8: Resume Tailoring Panel ──────────────────────────────────────── */
+
+.tailor-panel { border-left: 3px solid var(--brand-green); }
+
+.tailor-warning {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  color: #6d4c00;
+  margin-bottom: 12px;
+}
+
+.tailor-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+.tailor-label { font-size: 0.825rem; font-weight: 600; color: var(--brand-charcoal); }
+
+.tailor-notes {
+  border: 1px solid var(--brand-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--brand-surface);
+  color: var(--brand-black);
+}
+.tailor-notes:focus { outline: none; border-color: var(--brand-green); box-shadow: 0 0 0 2px rgba(0,122,61,.12); }
+
+.tailor-btn { align-self: flex-start; font-size: 0.875rem; padding: 8px 16px; }
+
+.tailor-status { margin: 8px 0; padding: 10px 14px; border-radius: 6px; font-size: 0.875rem; }
+.tailor-status-processing, .tailor-status-pending { background: #e3f2fd; color: #0d47a1; }
+.tailor-status-ready { background: var(--brand-green-soft); color: var(--brand-green-dark); }
+.tailor-status-error { background: #ffebee; color: #c62828; }
+
+.tailor-ready { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.tailor-spinner { display: flex; align-items: center; gap: 8px; }
+
+.tailor-error { color: #c62828; font-size: 0.875rem; margin: 4px 0; }
+
+.tailor-flagged-box {
+  background: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: 8px;
+  padding: 14px;
+  margin: 12px 0;
+}
+.tailor-flagged-title { font-weight: 700; font-size: 0.9rem; margin: 0 0 6px; color: #e65100; }
+.tailor-flagged-desc { font-size: 0.85rem; margin: 0 0 10px; color: #5d4037; }
+.tailor-flagged-list { margin: 0 0 12px; padding-left: 18px; }
+.tailor-flagged-item { font-size: 0.875rem; margin-bottom: 3px; }
+.tailor-flagged-actions { display: flex; gap: 8px; }
+
+.tailor-history { margin-top: 16px; border-top: 1px solid var(--brand-border); padding-top: 12px; }
+.tailor-history h4 { font-size: 0.85rem; font-weight: 600; color: var(--brand-muted); margin: 0 0 8px; text-transform: uppercase; letter-spacing: .05em; }
+.tailor-history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tailor-history-item { display: flex; align-items: center; gap: 10px; font-size: 0.825rem; }
+.tailor-history-date { color: var(--brand-muted); }
+.tailor-history-status { font-weight: 600; text-transform: capitalize; }
+.tailor-history-status-ready { color: var(--brand-green-dark); }
+.tailor-history-status-error { color: #c62828; }
+.tailor-history-status-processing, .tailor-history-status-pending { color: #1565c0; }
+.tailor-history-dl { color: var(--brand-green); text-decoration: none; font-weight: 600; }
+.tailor-history-dl:hover { text-decoration: underline; }
