@@ -53,8 +53,21 @@ const PRIORITY_TO_NUM: Record<Exclude<PriorityFilter, "All">, number> = {
 const DASHBOARD_PAGE_LIMIT = 200;
 const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "admin-whatsapp", "admin-sources", "analytics"];
 
+// Decode invite token to extract pre-fill email (no verification needed — server verifies on submit)
+function extractInviteEmail(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
-  const initialResetToken = new URLSearchParams(window.location.search).get("reset_token");
+  const params = new URLSearchParams(window.location.search);
+  const initialResetToken = params.get("reset_token");
+  const initialInviteEmail = extractInviteEmail(params.get("invite"));
   const [activePage, setActivePage] = useState<ActivePage>("operations-dashboard");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -89,6 +102,7 @@ export default function App() {
   const [dashboardDayFilter, setDashboardDayFilter] = useState("all");
 
   // Busy / error states
+  const [dataLoading, setDataLoading] = useState(false);
   const [busyMatchId, setBusyMatchId] = useState<number | null>(null);
   const [busyQueueId, setBusyQueueId] = useState<number | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -130,6 +144,7 @@ export default function App() {
   async function loadData() {
     if (!currentUser) return;
     try {
+      setDataLoading(true);
       setPageError(null);
       const priorityValue = selectedPriority === "All" ? undefined : PRIORITY_TO_NUM[selectedPriority];
 
@@ -176,6 +191,8 @@ export default function App() {
       setWhatsappRecipients(waResponse as AlertRecipient[]);
     } catch (loadError) {
       setPageError(loadError instanceof Error ? loadError.message : "Unknown dashboard error");
+    } finally {
+      setDataLoading(false);
     }
   }
 
@@ -395,6 +412,7 @@ export default function App() {
         successMessage={authSuccess}
         isSubmitting={authBusy}
         initialResetToken={initialResetToken}
+        initialInviteEmail={initialInviteEmail}
         forgotPasswordPreview={forgotPasswordPreview}
         googleClientId={import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined}
         onLogin={handleLogin}
@@ -442,7 +460,12 @@ export default function App() {
         />
       ) : null}
 
-      {activePage === "operations-dashboard" ? (
+      {activePage === "operations-dashboard" && dataLoading && workQueues.length === 0 ? (
+        <section className="panel" style={{ display: "flex", alignItems: "center", gap: 14, padding: "32px 28px" }}>
+          <div style={{ width: 22, height: 22, border: "3px solid #e2e8f0", borderTopColor: "#007a3d", borderRadius: "50%", animation: "portal-spin 0.7s linear infinite", flexShrink: 0 }} />
+          <span style={{ color: "var(--brand-muted)", fontSize: "0.95rem" }}>Loading your dashboard…</span>
+        </section>
+      ) : activePage === "operations-dashboard" ? (
         <OperationsDashboardPage
           queueItems={workQueues}
           candidateMap={candidateMap}
