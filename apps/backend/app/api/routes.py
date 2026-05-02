@@ -71,6 +71,8 @@ from app.schemas.source import (
     SourceUpdate,
 )
 from app.schemas.ingestion_run import IngestionRunPage, IngestionRunRead, SourceHealthRead
+from app.schemas.tailored_resume import TailoredResumeRead, TailoredResumeReadWithFlags, TailorResumeRequest
+from app.models.tailored_resume import TailoredResume
 from app.services.source_management import (
     create_source as svc_create_source,
     delete_source as svc_delete_source,
@@ -1394,3 +1396,151 @@ def admin_sources_health(
             )
         )
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 8 — Resume Tailoring
+# Employee-facing routes to generate and download AI-tailored DOCX resumes.
+# Employees can only tailor resumes for their assigned candidates.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _require_employee_or_admin(current_user: User) -> None:
+    if current_user.role not in {"super_admin", "employee"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Employee access required")
+
+
+def _ensure_tailor_access(db: Session, current_user: User, candidate_id: int) -> None:
+    """Super-admins pass freely.  Employees must have a queue item for this candidate."""
+    if current_user.role == "super_admin":
+        return
+    _require_employee_or_admin(current_user)
+    has_access = (db.scalar(
+        select(func.count()).select_from(EmployeeWorkQueue)
+        .where(EmployeeWorkQueue.employee_id == current_user.employee_id)
+        .where(EmployeeWorkQueue.candidate_id == candidate_id)
+    ) or 0) > 0
+    if not has_access:
+        # Fall back to assigned_employee check
+        candidate = db.get(Candidate, candidate_id)
+        if candidate is None or candidate.assigned_employee != current_user.employee_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot access this candidate")
+
+
+@router.post("/jobs/{job_id}/tailor-resume", response_model=TailoredResumeReadWithFlags)
+def tailor_resume_for_job(
+    job_id: int,
+    payload: TailorResumeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> TailoredResumeReadWithFlags:
+    """Trigger AI resume tailoring for a candidate × job combination.
+
+    - Returns the TailoredResume record plus any `flagged_skills` that aren't
+      in the candidate's profile.
+    - If flagged_skills is non-empty, re-submit with confirm_flagged_skills=[]
+      (or with the accepted skill names) to proceed.
+    """
+    _require_employee_or_admin(current_user)
+    _ensure_tailor_access(db, current_user, payload.candidate_id)
+
+    # Validate job exists
+    job = db.get(JobNormalized, job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    # Validate candidate exists
+    candidate = db.get(Candidate, payload.candidate_id)
+    if candidate is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    # Check resume is on file
+    if not candidate.resume_filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Candidate has no resume on file. Upload a DOCX resume first.",
+        )
+
+    master_path = _RESUME_DIR / candidate.resume_filename
+    jd_text = (job.description or "").strip() or f"{job.title} at {job.company}"
+
+    from app.services.resume_tailor import tailor_resume as svc_tailor_resume
+
+    record, flagged_skills = svc_tailor_resume(
+        candidate_id=payload.candidate_id,
+        job_id=job_id,
+        master_resume_path=str(master_path),
+        jd_text=jd_text,
+        notes=payload.notes,
+        db=db,
+        created_by_employee_id=current_user.employee_id,
+        confirm_flagged_skills=payload.confirm_flagged_skills,
+    )
+
+    result = TailoredResumeReadWithFlags.model_validate(record)
+    result.flagged_skills = flagged_skills
+    return result
+
+
+@router.get("/tailored-resumes/{record_id}", response_model=TailoredResumeRead)
+def get_tailored_resume(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> TailoredResumeRead:
+    """Poll for status of a tailoring job."""
+    _require_employee_or_admin(current_user)
+    record = db.get(TailoredResume, record_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tailored resume not found")
+    _ensure_tailor_access(db, current_user, record.candidate_id)
+    return record
+
+
+@router.get("/tailored-resumes/{record_id}/download")
+def download_tailored_resume(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> Response:
+    """Download the generated DOCX file."""
+    from fastapi.responses import FileResponse
+
+    _require_employee_or_admin(current_user)
+    record = db.get(TailoredResume, record_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tailored resume not found")
+    _ensure_tailor_access(db, current_user, record.candidate_id)
+
+    if record.status != "ready" or not record.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File not ready (status: {record.status})",
+        )
+
+    tailored_dir = _RESUME_DIR / "tailored"
+    path = tailored_dir / record.filename
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
+    return FileResponse(str(path), filename=record.filename, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+
+@router.get("/jobs/{job_id}/tailored-resumes", response_model=list[TailoredResumeRead])
+def list_tailored_resumes_for_job(
+    job_id: int,
+    candidate_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> list[TailoredResumeRead]:
+    """List all tailored resumes for a given job + candidate combination."""
+    _require_employee_or_admin(current_user)
+    _ensure_tailor_access(db, current_user, candidate_id)
+
+    records = list(
+        db.scalars(
+            select(TailoredResume)
+            .where(TailoredResume.job_id == job_id)
+            .where(TailoredResume.candidate_id == candidate_id)
+            .order_by(TailoredResume.created_at.desc())
+        )
+    )
+    return records
