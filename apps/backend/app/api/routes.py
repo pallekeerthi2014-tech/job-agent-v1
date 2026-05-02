@@ -68,6 +68,7 @@ from app.schemas.source import (
     SourceTestResult,
     SourceUpdate,
 )
+from app.schemas.ingestion_run import IngestionRunPage, IngestionRunRead, SourceHealthRead
 from app.services.source_management import (
     create_source as svc_create_source,
     delete_source as svc_delete_source,
@@ -1197,4 +1198,120 @@ def admin_run_source_now(
     result = svc_run_source_now(db, source_id)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
+    return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 7 — Source Health & Ingestion Run History
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/admin/sources/{source_id}/runs", response_model=IngestionRunPage)
+def admin_list_source_runs(
+    source_id: int,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> IngestionRunPage:
+    """Return paginated ingestion run history for a single source."""
+    from app.models.ingestion_run import IngestionRun
+    from sqlalchemy import func
+
+    total: int = db.scalar(
+        select(func.count(IngestionRun.id)).where(IngestionRun.source_id == source_id)
+    ) or 0
+    items = list(
+        db.scalars(
+            select(IngestionRun)
+            .where(IngestionRun.source_id == source_id)
+            .order_by(IngestionRun.started_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    )
+    return IngestionRunPage(items=items, total=total)
+
+
+@router.get("/admin/sources/health", response_model=list[SourceHealthRead])
+def admin_sources_health(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> list[SourceHealthRead]:
+    """Return a health snapshot for all sources (enabled + disabled).
+
+    Health status logic:
+    - "paused"  — source.enabled is False
+    - "healthy" — last_successful_run_at within 24 h AND recent error rate < 20%
+    - "warning" — last_successful_run_at between 24 h and 48 h ago OR error rate 20–60%
+    - "critical" — no success in 48 h+ OR error rate > 60% in last 5 runs
+    """
+    from app.models.ingestion_run import IngestionRun
+    from app.models.source import JobSource
+    from datetime import datetime, timezone
+    from sqlalchemy import func
+
+    now = datetime.now(timezone.utc)
+    sources = list(db.scalars(select(JobSource).order_by(JobSource.id.asc())))
+
+    result: list[SourceHealthRead] = []
+    for source in sources:
+        if not source.enabled:
+            result.append(
+                SourceHealthRead(
+                    source_id=source.id,
+                    source_name=source.name,
+                    enabled=False,
+                    last_run_at=source.last_run_at,
+                    last_successful_run_at=source.last_successful_run_at,
+                    last_error=source.last_error,
+                    health_status="paused",
+                    recent_error_rate=0.0,
+                    runs_last_24h=0,
+                )
+            )
+            continue
+
+        # Count runs in last 24h
+        cutoff_24h = now - __import__("datetime").timedelta(hours=24)
+        runs_24h: int = db.scalar(
+            select(func.count(IngestionRun.id))
+            .where(IngestionRun.source_id == source.id)
+            .where(IngestionRun.started_at >= cutoff_24h)
+        ) or 0
+
+        # Error rate from last 5 runs
+        last_5 = list(
+            db.scalars(
+                select(IngestionRun.status)
+                .where(IngestionRun.source_id == source.id)
+                .order_by(IngestionRun.started_at.desc())
+                .limit(5)
+            )
+        )
+        error_rate = (last_5.count("error") / len(last_5)) if last_5 else 0.0
+
+        # Determine health
+        last_ok = source.last_successful_run_at
+        if last_ok is None:
+            health = "critical"
+        elif (now - last_ok).total_seconds() < 86_400:   # < 24h
+            health = "healthy" if error_rate < 0.2 else "warning"
+        elif (now - last_ok).total_seconds() < 172_800:  # 24–48h
+            health = "warning"
+        else:
+            health = "critical"
+
+        result.append(
+            SourceHealthRead(
+                source_id=source.id,
+                source_name=source.name,
+                enabled=source.enabled,
+                last_run_at=source.last_run_at,
+                last_successful_run_at=source.last_successful_run_at,
+                last_error=source.last_error,
+                health_status=health,
+                recent_error_rate=round(error_rate, 3),
+                runs_last_24h=runs_24h,
+            )
+        )
     return result
