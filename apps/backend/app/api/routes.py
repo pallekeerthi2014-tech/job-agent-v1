@@ -14,6 +14,7 @@ from app.db import crud
 from app.models.alert_recipient import AlertRecipient
 from app.models.candidate import Candidate
 from app.models.employee import Employee
+from app.models.gmail_analytics import CandidateMailbox
 from app.models.job import JobNormalized, JobRaw
 from app.models.match_score import JobCandidateMatch
 from app.models.user import User
@@ -32,6 +33,12 @@ from app.schemas.candidate import (
     CandidateUpdate,
 )
 from app.schemas.employee import EmployeeCreate, EmployeeRead
+from app.schemas.gmail_analytics import (
+    CandidateMailboxCreate,
+    CandidateMailboxRead,
+    GmailAnalyticsRunResponse,
+    GmailOAuthUrlResponse,
+)
 from app.schemas.job import JobNormalizedCreate, JobNormalizedPage, JobNormalizedRead, JobRawCreate, JobRawRead
 from app.schemas.match import JobCandidateMatchCreate, JobCandidateMatchPage, JobCandidateMatchRead
 from app.schemas.pagination import PageMeta
@@ -60,6 +67,7 @@ from app.services.auth import (
     reset_password_with_token,
 )
 from app.services.emailer import send_password_reset_email, smtp_enabled
+from app.services.gmail_analytics import build_candidate_oauth_url, exchange_candidate_oauth_code, run_gmail_analytics_cycle
 from app.services.pipeline import run_daily_pipeline
 from app.schemas.source import (
     AdapterTypeList,
@@ -137,6 +145,71 @@ def _build_user_create_payload(db: Session, payload: UserCreate) -> UserCreate:
         is_active=payload.is_active,
         employee_id=employee_id,
     )
+
+
+@router.get("/admin/gmail/mailboxes", response_model=list[CandidateMailboxRead])
+def list_candidate_mailboxes(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> list[CandidateMailboxRead]:
+    return list(db.scalars(select(CandidateMailbox).order_by(CandidateMailbox.id.desc())))
+
+
+@router.post("/admin/gmail/mailboxes", response_model=CandidateMailboxRead, status_code=status.HTTP_201_CREATED)
+def create_candidate_mailbox(
+    payload: CandidateMailboxCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> CandidateMailboxRead:
+    candidate = _get_candidate_or_404(db, payload.candidate_id)
+    existing = db.scalar(select(CandidateMailbox).where(CandidateMailbox.candidate_id == payload.candidate_id))
+    if existing is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Candidate mailbox already exists")
+    mailbox = CandidateMailbox(
+        candidate_id=candidate.id,
+        email=payload.email.lower(),
+        status="pending",
+        gmail_connected=False,
+        calendar_connected=False,
+    )
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+    return mailbox
+
+
+@router.get("/admin/gmail/oauth-url", response_model=GmailOAuthUrlResponse)
+def gmail_oauth_url(
+    candidate_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> GmailOAuthUrlResponse:
+    _get_candidate_or_404(db, candidate_id)
+    return GmailOAuthUrlResponse(candidate_id=candidate_id, authorization_url=build_candidate_oauth_url(candidate_id=candidate_id))
+
+
+@router.get("/admin/gmail/oauth/callback")
+def gmail_oauth_callback(
+    code: str = Query(...),
+    state: str = Query(...),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    mailbox = exchange_candidate_oauth_code(db, code=code, state=state)
+    return {
+        "message": "Candidate Gmail and Calendar connected successfully.",
+        "candidate_email": mailbox.email,
+        "status": mailbox.status,
+    }
+
+
+@router.post("/admin/gmail/run", response_model=GmailAnalyticsRunResponse)
+def run_gmail_analytics_now(
+    publish_sheets: bool = Query(default=True),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> GmailAnalyticsRunResponse:
+    summary = run_gmail_analytics_cycle(db, publish_sheets=publish_sheets)
+    return GmailAnalyticsRunResponse(**summary.__dict__)
 
 
 @router.post("/auth/login", response_model=TokenResponse)
