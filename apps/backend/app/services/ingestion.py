@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from sqlalchemy import tuple_
 
+from app.models.ingestion_run import IngestionRun
 from app.models.job import JobRaw
 from app.models.source import JobSource
 from app.services.logging_utils import log_event
@@ -25,6 +26,18 @@ def fetch_jobs_from_enabled_sources(db: Session) -> dict[str, int]:
 
     for source in sources:
         totals["sources_processed"] += 1
+        started_at = datetime.now(timezone.utc)
+
+        # Open an IngestionRun record before we start (status="error" by default)
+        run = IngestionRun(
+            source_id=source.id,
+            source_name=source.name,
+            started_at=started_at,
+            status="error",
+        )
+        db.add(run)
+        db.flush()  # get run.id
+
         try:
             adapter = build_source_adapter(source.adapter_type, source.name, source.config)
             raw_jobs = adapter.fetch_jobs()
@@ -66,8 +79,18 @@ def fetch_jobs_from_enabled_sources(db: Session) -> dict[str, int]:
                 raw_external_ids.add(external_id)
                 stored += 1
 
-            source.last_run_at = datetime.now(timezone.utc)
+            completed_at = datetime.now(timezone.utc)
+            source.last_run_at = completed_at
+            source.last_successful_run_at = completed_at
             source.last_error = None
+
+            # Update run record — success
+            run.completed_at = completed_at
+            run.status = "success"
+            run.raw_fetched = len(raw_jobs)
+            run.raw_stored = stored
+            run.jobs_skipped = skipped_irrelevant
+
             totals["raw_jobs_stored"] += stored
             totals["jobs_skipped_irrelevant"] += skipped_irrelevant
             log_event(
@@ -78,8 +101,15 @@ def fetch_jobs_from_enabled_sources(db: Session) -> dict[str, int]:
                 skipped_irrelevant=skipped_irrelevant,
             )
         except Exception as exc:
-            source.last_run_at = datetime.now(timezone.utc)
+            completed_at = datetime.now(timezone.utc)
+            source.last_run_at = completed_at
             source.last_error = str(exc)
+
+            # Update run record — error
+            run.completed_at = completed_at
+            run.status = "error"
+            run.error_message = str(exc)[:2000]
+
             totals["source_failures"] += 1
             log_event(logging.ERROR, "pipeline.fetch_source.failure", source=source.name, error=str(exc))
 
