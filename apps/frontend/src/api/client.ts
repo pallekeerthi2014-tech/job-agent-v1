@@ -17,6 +17,8 @@ import type {
   ForgotPasswordPayload,
   ForgotPasswordResponse,
   IngestionRunPage,
+  InviteCandidatePayload,
+  InviteCandidateResponse,
   Job,
   LoginPayload,
   LoginResponse,
@@ -29,6 +31,9 @@ import type {
   SourceRunResult,
   SourceTestResult,
   SourceUpdate,
+  TailoredResumeRead,
+  TailoredResumeReadWithFlags,
+  TailorResumeRequest,
   User,
   UserCreatePayload,
   UserUpdatePayload,
@@ -295,9 +300,29 @@ export const apiClient = {
   runSourceNow: (id: number) =>
     request<SourceRunResult>(`/api/v1/admin/sources/${id}/run-now`, { method: "POST" }),
 
+  // ── Candidate invitation ─────────────────────────────────────────────────
+  inviteCandidate: (payload: InviteCandidatePayload) =>
+    request<InviteCandidateResponse>("/api/v1/admin/invite-candidate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   // ── Phase 7: Source health & run history ─────────────────────────────────
   listSourceRuns: (sourceId: number, params?: { limit?: number; offset?: number }) =>
     request<IngestionRunPage>(`/api/v1/admin/sources/${sourceId}/runs${buildQuery(params ?? {})}`),
   getSourcesHealth: () =>
-    request<SourceHealth[]>("/api/v1/admin/sources/health")
+    request<SourceHealth[]>("/api/v1/admin/sources/health"),
+
+  // ── Phase 8: Resume Tailoring ─────────────────────────────────────────────
+  tailorResume: (jobId: number, payload: TailorResumeRequest) =>
+    request<TailoredResumeReadWithFlags>(`/api/v1/jobs/${jobId}/tailor-resume`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  getTailoredResume: (id: number) =>
+    request<TailoredResumeRead>(`/api/v1/tailored-resumes/${id}`),
+  downloadTailoredResumeUrl: (id: number) =>
+    `${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`,
+  listTailoredResumes: (jobId: number, candidateId: number) =>
+    request<TailoredResumeRead[]>(`/api/v1/jobs/${jobId}/tailored-resumes?candidate_id=${candidateId}`)
 };
