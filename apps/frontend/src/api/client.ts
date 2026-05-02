@@ -232,6 +232,11 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  portalGoogleAuth: (credential: string) =>
+    request<LoginResponse>("/api/v1/portal/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential })
+    }),
   portalGetProfile: () =>
     request<Candidate>("/api/v1/portal/me"),
   portalUpdateProfile: (payload: CandidateProfileUpdatePayload) =>
