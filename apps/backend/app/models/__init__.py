@@ -2,6 +2,7 @@ from app.models.alert_recipient import AlertRecipient
 from app.models.application import Application
 from app.models.candidate import Candidate, CandidatePreference, CandidateSkill
 from app.models.employee import Employee
+from app.models.ingestion_run import IngestionRun
 from app.models.job import JobNormalized, JobRaw
 from app.models.match_score import JobCandidateMatch
 from app.models.source import JobSource
@@ -16,6 +17,7 @@ __all__ = [
     "CandidateSkill",
     "Employee",
     "EmployeeWorkQueue",
+    "IngestionRun",
     "JobCandidateMatch",
     "JobNormalized",
     "JobRaw",
