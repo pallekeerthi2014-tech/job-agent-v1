@@ -690,6 +690,15 @@ export function AdminSourcesPage() {
   // Phase 7: run history drawer
   const [historySource, setHistorySource] = useState<Source | null>(null);
 
+  // Sort controls
+  type SortField = "name" | "type" | "health" | "last_run";
+  const [sortBy, setSortBy] = useState<SortField>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // Run All
+  const [runAllBusy, setRunAllBusy] = useState(false);
+  const [runAllResults, setRunAllResults] = useState<SourceRunResult[]>([]);
+
   const loadAll = useCallback(async () => {
     setLoadError(null);
     try {
@@ -735,6 +744,61 @@ export function AdminSourcesPage() {
     } finally {
       setBusySourceId(null);
     }
+  }
+
+  function toggleSort(field: SortField) {
+    if (sortBy === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortDir("asc");
+    }
+  }
+
+  const healthOrder: Record<SourceHealth["health_status"], number> = { healthy: 0, warning: 1, critical: 2, paused: 3 };
+
+  const sortedSources = [...sources].sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === "name") cmp = a.name.localeCompare(b.name);
+    else if (sortBy === "type") cmp = a.adapter_type.localeCompare(b.adapter_type);
+    else if (sortBy === "health") {
+      const ha = healthMap.get(a.id)?.health_status ?? "paused";
+      const hb = healthMap.get(b.id)?.health_status ?? "paused";
+      cmp = healthOrder[ha] - healthOrder[hb];
+    } else if (sortBy === "last_run") {
+      const da = a.last_run_at ? new Date(a.last_run_at).getTime() : 0;
+      const db = b.last_run_at ? new Date(b.last_run_at).getTime() : 0;
+      cmp = da - db;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  async function handleRunAll() {
+    const enabled = sources.filter((s) => s.enabled);
+    if (enabled.length === 0) return;
+    setRunAllBusy(true);
+    setActionError(null);
+    setRunAllResults([]);
+    const results: SourceRunResult[] = [];
+    for (const source of enabled) {
+      try {
+        const r = await apiClient.runSourceNow(source.id);
+        results.push(r);
+      } catch {
+        results.push({
+          source_id: source.id,
+          source_name: source.name,
+          success: false,
+          raw_jobs_stored: 0,
+          jobs_skipped_irrelevant: 0,
+          error: "Request failed",
+          duration_ms: 0,
+        });
+      }
+    }
+    setRunAllResults(results);
+    setRunAllBusy(false);
+    await loadAll();
   }
 
   async function handleRunNow(source: Source) {
@@ -784,9 +848,19 @@ export function AdminSourcesPage() {
             <h3>Job Sources</h3>
             <p>Manage the external feeds that the daily pipeline ingests. Runs automatically at 6 AM UTC.</p>
           </div>
-          <button className="primary-button" onClick={openAdd}>
-            + Add Source
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              className="secondary-button"
+              onClick={() => void handleRunAll()}
+              disabled={runAllBusy || sources.filter((s) => s.enabled).length === 0}
+              title="Run all enabled sources now"
+            >
+              {runAllBusy ? "⏳ Running All…" : "▶▶ Run All"}
+            </button>
+            <button className="primary-button" onClick={openAdd}>
+              + Add Source
+            </button>
+          </div>
         </div>
 
         {actionError && (
@@ -795,6 +869,26 @@ export function AdminSourcesPage() {
         {runResult && (
           <div style={{ marginTop: 12 }}>
             <RunResultBanner result={runResult} onClose={() => setRunResult(null)} />
+          </div>
+        )}
+        {runAllResults.length > 0 && (
+          <div style={{ marginTop: 12, padding: "14px 18px", borderRadius: 14, background: "rgba(255,255,255,0.8)", border: "1px solid var(--brand-border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <strong style={{ fontSize: "0.9rem" }}>▶▶ Run All Results</strong>
+              <button onClick={() => setRunAllResults([])} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--brand-muted)", fontSize: "1rem" }}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {runAllResults.map((r) => (
+                <div key={r.source_id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.85rem" }}>
+                  <span>{r.success ? "✅" : "❌"}</span>
+                  <span style={{ fontWeight: 600, minWidth: 140 }}>{r.source_name}</span>
+                  {r.success
+                    ? <span style={{ color: "var(--brand-muted)" }}>{r.raw_jobs_stored} stored · {r.jobs_skipped_irrelevant} skipped · {fmtMs(r.duration_ms)}</span>
+                    : <span style={{ color: "#8a2b1f" }}>{r.error}</span>
+                  }
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>
@@ -827,6 +921,33 @@ export function AdminSourcesPage() {
             <p>No sources configured yet. Click <strong>+ Add Source</strong> to add the first feed.</p>
           </div>
         ) : (
+          <>
+            {/* Sort controls */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.8rem", color: "var(--brand-muted)", marginRight: 4 }}>Sort by:</span>
+              {(["name", "type", "health", "last_run"] as const).map((field) => {
+                const labels = { name: "Name", type: "Type", health: "Health", last_run: "Last Run" };
+                const active = sortBy === field;
+                return (
+                  <button
+                    key={field}
+                    onClick={() => toggleSort(field)}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 20,
+                      border: "1px solid var(--brand-border)",
+                      background: active ? "var(--brand-green-soft)" : "white",
+                      color: active ? "var(--brand-green-dark)" : "var(--brand-muted)",
+                      fontWeight: active ? 700 : 400,
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {labels[field]} {active ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                  </button>
+                );
+              })}
+            </div>
           <div className="table-wrap">
             <table>
               <thead>
@@ -843,7 +964,7 @@ export function AdminSourcesPage() {
                 </tr>
               </thead>
               <tbody>
-                {sources.map((source) => {
+                {sortedSources.map((source) => {
                   const busy = busySourceId === source.id;
                   return (
                     <tr key={source.id}>
@@ -959,6 +1080,7 @@ export function AdminSourcesPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </section>
 
