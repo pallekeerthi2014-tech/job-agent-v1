@@ -153,6 +153,72 @@ def send_whatsapp_alert(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Source silence alert — fires when a source goes 24 h+ without a successful run
+# ──────────────────────────────────────────────────────────────────────────────
+
+def send_source_silence_alerts(silent_sources: list[tuple[str, str | None]], db: "Session | None" = None) -> int:
+    """Send a single WhatsApp broadcast to the team listing all silent sources.
+
+    Args:
+        silent_sources: list of (source_name, last_success_iso_or_None) tuples
+        db: optional DB session for team-number lookup
+
+    Returns number of messages sent.
+    """
+    if not silent_sources:
+        return 0
+
+    if not settings.whatsapp_alerts_enabled:
+        logger.debug("source_silence_alert.skipped: WHATSAPP_ALERTS_ENABLED=false")
+        return 0
+
+    try:
+        from twilio.rest import Client as TwilioClient  # type: ignore
+        from twilio.base.exceptions import TwilioRestException  # type: ignore
+    except ImportError:
+        logger.warning("source_silence_alert.skipped: twilio package not installed")
+        return 0
+
+    if not settings.twilio_account_sid or not settings.twilio_auth_token or not settings.twilio_whatsapp_from_formatted:
+        logger.warning("source_silence_alert.skipped: incomplete Twilio credentials")
+        return 0
+
+    team_numbers = _team_whatsapp_numbers(db)
+    if not team_numbers:
+        logger.warning("source_silence_alert.skipped: no active recipient numbers")
+        return 0
+
+    lines = "\n".join(
+        f"  ⚠️ {name} (last success: {last or 'never'})"
+        for name, last in silent_sources
+    )
+    message_body = (
+        f"🔴 *Source Silence Alert*\n"
+        f"──────────────────\n"
+        f"The following enabled sources have had NO successful run in the past 24 h:\n\n"
+        f"{lines}\n\n"
+        f"Check Railway logs or run each source manually from the Admin panel."
+    )
+    if len(message_body) > _WHATSAPP_MAX_CHARS:
+        message_body = message_body[:_WHATSAPP_MAX_CHARS - 4] + "…"
+
+    client = TwilioClient(settings.twilio_account_sid, settings.twilio_auth_token)
+    sent = 0
+    for to_number in team_numbers:
+        try:
+            client.messages.create(
+                body=message_body,
+                from_=settings.twilio_whatsapp_from_formatted,
+                to=to_number,
+            )
+            sent += 1
+            logger.info("source_silence_alert.sent to=%s sources=%d", to_number, len(silent_sources))
+        except Exception as exc:
+            logger.warning("source_silence_alert.failed to=%s error=%s", to_number, exc)
+    return sent
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Email alert
 # ──────────────────────────────────────────────────────────────────────────────
 
