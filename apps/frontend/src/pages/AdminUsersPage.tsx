@@ -1,6 +1,7 @@
 import { useState } from "react";
 
-import type { User, UserCreatePayload } from "../types";
+import { apiClient } from "../api/client";
+import type { InviteCandidatePayload, User, UserCreatePayload } from "../types";
 
 type AdminUsersPageProps = {
   users: User[];
@@ -20,6 +21,121 @@ const INITIAL_FORM: UserCreatePayload = {
   employee_id: null
 };
 
+// ── Invite Candidate Modal ────────────────────────────────────────────────────
+
+function InviteModal({ onClose }: { onClose: () => void }) {
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function handleInvite(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    setPreviewUrl(null);
+    try {
+      const payload: InviteCandidatePayload = {
+        email: inviteEmail,
+        name: inviteName || null,
+      };
+      const result = await apiClient.inviteCandidate(payload);
+      if (result.delivery === "preview" && result.invite_url) {
+        setPreviewUrl(result.invite_url);
+      } else {
+        // Email was sent
+        onClose();
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to send invite");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function copyLink() {
+    if (!previewUrl) return;
+    void navigator.clipboard.writeText(previewUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-box" style={{ maxWidth: 480 }}>
+        <div className="modal-header">
+          <h3>Invite Candidate</h3>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        {!previewUrl ? (
+          <form onSubmit={handleInvite} className="modal-body">
+            <p style={{ marginBottom: "1rem", color: "var(--text-muted, #64748b)", fontSize: "0.9rem" }}>
+              Send a registration invitation link to a candidate's email address.
+            </p>
+
+            <label className="filter-field">
+              <span>Candidate Email *</span>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="candidate@email.com"
+                required
+              />
+            </label>
+
+            <label className="filter-field" style={{ marginTop: "0.75rem" }}>
+              <span>Candidate Name (optional)</span>
+              <input
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="e.g. Jane Smith"
+              />
+            </label>
+
+            {error && <div className="error-banner" style={{ marginTop: "0.75rem" }}>{error}</div>}
+
+            <div className="modal-footer">
+              <button className="secondary-button" type="button" onClick={onClose}>
+                Cancel
+              </button>
+              <button className="primary-button" type="submit" disabled={busy || !inviteEmail}>
+                {busy ? "Sending…" : "Send Invite"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="modal-body">
+            <div className="auth-helper-card" style={{ marginBottom: "1rem" }}>
+              <strong>📧 SMTP not configured — preview link</strong>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-muted, #64748b)", marginTop: 8 }}>
+                Email delivery is not set up yet. Share this link directly with the candidate.
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
+                <code style={{ flex: 1, padding: "8px 12px", borderRadius: 8, background: "var(--surface-inset, #f1f5f9)", fontSize: "0.78rem", wordBreak: "break-all" }}>
+                  {previewUrl}
+                </code>
+                <button className="secondary-button" onClick={copyLink} style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+                  {copied ? "✓ Copied" : "Copy Link"}
+                </button>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="primary-button" onClick={onClose}>Done</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export function AdminUsersPage({
   users,
   busy,
@@ -31,13 +147,25 @@ export function AdminUsersPage({
   const [form, setForm] = useState<UserCreatePayload>(INITIAL_FORM);
   const [resetTargetId, setResetTargetId] = useState<number | null>(null);
   const [resetPassword, setResetPasswordValue] = useState("");
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   return (
     <section className="dashboard-stack">
+      {showInviteModal && <InviteModal onClose={() => setShowInviteModal(false)} />}
+
       <section className="panel">
         <div className="section-heading">
-          <h3>Super Admin User Management</h3>
-          <p>Create employee logins, activate or pause access, and reset passwords from one place.</p>
+          <div>
+            <h3>Super Admin User Management</h3>
+            <p>Create employee logins, activate or pause access, and reset passwords from one place.</p>
+          </div>
+          <button
+            className="primary-button"
+            style={{ marginLeft: "auto", flexShrink: 0 }}
+            onClick={() => setShowInviteModal(true)}
+          >
+            ✉ Invite Candidate
+          </button>
         </div>
 
         <form
@@ -111,7 +239,7 @@ export function AdminUsersPage({
               <div>
                 <strong>{user.name}</strong>
                 <p>
-                  {user.email} · {user.role === "super_admin" ? "Super Admin" : "Employee"}
+                  {user.email} · {user.role === "super_admin" ? "Super Admin" : user.role === "candidate" ? "Candidate" : "Employee"}
                 </p>
                 <span className={`queue-status-pill queue-status-${user.is_active ? "pending" : "skipped"}`}>
                   {user.is_active ? "Active" : "Inactive"}
