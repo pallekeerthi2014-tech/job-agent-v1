@@ -39,6 +39,7 @@ type LoginPageProps = {
   successMessage: string | null;
   isSubmitting: boolean;
   initialResetToken?: string | null;
+  initialInviteEmail?: string | null;
   forgotPasswordPreview: ForgotPasswordResponse | null;
   googleClientId?: string;
   onLogin: (payload: { email: string; password: string }) => Promise<void>;
@@ -53,6 +54,7 @@ export function LoginPage({
   successMessage,
   isSubmitting,
   initialResetToken,
+  initialInviteEmail,
   forgotPasswordPreview,
   googleClientId,
   onLogin,
@@ -69,7 +71,7 @@ export function LoginPage({
 
   // Register form state
   const [regName, setRegName] = useState("");
-  const [regEmail, setRegEmail] = useState("");
+  const [regEmail, setRegEmail] = useState(initialInviteEmail ?? "");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
   const [regPasswordError, setRegPasswordError] = useState<string | null>(null);
