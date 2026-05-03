@@ -192,6 +192,7 @@ export function OperationsDashboardPage({
                     candidate={candidate}
                     job={job}
                     compact
+                    queueStatus={queueItem.status}
                     disabled={busyQueueId === queueItem.id}
                     onViewJob={() => {
                       if (queueItem.match_id && matchMap.get(queueItem.match_id)) {

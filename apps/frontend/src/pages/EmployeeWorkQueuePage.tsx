@@ -120,6 +120,7 @@ export function EmployeeWorkQueuePage({
                 candidate={candidate}
                 job={job}
                 compact
+                queueStatus={queueItem?.status}
                 disabled={busyMatchId === match.id}
                 onViewJob={() => onViewJob(match)}
                 onApply={() => void onMarkApplied(match)}

@@ -8,6 +8,8 @@ type JobCardProps = {
   job?: Job | null;
   disabled?: boolean;
   compact?: boolean;
+  /** Pass the EmployeeWorkQueue status so buttons reflect current state */
+  queueStatus?: string | null;
   onViewJob: () => void;
   onApply: () => void;
   onSkip: () => void;
@@ -38,6 +40,7 @@ export function JobCard({
   job,
   disabled,
   compact = false,
+  queueStatus,
   onViewJob,
   onApply,
   onSkip
@@ -106,6 +109,7 @@ export function JobCard({
         onMarkApplied={onApply}
         onSkip={onSkip}
         disabled={disabled}
+        queueStatus={queueStatus}
       />
     </article>
   );
