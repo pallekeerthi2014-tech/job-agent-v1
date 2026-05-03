@@ -2143,3 +2143,7 @@ button:disabled {
 .tailor-history-status-processing, .tailor-history-status-pending { color: #1565c0; }
 .tailor-history-dl { color: var(--brand-green); text-decoration: none; font-weight: 600; }
 .tailor-history-dl:hover { text-decoration: underline; }
+
+/* ── Resume tailor error box (re-upload hint) ─────────────────────────────── */
+.tailor-error-box { display: flex; flex-direction: column; gap: 6px; }
+.tailor-reupload-hint { font-size: 0.825rem; color: #5d4037; margin: 0; background: #fff3e0; border-radius: 4px; padding: 6px 10px; }
