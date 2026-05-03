@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -24,6 +24,9 @@ class Candidate(Base):
     # Resume storage — filename on disk + extracted plain text for scoring
     resume_filename: Mapped[str | None] = mapped_column(String(500), nullable=True)
     resume_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Raw file bytes stored in DB — survives container restarts / redeployments
+    resume_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    resume_content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     employee = relationship("Employee", back_populates="assigned_candidates")
     preference = relationship("CandidatePreference", back_populates="candidate", uselist=False, cascade="all, delete-orphan")
