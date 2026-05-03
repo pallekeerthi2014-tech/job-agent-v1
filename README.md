@@ -120,6 +120,8 @@ The monorepo uses environment variables across Compose, backend, and frontend.
 - `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`, `EMPLOYEE_DEFAULT_PASSWORD`
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_USE_TLS`
 - `SEED_SAMPLE_CANDIDATES`
+- `GMAIL_ANALYTICS_ENABLED`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`
+- `GOOGLE_TOKEN_ENCRYPTION_KEY`, `GOOGLE_SHEETS_REPORT_ID`
 
 ## Auth overview
 
@@ -132,6 +134,12 @@ The monorepo uses environment variables across Compose, backend, and frontend.
 - `PUT /api/v1/admin/users/{id}`: activate/deactivate or reset passwords
 
 Employees only see their own candidates, matches, applications, and work queue. Super admins can see and manage everything.
+
+## Gmail candidate analytics
+
+Candidate Gmail analytics is a Google-first reporting workflow that stays separate from WhatsApp alerts. Candidate mailboxes connect through OAuth read-only Gmail and Calendar access, and the backend publishes candidate-wise daily metrics into a Google Sheet owned by the company account. See [docs/gmail-candidate-analytics-playbook.md](docs/gmail-candidate-analytics-playbook.md) for setup and employee instructions.
+
+For a no-local-machine deployment, use Cloud Run service + Cloud Run Job + Cloud Scheduler + Cloud SQL. See [docs/google-cloud-gmail-analytics-deployment.md](docs/google-cloud-gmail-analytics-deployment.md).
 
 ## Deployment
 
@@ -192,6 +200,9 @@ Example source config:
 - `GET /api/v1/dashboard/summary`
 - `GET /api/v1/dashboard/work-queue`
 - `POST /api/v1/dashboard/work-queue/{queue_item_id}/mark-applied`
+- `GET /api/v1/admin/gmail/oauth-url`
+- `GET /api/v1/admin/gmail/mailboxes`
+- `POST /api/v1/admin/gmail/run`
 
 ## Useful commands
 

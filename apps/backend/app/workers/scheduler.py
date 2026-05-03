@@ -175,6 +175,24 @@ def run_midnight_cleanup_job() -> None:
         db.close()
 
 
+def run_gmail_analytics_job() -> None:
+    """Scan connected candidate Gmail/Calendar accounts and publish the Google Sheet report."""
+    if not settings.gmail_analytics_enabled:
+        return
+    db = SessionLocal()
+    try:
+        from app.services.gmail_analytics import run_gmail_analytics_cycle
+
+        summary = run_gmail_analytics_cycle(db, publish_sheets=True)
+        log_event(logging.INFO, "scheduler.gmail_analytics.completed", **asdict(summary))
+    except Exception as exc:
+        db.rollback()
+        log_event(logging.ERROR, "scheduler.gmail_analytics.failed", error=str(exc))
+        logger.exception("Gmail analytics job failed")
+    finally:
+        db.close()
+
+
 def build_scheduler() -> BackgroundScheduler:
     """
     Build and return a configured BackgroundScheduler with two jobs:
@@ -207,5 +225,17 @@ def build_scheduler() -> BackgroundScheduler:
         misfire_grace_time=300,
     )
     logger.info("scheduler.configured: midnight cleanup retained")
+
+    if settings.gmail_analytics_enabled:
+        scheduler.add_job(
+            run_gmail_analytics_job,
+            IntervalTrigger(minutes=settings.gmail_scan_interval_minutes, timezone=settings.scheduler_timezone),
+            id="candidate-gmail-analytics",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=120,
+        )
+        logger.info("scheduler.configured: Gmail analytics every %d minutes", settings.gmail_scan_interval_minutes)
 
     return scheduler
