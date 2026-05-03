@@ -723,12 +723,26 @@ async def upload_resume(
     if suffix not in allowed:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {suffix}. Allowed: {allowed}")
 
-    _RESUME_DIR.mkdir(parents=True, exist_ok=True)
-    safe_name = f"candidate_{candidate_id}{suffix}"
-    dest = _RESUME_DIR / safe_name
-
     content = await file.read()
-    dest.write_bytes(content)
+
+    # Always persist bytes to DB — survives container restarts / redeployments
+    content_type_map = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".doc": "application/msword",
+        ".txt": "text/plain",
+    }
+    candidate.resume_bytes = content
+    candidate.resume_content_type = content_type_map.get(suffix, "application/octet-stream")
+
+    # Also write to disk as a local cache (best-effort — failure is non-fatal)
+    safe_name = f"candidate_{candidate_id}{suffix}"
+    try:
+        _RESUME_DIR.mkdir(parents=True, exist_ok=True)
+        dest = _RESUME_DIR / safe_name
+        dest.write_bytes(content)
+    except Exception:
+        pass  # DB copy is the source of truth; disk is just a cache
 
     # Extract plain text for scoring
     resume_text: str | None = None
@@ -745,7 +759,7 @@ async def upload_resume(
         else:
             resume_text = content.decode("utf-8", errors="ignore")
     except Exception:
-        resume_text = None  # Store file even if text extraction fails
+        resume_text = None
 
     candidate.resume_filename = safe_name
     candidate.resume_text = (resume_text or "").strip() or None
@@ -764,10 +778,29 @@ def download_resume(
     candidate = db.scalar(select(Candidate).where(Candidate.id == candidate_id))
     if not candidate or not candidate.resume_filename:
         raise HTTPException(status_code=404, detail="No resume on file for this candidate")
+
+    # Try disk cache first (fastest)
     path = _RESUME_DIR / candidate.resume_filename
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Resume file not found on disk")
-    return FileResponse(str(path), filename=candidate.resume_filename)
+    if path.exists():
+        return FileResponse(str(path), filename=candidate.resume_filename)
+
+    # Fall back to DB bytes (always available after upload, survives redeploy)
+    if candidate.resume_bytes:
+        content_type = candidate.resume_content_type or "application/octet-stream"
+        # Opportunistically restore the disk cache for next time
+        try:
+            _RESUME_DIR.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(candidate.resume_bytes)
+            return FileResponse(str(path), filename=candidate.resume_filename)
+        except Exception:
+            pass
+        return Response(
+            content=candidate.resume_bytes,
+            media_type=content_type,
+            headers={"Content-Disposition": f'attachment; filename="{candidate.resume_filename}"'},
+        )
+
+    raise HTTPException(status_code=404, detail="Resume file not found. Please re-upload.")
 
 
 # ── Work queue: report a job as invalid/outdated/not-relevant ─────────────────
@@ -1106,11 +1139,25 @@ async def portal_upload_resume(
     if suffix not in allowed:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {suffix}. Allowed: {allowed}")
 
-    _RESUME_DIR.mkdir(parents=True, exist_ok=True)
-    safe_name = f"candidate_{candidate.id}{suffix}"
-    dest = _RESUME_DIR / safe_name
     content = await file.read()
-    dest.write_bytes(content)
+    safe_name = f"candidate_{candidate.id}{suffix}"
+
+    # Persist bytes to DB — source of truth across redeployments
+    content_type_map = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".doc": "application/msword",
+        ".txt": "text/plain",
+    }
+    candidate.resume_bytes = content
+    candidate.resume_content_type = content_type_map.get(suffix, "application/octet-stream")
+
+    # Also write to disk as a cache (best-effort)
+    try:
+        _RESUME_DIR.mkdir(parents=True, exist_ok=True)
+        (_RESUME_DIR / safe_name).write_bytes(content)
+    except Exception:
+        pass
 
     resume_text: str | None = None
     try:
@@ -1145,10 +1192,26 @@ def portal_download_resume(
     candidate = db.get(Candidate, current_user.candidate_id)
     if candidate is None or not candidate.resume_filename:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No resume on file")
+
     path = _RESUME_DIR / candidate.resume_filename
-    if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume file not found on disk")
-    return FileResponse(str(path), filename=candidate.resume_filename)
+    if path.exists():
+        return FileResponse(str(path), filename=candidate.resume_filename)
+
+    if candidate.resume_bytes:
+        content_type = candidate.resume_content_type or "application/octet-stream"
+        try:
+            _RESUME_DIR.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(candidate.resume_bytes)
+            return FileResponse(str(path), filename=candidate.resume_filename)
+        except Exception:
+            pass
+        return Response(
+            content=candidate.resume_bytes,
+            media_type=content_type,
+            headers={"Content-Disposition": f'attachment; filename="{candidate.resume_filename}"'},
+        )
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume file not found. Please re-upload.")
 
 
 # ── Admin: Source / Feed Management ──────────────────────────────────────────
