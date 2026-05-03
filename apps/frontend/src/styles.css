@@ -2201,6 +2201,8 @@ button:disabled {
   font-size: 0.875rem;
   cursor: default;
   opacity: 0.75;
+}
+
 /* Gmail analytics onboarding */
 .gmail-action-row,
 .gmail-connect-grid {
