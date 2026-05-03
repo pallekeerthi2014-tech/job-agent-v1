@@ -2147,3 +2147,35 @@ button:disabled {
 /* ── Resume tailor error box (re-upload hint) ─────────────────────────────── */
 .tailor-error-box { display: flex; flex-direction: column; gap: 6px; }
 .tailor-reupload-hint { font-size: 0.825rem; color: #5d4037; margin: 0; background: #fff3e0; border-radius: 4px; padding: 6px 10px; }
+
+/* ── Toast notification ───────────────────────────────────────────────────── */
+.toast-notification {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1b5e20;
+  color: #fff;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 0.925rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  z-index: 9999;
+  animation: toast-in 0.25s ease;
+  white-space: nowrap;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Employee analytics table ─────────────────────────────────────────────── */
+.employee-stats-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.employee-stats-table th { text-align: left; padding: 8px 12px; background: var(--brand-surface); border-bottom: 2px solid var(--brand-border); font-size: 0.775rem; text-transform: uppercase; letter-spacing: .06em; color: var(--brand-muted); }
+.employee-stats-table td { padding: 8px 12px; border-bottom: 1px solid var(--brand-border); }
+.employee-stats-table tr:last-child td { border-bottom: none; }
+.employee-stats-table .applied-cell { color: var(--brand-green-dark); font-weight: 700; }
+.employee-stats-table .pending-cell { color: #1565c0; }
+.applied-bar-track { background: #e0f2e9; border-radius: 4px; height: 7px; width: 80px; display: inline-block; vertical-align: middle; }
+.applied-bar-fill  { background: var(--brand-green); height: 100%; border-radius: 4px; }

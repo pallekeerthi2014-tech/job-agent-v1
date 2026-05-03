@@ -243,6 +243,16 @@ export type CandidateProfileUpdatePayload = {
   salary_unit?: string | null;
 };
 
+export type EmployeeStat = {
+  employee_id: number;
+  employee_name: string;
+  candidate_id: number;
+  candidate_name: string;
+  total: number;
+  applied: number;
+  pending: number;
+};
+
 export type AnalyticsOverview = {
   jobs_by_source: { source: string; count: number; latest_posted: string | null }[];
   freshness: { status: string; count: number }[];
@@ -255,6 +265,7 @@ export type AnalyticsOverview = {
   };
   reports_by_source: { source: string; total: number; invalid: number; outdated: number; not_relevant: number }[];
   top_candidates: { candidate_id: number; candidate_name: string; match_count: number; avg_score: number }[];
+  employee_stats: EmployeeStat[];
 };
 
 // ── Phase 4: Source / Feed Management ────────────────────────────────────────

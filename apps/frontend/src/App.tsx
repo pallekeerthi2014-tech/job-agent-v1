@@ -101,6 +101,9 @@ export default function App() {
   const [dashboardStatusFilter, setDashboardStatusFilter] = useState("pending");
   const [dashboardDayFilter, setDashboardDayFilter] = useState("all");
 
+  // Toast notification
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   // Busy / error states
   const [dataLoading, setDataLoading] = useState(false);
   const [busyMatchId, setBusyMatchId] = useState<number | null>(null);
@@ -304,6 +307,11 @@ export default function App() {
   }
 
   // ── Application / skip ──────────────────────────────────────────────────────
+  function showToast(message: string, duration = 3500) {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), duration);
+  }
+
   async function updateApplication(
     params: { candidateId: number; jobId: number; employeeId?: number | null; matchId?: number | null; queueId?: number | null },
     status: "applied" | "skipped"
@@ -319,6 +327,8 @@ export default function App() {
         notes: status === "applied" ? "Applied from dashboard." : "Skipped from dashboard."
       });
       await loadData();
+      if (status === "applied") showToast("✅ Marked as Applied — moved out of pending queue.");
+      if (status === "skipped") showToast("⏭ Skipped — job moved to skipped queue.");
     } finally {
       setBusyMatchId(null);
       setBusyQueueId(null);
@@ -602,6 +612,13 @@ export default function App() {
           }}
         />
       ) : null}
+
+      {/* Global toast notification */}
+      {toastMessage && (
+        <div className="toast-notification" role="status" aria-live="polite">
+          {toastMessage}
+        </div>
+      )}
     </Layout>
   );
 }

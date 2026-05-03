@@ -898,6 +898,35 @@ def analytics_overview(
         {"source": src, **counts} for src, counts in sorted(rpt_map.items(), key=lambda x: -x[1]["total"])
     ]
 
+    # ── Employee activity — per employee × candidate breakdown ─────────────
+    emp_rows = db.execute(
+        select(
+            Employee.id.label("employee_id"),
+            Employee.name.label("employee_name"),
+            Candidate.id.label("candidate_id"),
+            Candidate.name.label("candidate_name"),
+            func.count().label("total"),
+            func.sum(case((EmployeeWorkQueue.status == "applied", 1), else_=0)).label("applied"),
+            func.sum(case((EmployeeWorkQueue.status == "pending", 1), else_=0)).label("pending"),
+        )
+        .join(Employee, EmployeeWorkQueue.employee_id == Employee.id)
+        .join(Candidate, EmployeeWorkQueue.candidate_id == Candidate.id)
+        .group_by(Employee.id, Employee.name, Candidate.id, Candidate.name)
+        .order_by(Employee.name, Candidate.name)
+    ).all()
+    employee_stats = [
+        {
+            "employee_id": row.employee_id,
+            "employee_name": row.employee_name,
+            "candidate_id": row.candidate_id,
+            "candidate_name": row.candidate_name,
+            "total": int(row.total),
+            "applied": int(row.applied or 0),
+            "pending": int(row.pending or 0),
+        }
+        for row in emp_rows
+    ]
+
     # ── Top candidates by match volume / avg score ──────────────────────────
     top_rows = db.execute(
         select(
@@ -933,6 +962,7 @@ def analytics_overview(
         },
         "reports_by_source": reports_by_source,
         "top_candidates": top_candidates,
+        "employee_stats": employee_stats,
     }
 
 

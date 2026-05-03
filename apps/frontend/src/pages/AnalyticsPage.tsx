@@ -1,4 +1,4 @@
-import type { AnalyticsOverview } from "../types";
+import type { AnalyticsOverview, EmployeeStat } from "../types";
 
 type AnalyticsPageProps = {
   data: AnalyticsOverview | null;
@@ -48,7 +48,7 @@ export function AnalyticsPage({ data, busy, error, onRefresh }: AnalyticsPagePro
     );
   }
 
-  const { funnel, jobs_by_source, freshness, reports_by_source, top_candidates } = data;
+  const { funnel, jobs_by_source, freshness, reports_by_source, top_candidates, employee_stats = [] } = data;
   const totalFresh = freshness.find((f) => f.status === "fresh")?.count ?? 0;
   const totalStale = freshness.find((f) => f.status === "stale")?.count ?? 0;
   const totalOther = freshness.find((f) => !["fresh", "stale"].includes(f.status))?.count ?? 0;
@@ -216,6 +216,86 @@ export function AnalyticsPage({ data, busy, error, onRefresh }: AnalyticsPagePro
           </div>
         )}
       </section>
+
+      {/* ── Employee Activity ───────────────────────────────────────────────────── */}
+      <section className="panel">
+        <div className="section-heading">
+          <h3>Employee Activity</h3>
+          <p>Per-employee, per-candidate breakdown — jobs queued, applied, and still pending.</p>
+        </div>
+
+        {employee_stats.length === 0 ? (
+          <p className="empty-state">No employee queue data yet.</p>
+        ) : (
+          <EmployeeStatsTable rows={employee_stats} />
+        )}
+      </section>
     </section>
+  );
+}
+
+// ── Employee stats table ──────────────────────────────────────────────────────
+
+function EmployeeStatsTable({ rows }: { rows: EmployeeStat[] }) {
+  // Group by employee for better readability
+  const byEmployee = new Map<string, EmployeeStat[]>();
+  for (const row of rows) {
+    const key = `${row.employee_id}:${row.employee_name}`;
+    const existing = byEmployee.get(key) ?? [];
+    existing.push(row);
+    byEmployee.set(key, existing);
+  }
+
+  return (
+    <div className="analytics-table-wrap">
+      <table className="employee-stats-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Candidate</th>
+            <th>Total Queued</th>
+            <th>Applied</th>
+            <th>Pending</th>
+            <th>Applied %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from(byEmployee.entries()).map(([empKey, empRows]) => {
+            const empTotal = empRows.reduce((s, r) => s + r.total, 0);
+            const empApplied = empRows.reduce((s, r) => s + r.applied, 0);
+            const empPending = empRows.reduce((s, r) => s + r.pending, 0);
+            const empPct = empTotal ? Math.round((empApplied / empTotal) * 100) : 0;
+
+            return empRows.map((row, i) => (
+              <tr key={`${empKey}:${row.candidate_id}`}>
+                {i === 0 ? (
+                  <td rowSpan={empRows.length} style={{ fontWeight: 700, verticalAlign: "top", borderRight: "2px solid var(--brand-border)" }}>
+                    {row.employee_name}
+                    <div style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--brand-muted)", marginTop: 2 }}>
+                      {empApplied}/{empTotal} applied ({empPct}%)
+                    </div>
+                  </td>
+                ) : null}
+                <td>{row.candidate_name}</td>
+                <td>{row.total}</td>
+                <td className="applied-cell">{row.applied}</td>
+                <td className="pending-cell">{row.pending}</td>
+                <td>
+                  <span style={{ fontSize: "0.8rem", marginRight: 6 }}>
+                    {row.total ? Math.round((row.applied / row.total) * 100) : 0}%
+                  </span>
+                  <span className="applied-bar-track">
+                    <span
+                      className="applied-bar-fill"
+                      style={{ width: `${row.total ? Math.min(100, Math.round((row.applied / row.total) * 100)) : 0}%` }}
+                    />
+                  </span>
+                </td>
+              </tr>
+            ));
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
