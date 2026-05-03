@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -97,6 +98,7 @@ from app.services.source_adapters.form_schemas import get_adapter_form_schemas
 _RESUME_DIR = Path(os.getenv("RESUME_STORAGE_PATH", "/app/resumes"))
 
 router = APIRouter(prefix="/api/v1")
+logger = logging.getLogger(__name__)
 
 
 def _scoped_employee_id(current_user: User, requested_employee_id: int | None) -> int | None:
@@ -194,7 +196,14 @@ def gmail_oauth_callback(
     state: str = Query(...),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    mailbox = exchange_candidate_oauth_code(db, code=code, state=state)
+    try:
+        mailbox = exchange_candidate_oauth_code(db, code=code, state=state)
+    except Exception as exc:
+        logger.exception("gmail_oauth_callback_failed")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Gmail connection failed: {exc}",
+        ) from exc
     return {
         "message": "Candidate Gmail and Calendar connected successfully.",
         "candidate_email": mailbox.email,
