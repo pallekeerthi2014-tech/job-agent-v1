@@ -169,7 +169,7 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
                 <span className="tailor-spinner">⏳ Processing… please wait</span>
               ) : record.status === "ready" ? (
                 <div className="tailor-ready">
-                  <span>✅ Ready!</span>
+                  <span>✅ {record.error_message || "Tailored resume ready!"}</span>
                   <a
                     className="btn btn-primary btn-sm"
                     href={apiClient.downloadTailoredResumeUrl(record.id)}
@@ -181,7 +181,14 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
                   </a>
                 </div>
               ) : (
-                <span className="tailor-error">❌ {record.error_message || "Tailoring failed"}</span>
+                <div className="tailor-error-box">
+                  <span className="tailor-error">❌ {record.error_message || "Tailoring failed"}</span>
+                  {(record.error_message || "").toLowerCase().includes("re-upload") && (
+                    <p className="tailor-reupload-hint">
+                      Go to <strong>Admin → Candidates</strong>, open this candidate's profile, and upload their DOCX resume again.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
