@@ -312,7 +312,7 @@ def _credentials_for_mailbox(mailbox: CandidateMailbox) -> Credentials:
         client_secret=settings.google_client_secret,
         scopes=(mailbox.scopes or ",".join(GMAIL_SCOPES)).split(","),
     )
-    creds.expiry = mailbox.token_expiry
+    creds.expiry = _google_credentials_expiry(mailbox.token_expiry)
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
     return creds
@@ -330,6 +330,12 @@ def _persist_refreshed_tokens(mailbox: CandidateMailbox, creds: Credentials) -> 
         mailbox.refresh_token_encrypted = encrypt_token(creds.refresh_token)
     mailbox.token_expiry = creds.expiry
     mailbox.updated_at = _now()
+
+
+def _google_credentials_expiry(value: datetime | None) -> datetime | None:
+    if value is None or value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def _ensure_sheet_tabs(session: AuthorizedSession, spreadsheet_id: str) -> None:
