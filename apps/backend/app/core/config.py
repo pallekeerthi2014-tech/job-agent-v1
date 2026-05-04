@@ -98,6 +98,7 @@ class Settings(BaseSettings):
     gmail_scan_lookback_days: int = Field(default=14, alias="GMAIL_SCAN_LOOKBACK_DAYS")
     gmail_calendar_lookahead_days: int = Field(default=30, alias="GMAIL_CALENDAR_LOOKAHEAD_DAYS")
     google_sheets_report_id: str = Field(default="", alias="GOOGLE_SHEETS_REPORT_ID")
+    google_service_account_json: str = Field(default="", alias="GOOGLE_SERVICE_ACCOUNT_JSON")
 
     # ── USAJobs ───────────────────────────────────────────────────────────────
     usajobs_api_key: str = Field(default="", alias="USAJOBS_API_KEY")

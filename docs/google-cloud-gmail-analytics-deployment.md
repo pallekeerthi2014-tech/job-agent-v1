@@ -41,6 +41,7 @@ Store these in Secret Manager:
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_TOKEN_ENCRYPTION_KEY`
 - `GOOGLE_SHEETS_REPORT_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON` (Railway only; Cloud Run can use service account Application Default Credentials instead)
 - `SUPER_ADMIN_EMAIL`
 - `SUPER_ADMIN_PASSWORD`
 - `EMPLOYEE_DEFAULT_PASSWORD`

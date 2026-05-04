@@ -23,6 +23,7 @@ For cloud deployment, use [google-cloud-gmail-analytics-deployment.md](google-cl
    - `GOOGLE_OAUTH_REDIRECT_URI=https://YOUR_BACKEND_DOMAIN/api/v1/admin/gmail/oauth/callback`
    - `GOOGLE_TOKEN_ENCRYPTION_KEY=...`
    - `GOOGLE_SHEETS_REPORT_ID=...`
+   - `GOOGLE_SERVICE_ACCOUNT_JSON=...` (Railway only: paste the service account key JSON as a single-line env var)
 
 ## Candidate Connection
 
@@ -74,4 +75,4 @@ POST /api/v1/admin/gmail/run?publish_sheets=true
 - `not_connected`: candidate has not completed OAuth yet.
 - `error`: open mailbox health to see the last error.
 - `invalid_grant`: candidate revoked access or Google invalidated the refresh token; reconnect that Gmail.
-- Sheet not updating: confirm `GOOGLE_SHEETS_REPORT_ID` is correct and the service account email has Editor access to the Sheet.
+- Sheet not updating: confirm `GOOGLE_SHEETS_REPORT_ID` is correct, `GOOGLE_SERVICE_ACCOUNT_JSON` is present on Railway or Application Default Credentials are available on Cloud Run, and the service account email has Editor access to the Sheet.

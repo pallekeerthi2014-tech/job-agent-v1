@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import hmac
 import hashlib
+import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Any
 import google.auth
 from google.auth.transport.requests import AuthorizedSession, Request
 from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from google_auth_oauthlib.flow import Flow
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -319,6 +321,9 @@ def _credentials_for_mailbox(mailbox: CandidateMailbox) -> Credentials:
 
 
 def _sheets_credentials() -> Any:
+    if settings.google_service_account_json:
+        info = json.loads(settings.google_service_account_json)
+        return service_account.Credentials.from_service_account_info(info, scopes=SHEETS_SCOPE)
     creds, _ = google.auth.default(scopes=SHEETS_SCOPE)
     return creds
 
