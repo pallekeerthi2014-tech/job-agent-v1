@@ -295,7 +295,12 @@ def _candidate_oauth_flow() -> Flow:
             "redirect_uris": [settings.google_oauth_redirect_uri],
         }
     }
-    return Flow.from_client_config(config, scopes=GMAIL_SCOPES, redirect_uri=settings.google_oauth_redirect_uri)
+    return Flow.from_client_config(
+        config,
+        scopes=GMAIL_SCOPES,
+        redirect_uri=settings.google_oauth_redirect_uri,
+        autogenerate_code_verifier=False,
+    )
 
 
 def _credentials_for_mailbox(mailbox: CandidateMailbox) -> Credentials:
