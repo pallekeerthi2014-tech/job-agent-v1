@@ -189,7 +189,7 @@ def publish_google_sheet_report(db: Session) -> None:
 
 def _scan_mailbox_messages(db: Session, session: AuthorizedSession, mailbox: CandidateMailbox) -> int:
     after = mailbox.last_email_scan_at or (_now() - timedelta(days=settings.gmail_scan_lookback_days))
-    query = f"after:{after.strftime('%Y/%m/%d')}"
+    query = _gmail_message_query(after)
     list_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
     response = session.get(list_url, params={"q": query, "maxResults": 100}, timeout=30)
     response.raise_for_status()
@@ -247,6 +247,10 @@ def _scan_mailbox_messages(db: Session, session: AuthorizedSession, mailbox: Can
     mailbox.last_email_scan_at = _now()
     mailbox.updated_at = _now()
     return created
+
+
+def _gmail_message_query(after: datetime) -> str:
+    return f"in:anywhere after:{after.strftime('%Y/%m/%d')}"
 
 
 def _scan_calendar_events(db: Session, session: AuthorizedSession, mailbox: CandidateMailbox) -> int:
