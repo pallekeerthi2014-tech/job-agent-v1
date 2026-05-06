@@ -94,6 +94,7 @@ class Settings(BaseSettings):
     google_oauth_redirect_uri: str = Field(default="http://localhost:8000/api/v1/admin/gmail/oauth/callback", alias="GOOGLE_OAUTH_REDIRECT_URI")
     google_token_encryption_key: str = Field(default="", alias="GOOGLE_TOKEN_ENCRYPTION_KEY")
     gmail_analytics_enabled: bool = Field(default=False, alias="GMAIL_ANALYTICS_ENABLED")
+    gmail_ai_classification_enabled: bool = Field(default=True, alias="GMAIL_AI_CLASSIFICATION_ENABLED")
     gmail_scan_interval_minutes: int = Field(default=30, alias="GMAIL_SCAN_INTERVAL_MINUTES")
     gmail_scan_lookback_days: int = Field(default=14, alias="GMAIL_SCAN_LOOKBACK_DAYS")
     gmail_calendar_lookahead_days: int = Field(default=30, alias="GMAIL_CALENDAR_LOOKAHEAD_DAYS")

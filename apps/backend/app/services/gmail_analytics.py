@@ -4,6 +4,9 @@ import logging
 import hmac
 import hashlib
 import json
+import base64
+import html
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -194,16 +197,14 @@ def _scan_mailbox_messages(db: Session, session: AuthorizedSession, mailbox: Can
     for item in response.json().get("messages", []):
         message_id = item["id"]
         existing = db.scalar(
-            select(EmailEvent.id).where(
+            select(EmailEvent).where(
                 EmailEvent.mailbox_id == mailbox.id,
                 EmailEvent.gmail_message_id == message_id,
             )
         )
-        if existing:
-            continue
         message = session.get(
             f"{list_url}/{message_id}",
-            params={"format": "metadata", "metadataHeaders": ["From", "Subject", "Date"]},
+            params={"format": "full", "metadataHeaders": ["From", "Subject", "Date"]},
             timeout=30,
         )
         message.raise_for_status()
@@ -212,8 +213,19 @@ def _scan_mailbox_messages(db: Session, session: AuthorizedSession, mailbox: Can
         sender = headers.get("from")
         subject = headers.get("subject")
         snippet = payload.get("snippet")
-        classification = classify_email(sender=sender, subject=subject, snippet=snippet)
+        body_text = _message_body_text(payload)
+        classification = classify_email(sender=sender, subject=subject, snippet=snippet, body=body_text)
         received_at = _from_gmail_internal_date(payload.get("internalDate"))
+        if existing:
+            existing.sender = sender
+            existing.subject = subject
+            existing.snippet = snippet
+            existing.detected_company = classification.detected_company
+            existing.detected_role = classification.detected_role
+            existing.category = classification.category
+            existing.importance = classification.importance
+            existing.action_required = classification.action_required
+            continue
         event = EmailEvent(
             mailbox_id=mailbox.id,
             candidate_id=mailbox.candidate_id,
@@ -456,6 +468,51 @@ def _headers(message: dict[str, Any]) -> dict[str, str]:
     for header in (message.get("payload") or {}).get("headers", []):
         headers[header.get("name", "").lower()] = header.get("value", "")
     return headers
+
+
+def _message_body_text(message: dict[str, Any]) -> str:
+    parts = _message_parts(message.get("payload") or {})
+    plain_chunks = [_decode_part(part) for part in parts if part.get("mimeType") == "text/plain"]
+    text = "\n".join(chunk for chunk in plain_chunks if chunk).strip()
+    if text:
+        return _compact_text(text)
+
+    html_chunks = [_decode_part(part) for part in parts if part.get("mimeType") == "text/html"]
+    text = "\n".join(_html_to_text(chunk) for chunk in html_chunks if chunk).strip()
+    return _compact_text(text)
+
+
+def _message_parts(part: dict[str, Any]) -> list[dict[str, Any]]:
+    children = part.get("parts") or []
+    if not children:
+        return [part]
+
+    parts: list[dict[str, Any]] = []
+    for child in children:
+        parts.extend(_message_parts(child))
+    return parts
+
+
+def _decode_part(part: dict[str, Any]) -> str:
+    data = ((part.get("body") or {}).get("data") or "").strip()
+    if not data:
+        return ""
+    try:
+        return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+
+
+def _html_to_text(value: str) -> str:
+    value = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", value)
+    value = re.sub(r"(?i)<br\s*/?>", "\n", value)
+    value = re.sub(r"(?i)</p\s*>", "\n", value)
+    value = re.sub(r"<[^>]+>", " ", value)
+    return html.unescape(value)
+
+
+def _compact_text(value: str) -> str:
+    return re.sub(r"\s+", " ", value).strip()[:8000]
 
 
 def _candidate_id_from_state(state: str) -> int:

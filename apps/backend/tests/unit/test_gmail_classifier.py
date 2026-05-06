@@ -29,3 +29,38 @@ def test_classifies_interview_as_high_priority_action() -> None:
 def test_calendar_interview_detection() -> None:
     assert is_interview_like_calendar_event("Technical round with hiring team") is True
     assert is_interview_like_calendar_event("Personal reminder") is False
+
+
+def test_classifies_application_confirmation_from_body() -> None:
+    result = classify_email(
+        sender="no-reply@greenhouse.io",
+        subject="Your submission is complete",
+        snippet="Thanks",
+        body="Your application was sent to Acme for the Senior Data Analyst role. The hiring team will review it.",
+    )
+
+    assert result.category == "application_confirmation"
+    assert result.detected_role == "Senior Data Analyst"
+
+
+def test_classifies_assessment_from_body() -> None:
+    result = classify_email(
+        sender="talent@examplecorp.com",
+        subject="Next step for your candidacy",
+        snippet="Please continue when ready.",
+        body="Please complete this case study and online test by Friday.",
+    )
+
+    assert result.category == "assessment"
+    assert result.action_required is True
+
+
+def test_classifies_rejection_language() -> None:
+    result = classify_email(
+        sender="careers@examplecorp.com",
+        subject="Update on your application",
+        snippet="After careful review, we decided not to move forward with your candidacy.",
+    )
+
+    assert result.category == "rejection"
+    assert result.action_required is False
