@@ -143,6 +143,16 @@ def rebuild_daily_metrics(db: Session, *, days: int = 30) -> int:
                     )
                 )
             )
+            calendar_events = list(
+                db.scalars(
+                    select(CandidateCalendarEvent).where(
+                        CandidateCalendarEvent.candidate_id == candidate.id,
+                        CandidateCalendarEvent.starts_at >= metric_date,
+                        CandidateCalendarEvent.starts_at < next_date,
+                        CandidateCalendarEvent.is_interview_like.is_(True),
+                    )
+                )
+            )
             mailbox = db.scalar(select(CandidateMailbox).where(CandidateMailbox.candidate_id == candidate.id))
             metric = db.scalar(
                 select(DailyCandidateMetric).where(
@@ -155,7 +165,7 @@ def rebuild_daily_metrics(db: Session, *, days: int = 30) -> int:
                 db.add(metric)
             metric.jobs_applied_detected = _count(events, "application_confirmation")
             metric.recruiter_replies = _count(events, "recruiter_reply")
-            metric.interview_invites = _count(events, "interview_invite")
+            metric.interview_invites = len(calendar_events)
             metric.assessments = _count(events, "assessment")
             metric.rejections = _count(events, "rejection")
             metric.followups_required = sum(1 for event in events if event.action_required)
@@ -209,6 +219,8 @@ def _scan_mailbox_messages(db: Session, session: AuthorizedSession, mailbox: Can
         )
         message.raise_for_status()
         payload = message.json()
+        if _is_outgoing_message(payload):
+            continue
         headers = _headers(payload)
         sender = headers.get("from")
         subject = headers.get("subject")
@@ -253,6 +265,11 @@ def _scan_mailbox_messages(db: Session, session: AuthorizedSession, mailbox: Can
 
 def _gmail_message_query(after: datetime) -> str:
     return f"in:anywhere after:{after.strftime('%Y/%m/%d')}"
+
+
+def _is_outgoing_message(message: dict[str, Any]) -> bool:
+    labels = set(message.get("labelIds") or [])
+    return bool(labels.intersection({"SENT", "DRAFT"}))
 
 
 def _scan_calendar_events(db: Session, session: AuthorizedSession, mailbox: CandidateMailbox) -> int:

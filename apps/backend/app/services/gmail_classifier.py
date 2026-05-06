@@ -112,7 +112,8 @@ _RECRUITER_PATTERNS = [
     "would like to connect",
     "are you interested",
 ]
-_JOB_BOARD_DOMAINS = {
+_PORTAL_DOMAINS = {
+    "dice.com",
     "greenhouse.io",
     "lever.co",
     "workday.com",
@@ -124,8 +125,27 @@ _JOB_BOARD_DOMAINS = {
     "jobvite.com",
     "indeed.com",
     "linkedin.com",
+    "jobs.linkedin.com",
+    "monster.com",
     "naukri.com",
+    "ziprecruiter.com",
+    "glassdoor.com",
+    "careerbuilder.com",
+    "foundit.in",
+    "simplyhired.com",
     "wellfound.com",
+}
+_AUTOMATED_LOCAL_PARTS = {
+    "no-reply",
+    "noreply",
+    "donotreply",
+    "do-not-reply",
+    "notification",
+    "notifications",
+    "jobs",
+    "careers",
+    "alerts",
+    "support",
 }
 _CATEGORIES = {
     "application_confirmation",
@@ -151,17 +171,20 @@ def classify_email(
     company = _company_from_sender(sender)
     role = _role_from_text(subject, body or snippet)
     summary = _fallback_summary(subject=subject, snippet=snippet, body=body)
+    sender_kind = _sender_kind(sender)
 
-    if _contains(haystack, _INTERVIEW_PATTERNS):
-        return EmailClassification("interview_invite", "high", True, company, role, summary)
+    if sender_kind == "portal":
+        return EmailClassification("application_confirmation", "normal", False, company, role, summary)
     if _contains(haystack, _ASSESSMENT_PATTERNS):
         return EmailClassification("assessment", "high", True, company, role, summary)
-    if _contains(haystack, _FOLLOWUP_PATTERNS):
-        return EmailClassification("follow_up_required", "high", True, company, role, summary)
     if _contains(haystack, _REJECTION_PATTERNS):
         return EmailClassification("rejection", "normal", False, company, role, summary)
     if _contains(haystack, _APPLICATION_PATTERNS):
         return EmailClassification("application_confirmation", "normal", False, company, role, summary)
+    if sender_kind == "individual" and _looks_job_related(haystack):
+        return EmailClassification("recruiter_reply", "high", True, company, role, summary)
+    if _contains(haystack, _FOLLOWUP_PATTERNS):
+        return EmailClassification("follow_up_required", "high", True, company, role, summary)
     if _contains(haystack, _RECRUITER_PATTERNS):
         return EmailClassification("recruiter_reply", "high", True, company, role, summary)
 
@@ -208,7 +231,7 @@ def _should_use_ai(text: str, sender: str | None) -> bool:
         return False
     _, addr = parseaddr(sender or "")
     domain = addr.split("@")[-1].lower() if "@" in addr else ""
-    return _looks_job_related(text) or any(domain.endswith(job_domain) for job_domain in _JOB_BOARD_DOMAINS)
+    return _looks_job_related(text) or _is_portal_domain(domain)
 
 
 def _classify_with_ai(
@@ -227,17 +250,19 @@ def _classify_with_ai(
 
     body_excerpt = (body or "")[:3500]
     prompt = f"""
-Classify this candidate job-search email into exactly one category:
+Classify this candidate job-search email into exactly one category using these strict rules:
 - application_confirmation: confirms the candidate applied or an application/profile was submitted
-- recruiter_reply: recruiter/employer reply or outreach that is job-related but not clearly one of the other categories
-- interview_invite: interview, phone screen, scheduling interview/call, or meeting invite
+- recruiter_reply: any inbound job-related message from an individual recruiter, vendor, hiring manager, or staffing person
+- interview_invite: do not use for Gmail email; interview counts come only from Google Calendar events
 - assessment: assessment, test, case study, work sample, coding challenge, or required evaluation
 - rejection: rejection or no longer under consideration
-- follow_up_required: candidate must reply, confirm, send availability/documents, complete a form, or take action
+- follow_up_required: automated or team mailbox asks the candidate to reply, confirm, send availability/documents, complete a form, or take action
 - other_important: job-search related but not one of the above
 - other: not related to job search
 
-Prioritize the candidate's required action and funnel stage. Return only compact JSON with:
+If the sender is Dice, LinkedIn, Workday, Indeed, Greenhouse, Lever, Ashby, SmartRecruiters, iCIMS, Naukri, Monster, ZipRecruiter, Glassdoor, CareerBuilder, Wellfound, or another job portal/ATS, classify it as application_confirmation.
+If the sender is an individual person and the email is job-related, classify it as recruiter_reply and action_required true.
+Return only compact JSON with:
 {{"category":"...", "importance":"high|normal", "action_required":true|false, "detected_company":"...", "detected_role":"...", "content_summary":"..."}}
 
 Sender: {sender or ""}
@@ -263,6 +288,8 @@ Body excerpt: {body_excerpt}
         return None
 
     category = data.get("category")
+    if category == "interview_invite":
+        category = "recruiter_reply" if _sender_kind(sender) == "individual" else "follow_up_required"
     if category not in _CATEGORIES:
         return None
     importance = "high" if data.get("importance") == "high" or category in {"interview_invite", "assessment", "follow_up_required", "recruiter_reply"} else "normal"
@@ -287,6 +314,26 @@ def _company_from_sender(sender: str | None) -> str | None:
     if domain in {"gmail.com", "googlemail.com", "outlook.com", "yahoo.com", "icloud.com"}:
         return None
     return domain.split(".")[0].replace("-", " ").title()
+
+
+def _sender_kind(sender: str | None) -> str:
+    display_name, addr = parseaddr(sender or "")
+    local_part, _, domain = addr.lower().partition("@")
+    if _is_portal_domain(domain):
+        return "portal"
+    if not domain or domain in {"gmail.com", "googlemail.com", "outlook.com", "yahoo.com", "icloud.com"}:
+        return "individual" if display_name or local_part else "unknown"
+    if local_part in _AUTOMATED_LOCAL_PARTS or any(token in local_part for token in ["no-reply", "noreply", "notification", "alert"]):
+        return "automated"
+    if display_name and not any(word in display_name.lower() for word in ["team", "jobs", "careers", "notification", "support"]):
+        return "individual"
+    if "." in local_part or "_" in local_part:
+        return "individual"
+    return "automated"
+
+
+def _is_portal_domain(domain: str) -> bool:
+    return any(domain == portal_domain or domain.endswith(f".{portal_domain}") for portal_domain in _PORTAL_DOMAINS)
 
 
 def _role_from_text(subject: str | None, body: str | None = None) -> str | None:

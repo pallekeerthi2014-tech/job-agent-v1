@@ -14,14 +14,14 @@ def test_classifies_application_confirmation() -> None:
     assert result.action_required is False
 
 
-def test_classifies_interview_as_high_priority_action() -> None:
+def test_individual_interview_email_counts_as_recruiter_reply_not_interview() -> None:
     result = classify_email(
         sender="recruiter@acme.com",
         subject="Interview for Data Analyst",
         snippet="Please share your availability for a Zoom meeting.",
     )
 
-    assert result.category == "interview_invite"
+    assert result.category == "recruiter_reply"
     assert result.importance == "high"
     assert result.action_required is True
 
@@ -77,3 +77,46 @@ def test_email_summary_is_short_and_readable() -> None:
 
     assert result.content_summary is not None
     assert len(result.content_summary) <= 240
+
+
+def test_job_portal_email_counts_as_application_confirmation() -> None:
+    result = classify_email(
+        sender="LinkedIn Jobs <jobs-noreply@linkedin.com>",
+        subject="Your application was viewed",
+        snippet="A recruiter viewed your application for Data Analyst.",
+    )
+
+    assert result.category == "application_confirmation"
+    assert result.action_required is False
+
+
+def test_dice_email_counts_as_application_confirmation() -> None:
+    result = classify_email(
+        sender="Dice <notifications@dice.com>",
+        subject="Application submitted",
+        snippet="Your profile was submitted to the employer.",
+    )
+
+    assert result.category == "application_confirmation"
+
+
+def test_individual_job_email_counts_as_recruiter_response_action_needed() -> None:
+    result = classify_email(
+        sender="Jane Recruiter <jane.smith@vendorstaffing.com>",
+        subject="Business Analyst role",
+        snippet="I came across your resume and would like to connect.",
+    )
+
+    assert result.category == "recruiter_reply"
+    assert result.action_required is True
+
+
+def test_personal_non_job_email_is_not_recruiter_response() -> None:
+    result = classify_email(
+        sender="Friend <friend@gmail.com>",
+        subject="Dinner tomorrow",
+        snippet="Are you free for dinner?",
+    )
+
+    assert result.category == "other"
+    assert result.action_required is False
