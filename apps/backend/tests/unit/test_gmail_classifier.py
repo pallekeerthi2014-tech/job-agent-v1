@@ -41,6 +41,8 @@ def test_classifies_application_confirmation_from_body() -> None:
 
     assert result.category == "application_confirmation"
     assert result.detected_role == "Senior Data Analyst"
+    assert result.content_summary
+    assert "application was sent" in result.content_summary
 
 
 def test_classifies_assessment_from_body() -> None:
@@ -64,3 +66,14 @@ def test_classifies_rejection_language() -> None:
 
     assert result.category == "rejection"
     assert result.action_required is False
+
+
+def test_email_summary_is_short_and_readable() -> None:
+    result = classify_email(
+        sender="jobs@examplecorp.com",
+        subject="Application update",
+        snippet=" ".join(["This is a long candidate application update."] * 20),
+    )
+
+    assert result.content_summary is not None
+    assert len(result.content_summary) <= 240

@@ -56,6 +56,7 @@ class EmailEvent(Base):
     sender: Mapped[str | None] = mapped_column(String(500), nullable=True)
     subject: Mapped[str | None] = mapped_column(Text, nullable=True)
     snippet: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     detected_company: Mapped[str | None] = mapped_column(String(255), nullable=True)
     detected_role: Mapped[str | None] = mapped_column(String(255), nullable=True)
     category: Mapped[str] = mapped_column(String(80), nullable=False)

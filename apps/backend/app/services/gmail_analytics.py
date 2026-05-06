@@ -220,6 +220,7 @@ def _scan_mailbox_messages(db: Session, session: AuthorizedSession, mailbox: Can
             existing.sender = sender
             existing.subject = subject
             existing.snippet = snippet
+            existing.content_summary = classification.content_summary
             existing.detected_company = classification.detected_company
             existing.detected_role = classification.detected_role
             existing.category = classification.category
@@ -235,6 +236,7 @@ def _scan_mailbox_messages(db: Session, session: AuthorizedSession, mailbox: Can
             sender=sender,
             subject=subject,
             snippet=snippet,
+            content_summary=classification.content_summary,
             detected_company=classification.detected_company,
             detected_role=classification.detected_role,
             category=classification.category,
@@ -403,7 +405,7 @@ def _daily_summary_rows(db: Session) -> list[list[Any]]:
 
 
 def _candidate_detail_rows(db: Session) -> list[list[Any]]:
-    rows = [["candidate", "email timestamp", "sender", "subject", "detected company", "detected role", "category", "importance", "action required", "gmail message link"]]
+    rows = [["candidate", "email timestamp", "sender", "subject", "email summary", "detected company", "detected role", "category", "importance", "action required", "gmail message link"]]
     stmt = (
         select(EmailEvent, Candidate)
         .join(Candidate, Candidate.id == EmailEvent.candidate_id)
@@ -417,6 +419,7 @@ def _candidate_detail_rows(db: Session) -> list[list[Any]]:
             _fmt(event.received_at),
             event.sender or "",
             event.subject or "",
+            event.content_summary or event.snippet or "",
             event.detected_company or "",
             event.detected_role or "",
             event.category,

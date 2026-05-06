@@ -18,6 +18,7 @@ class EmailClassification:
     action_required: bool
     detected_company: str | None = None
     detected_role: str | None = None
+    content_summary: str | None = None
 
 
 _APPLICATION_PATTERNS = [
@@ -149,26 +150,27 @@ def classify_email(
     haystack = _normalize(" ".join(part for part in [subject, snippet, body, sender] if part))
     company = _company_from_sender(sender)
     role = _role_from_text(subject, body or snippet)
+    summary = _fallback_summary(subject=subject, snippet=snippet, body=body)
 
     if _contains(haystack, _INTERVIEW_PATTERNS):
-        return EmailClassification("interview_invite", "high", True, company, role)
+        return EmailClassification("interview_invite", "high", True, company, role, summary)
     if _contains(haystack, _ASSESSMENT_PATTERNS):
-        return EmailClassification("assessment", "high", True, company, role)
+        return EmailClassification("assessment", "high", True, company, role, summary)
     if _contains(haystack, _FOLLOWUP_PATTERNS):
-        return EmailClassification("follow_up_required", "high", True, company, role)
+        return EmailClassification("follow_up_required", "high", True, company, role, summary)
     if _contains(haystack, _REJECTION_PATTERNS):
-        return EmailClassification("rejection", "normal", False, company, role)
+        return EmailClassification("rejection", "normal", False, company, role, summary)
     if _contains(haystack, _APPLICATION_PATTERNS):
-        return EmailClassification("application_confirmation", "normal", False, company, role)
+        return EmailClassification("application_confirmation", "normal", False, company, role, summary)
     if _contains(haystack, _RECRUITER_PATTERNS):
-        return EmailClassification("recruiter_reply", "high", True, company, role)
+        return EmailClassification("recruiter_reply", "high", True, company, role, summary)
 
     if use_ai and _should_use_ai(haystack, sender):
         ai_result = _classify_with_ai(sender=sender, subject=subject, snippet=snippet, body=body, company=company, role=role)
         if ai_result:
             return ai_result
 
-    return EmailClassification("other_important" if _looks_job_related(haystack) else "other", "normal", False, company, role)
+    return EmailClassification("other_important" if _looks_job_related(haystack) else "other", "normal", False, company, role, summary)
 
 
 def is_interview_like_calendar_event(title: str | None, description: str | None = None) -> bool:
@@ -236,7 +238,7 @@ Classify this candidate job-search email into exactly one category:
 - other: not related to job search
 
 Prioritize the candidate's required action and funnel stage. Return only compact JSON with:
-{{"category":"...", "importance":"high|normal", "action_required":true|false, "detected_company":"...", "detected_role":"..."}}
+{{"category":"...", "importance":"high|normal", "action_required":true|false, "detected_company":"...", "detected_role":"...", "content_summary":"..."}}
 
 Sender: {sender or ""}
 Subject: {subject or ""}
@@ -270,6 +272,7 @@ Body excerpt: {body_excerpt}
         action_required=bool(data.get("action_required")) or category in {"interview_invite", "assessment", "follow_up_required", "recruiter_reply"},
         detected_company=(data.get("detected_company") or company) or None,
         detected_role=(data.get("detected_role") or role) or None,
+        content_summary=_clean_summary(data.get("content_summary")) or _fallback_summary(subject=subject, snippet=snippet, body=body),
     )
 
 
@@ -314,3 +317,17 @@ def _role_from_text(subject: str | None, body: str | None = None) -> str | None:
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).lower()
+
+
+def _fallback_summary(*, subject: str | None, snippet: str | None, body: str | None) -> str | None:
+    text = " ".join(part for part in [snippet, body, subject] if part)
+    return _clean_summary(text)
+
+
+def _clean_summary(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = re.sub(r"\s+", " ", value).strip()
+    if not text:
+        return None
+    return text[:240].rstrip(" ,;:-")
