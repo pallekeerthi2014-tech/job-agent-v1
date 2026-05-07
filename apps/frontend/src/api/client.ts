@@ -45,8 +45,29 @@ import type {
   WorkQueueReportPayload
 } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const ACCESS_TOKEN_KEY = "job-agent-access-token";
+
+function getApiBaseUrl() {
+  const baseUrl = RAW_API_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new Error("API URL is not configured. Set VITE_API_BASE_URL and redeploy the frontend.");
+  }
+  return baseUrl.replace(/\/+$/, "");
+}
+
+function apiUrl(path: string) {
+  return `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function toNetworkError(error: unknown) {
+  if (error instanceof TypeError) {
+    return new Error(
+      "Unable to reach the backend API. Check that VITE_API_BASE_URL points to the deployed backend and that CORS allows this site."
+    );
+  }
+  return error;
+}
 
 export function getStoredAccessToken() {
   return window.localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -62,14 +83,19 @@ export function clearStoredAccessToken() {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getStoredAccessToken();
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options?.headers ?? {})
-    },
-    ...options
-  });
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path), {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options?.headers ?? {})
+      },
+      ...options
+    });
+  } catch (error) {
+    throw toNetworkError(error);
+  }
 
   // 204 No Content — return empty object (DELETE endpoints)
   if (response.status === 204) {
@@ -94,9 +120,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 async function downloadAuthenticatedUrl(url: string, fallbackFilename: string) {
   const token = getStoredAccessToken();
-  const response = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  } catch (error) {
+    throw toNetworkError(error);
+  }
   if (!response.ok) {
     let message = `Download failed: ${response.status}`;
     try {
@@ -231,19 +262,23 @@ export const apiClient = {
     const token = getStoredAccessToken();
     const formData = new FormData();
     formData.append("file", file);
-    return fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`, {
+    return fetch(apiUrl(`/api/v1/candidates/${candidateId}/resume`), {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData
-    }).then((res) => {
-      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-      return res.json() as Promise<{ message: string; filename: string }>;
-    });
+    })
+      .catch((error) => {
+        throw toNetworkError(error);
+      })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+        return res.json() as Promise<{ message: string; filename: string }>;
+      });
   },
   getResumeUrl: (candidateId: number) =>
-    `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
+    apiUrl(`/api/v1/candidates/${candidateId}/resume`),
   downloadResume: (candidateId: number, fallbackFilename = "resume") =>
-    downloadAuthenticatedUrl(`${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`, fallbackFilename),
+    downloadAuthenticatedUrl(apiUrl(`/api/v1/candidates/${candidateId}/resume`), fallbackFilename),
 
   // ── Phase 3: Work queue reporting ───────────────────────────────────────────
   reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>
@@ -322,17 +357,21 @@ export const apiClient = {
     const token = getStoredAccessToken();
     const formData = new FormData();
     formData.append("file", file);
-    return fetch(`${API_BASE_URL}/api/v1/portal/me/resume`, {
+    return fetch(apiUrl("/api/v1/portal/me/resume"), {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData
-    }).then((res) => {
-      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-      return res.json() as Promise<Candidate>;
-    });
+    })
+      .catch((error) => {
+        throw toNetworkError(error);
+      })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+        return res.json() as Promise<Candidate>;
+      });
   },
   portalResumeUrl: () =>
-    `${API_BASE_URL}/api/v1/portal/me/resume`,
+    apiUrl("/api/v1/portal/me/resume"),
 
   // ── Phase 4: Source / Feed Management ─────────────────────────────────────
   listSourceTypes: () =>
@@ -385,9 +424,9 @@ export const apiClient = {
   getTailoredResume: (id: number) =>
     request<TailoredResumeRead>(`/api/v1/tailored-resumes/${id}`),
   downloadTailoredResumeUrl: (id: number) =>
-    `${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`,
+    apiUrl(`/api/v1/tailored-resumes/${id}/download`),
   downloadTailoredResume: (id: number, fallbackFilename = "tailored_resume.docx") =>
-    downloadAuthenticatedUrl(`${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`, fallbackFilename),
+    downloadAuthenticatedUrl(apiUrl(`/api/v1/tailored-resumes/${id}/download`), fallbackFilename),
   getWorkQueueStats: (params?: {
     days?: number;
     employee_id?: number;
