@@ -6,6 +6,7 @@ from app.services.source_adapters.ats_json import GenericATSJsonFeedAdapter
 from app.services.source_adapters.base import JobSourceAdapter
 from app.services.source_adapters.greenhouse import GreenhouseBoardAdapter
 from app.services.source_adapters.html_careers import GenericHTMLCareersPageAdapter
+from app.services.source_adapters.jsearch import JSearchAdapter
 from app.services.source_adapters.lever import LeverPostingsAdapter
 from app.services.source_adapters.linkedin import LinkedInJobsAdapter
 from app.services.source_adapters.live_feeds import LiveFeedAdapter
@@ -19,6 +20,7 @@ ADAPTER_REGISTRY: dict[str, type[JobSourceAdapter]] = {
     "generic_html_careers": GenericHTMLCareersPageAdapter,
     "configurable_template": ConfigurableSourceAdapterTemplate,
     "greenhouse_board": GreenhouseBoardAdapter,
+    "jsearch_jobs": JSearchAdapter,
     "lever_postings": LeverPostingsAdapter,
     "linkedin_jobs": LinkedInJobsAdapter,
     "live_feed": LiveFeedAdapter,
