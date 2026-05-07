@@ -12,6 +12,7 @@ class TailoredResumeRead(BaseModel):
     status: str
     filename: str | None
     notes: str | None
+    suggested_lines: str | None = None
     created_at: datetime
     error_message: str | None
 

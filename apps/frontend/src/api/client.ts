@@ -76,10 +76,50 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    let message = `API request failed: ${response.status}`;
+    try {
+      const errorBody = await response.json();
+      if (typeof errorBody?.detail === "string") {
+        message = errorBody.detail;
+      }
+    } catch {
+      // Keep the generic status message when the response is not JSON.
+    }
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;
+}
+
+async function downloadAuthenticatedUrl(url: string, fallbackFilename: string) {
+  const token = getStoredAccessToken();
+  const response = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  if (!response.ok) {
+    let message = `Download failed: ${response.status}`;
+    try {
+      const errorBody = await response.json();
+      if (typeof errorBody?.detail === "string") {
+        message = errorBody.detail;
+      }
+    } catch {
+      // Keep the generic status message when the response is not JSON.
+    }
+    throw new Error(message);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] ?? fallbackFilename;
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(objectUrl);
 }
 
 function buildQuery(params: Record<string, string | number | undefined | null>) {
@@ -199,6 +239,8 @@ export const apiClient = {
   },
   getResumeUrl: (candidateId: number) =>
     `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
+  downloadResume: (candidateId: number, fallbackFilename = "resume") =>
+    downloadAuthenticatedUrl(`${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`, fallbackFilename),
 
   // ── Phase 3: Work queue reporting ───────────────────────────────────────────
   reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>
@@ -341,6 +383,8 @@ export const apiClient = {
     request<TailoredResumeRead>(`/api/v1/tailored-resumes/${id}`),
   downloadTailoredResumeUrl: (id: number) =>
     `${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`,
+  downloadTailoredResume: (id: number, fallbackFilename = "tailored_resume.docx") =>
+    downloadAuthenticatedUrl(`${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`, fallbackFilename),
   listTailoredResumes: (jobId: number, candidateId: number) =>
     request<TailoredResumeRead[]>(`/api/v1/jobs/${jobId}/tailored-resumes?candidate_id=${candidateId}`)
 };

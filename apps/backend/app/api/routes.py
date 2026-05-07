@@ -1632,7 +1632,7 @@ def tailor_resume_for_job(
     if not candidate.resume_filename:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Candidate has no resume on file. Upload a DOCX resume first.",
+            detail="Candidate has no resume on file. Upload a resume first.",
         )
 
     master_path = _RESUME_DIR / candidate.resume_filename
@@ -1677,7 +1677,7 @@ def download_tailored_resume(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_authenticated_user),
 ) -> Response:
-    """Download the generated DOCX file."""
+    """Download the generated DOCX file, using DB bytes if disk cache is gone."""
     from fastapi.responses import FileResponse
 
     _require_employee_or_admin(current_user)
@@ -1695,8 +1695,20 @@ def download_tailored_resume(
     tailored_dir = _RESUME_DIR / "tailored"
     path = tailored_dir / record.filename
     if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
-    return FileResponse(str(path), filename=record.filename, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        if record.file_bytes:
+            media_type = record.content_type or "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            try:
+                tailored_dir.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(record.file_bytes)
+                return FileResponse(str(path), filename=record.filename, media_type=media_type)
+            except Exception:
+                return Response(
+                    content=record.file_bytes,
+                    media_type=media_type,
+                    headers={"Content-Disposition": f'attachment; filename="{record.filename}"'},
+                )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    return FileResponse(str(path), filename=record.filename, media_type=record.content_type or "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 
 @router.get("/jobs/{job_id}/tailored-resumes", response_model=list[TailoredResumeRead])

@@ -430,9 +430,10 @@ export type TailoredResumeRead = {
   id: number;
   candidate_id: number;
   job_id: number;
-  status: "pending" | "processing" | "ready" | "error";
+  status: "pending" | "processing" | "ready" | "suggestions_ready" | "error";
   filename: string | null;
   notes: string | null;
+  suggested_lines?: string | null;
   created_at: string;
   error_message: string | null;
 };

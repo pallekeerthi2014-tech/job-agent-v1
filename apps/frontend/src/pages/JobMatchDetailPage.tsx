@@ -23,11 +23,17 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
   const [history, setHistory] = useState<TailoredResumeRead[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const hasResume = Boolean(candidate.resume_filename);
   const hasMasterDocx = Boolean(
     candidate.resume_filename && candidate.resume_filename.toLowerCase().endsWith(".docx")
   );
+  const suggestedLines = (record?.suggested_lines || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 
   // Load history on mount
   useEffect(() => {
@@ -75,6 +81,7 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
     setError(null);
     setRecord(null);
     setFlaggedSkills([]);
+    setCopied(false);
     try {
       const resp: TailoredResumeReadWithFlags = await apiClient.tailorResume(job.id, {
         candidate_id: candidate.id,
@@ -87,6 +94,11 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
         setConfirmSkillsOpen(true);
       } else if (resp.status === "processing" || resp.status === "pending") {
         startPolling(resp.id);
+      } else {
+        apiClient
+          .listTailoredResumes(job.id, candidate.id)
+          .then(setHistory)
+          .catch(() => {});
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
@@ -105,27 +117,65 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
     void handleSubmit([]);
   };
 
+  const handleDownloadTailored = async (downloadRecord: TailoredResumeRead) => {
+    setError(null);
+    try {
+      await apiClient.downloadTailoredResume(downloadRecord.id, downloadRecord.filename || "tailored_resume.docx");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Download failed");
+    }
+  };
+
+  const handleDownloadOriginal = async () => {
+    setError(null);
+    try {
+      await apiClient.downloadResume(candidate.id, candidate.resume_filename || "resume");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Download failed");
+    }
+  };
+
+  const handleCopySuggestions = async () => {
+    if (!record?.suggested_lines) return;
+    try {
+      await navigator.clipboard.writeText(record.suggested_lines);
+      setCopied(true);
+    } catch {
+      setError("Could not copy suggestions. Select the lines and copy them manually.");
+    }
+  };
+
   return (
     <section className="panel tailor-panel">
       <div className="section-heading">
         <h3>✦ AI Resume Tailor</h3>
-        <p>Generate a tailored DOCX for <strong>{candidate.name}</strong> targeting this role.</p>
+        <p>
+          {hasMasterDocx
+            ? <>Generate a tailored DOCX for <strong>{candidate.name}</strong> targeting this role.</>
+            : <>Generate copy-paste lines for <strong>{candidate.name}</strong> targeting this role.</>}
+        </p>
       </div>
 
-      {!hasMasterDocx && (
+      {!hasResume && (
         <div className="tailor-warning">
-          ⚠️ Upload a <strong>.docx</strong> resume for {candidate.name} to enable tailoring.
+          ⚠️ Upload a resume for {candidate.name} to enable tailoring.
         </div>
       )}
 
-      {hasMasterDocx && (
+      {hasResume && !hasMasterDocx && (
+        <div className="tailor-warning">
+          This resume is not DOCX, so the system will provide copy-paste lines and the original resume download.
+        </div>
+      )}
+
+      {hasResume && (
         <>
           <div className="tailor-form">
             <label className="tailor-label">Notes / Instructions (optional)</label>
             <textarea
               className="tailor-notes"
               rows={3}
-              placeholder="e.g. Emphasise Python skills, remove references to Java, highlight cloud experience..."
+              placeholder="e.g. Add 2-3 healthcare claims bullets to the latest project, only if supported by the resume..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={submitting}
@@ -133,9 +183,13 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
             <button
               className="btn btn-primary tailor-btn"
               onClick={() => void handleSubmit()}
-              disabled={submitting || !hasMasterDocx}
+              disabled={submitting}
             >
-              {submitting ? "Tailoring…" : "✦ Tailor Resume for This Job"}
+              {submitting
+                ? "Tailoring…"
+                : hasMasterDocx
+                  ? "✦ Tailor Resume for This Job"
+                  : "✦ Generate Copy-Paste Lines"}
             </button>
           </div>
 
@@ -170,15 +224,30 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
               ) : record.status === "ready" ? (
                 <div className="tailor-ready">
                   <span>✅ {record.error_message || "Tailored resume ready!"}</span>
-                  <a
+                  <button
                     className="btn btn-primary btn-sm"
-                    href={apiClient.downloadTailoredResumeUrl(record.id)}
-                    download
-                    target="_blank"
-                    rel="noreferrer"
+                    type="button"
+                    onClick={() => void handleDownloadTailored(record)}
                   >
                     ⬇ Download Tailored Resume
-                  </a>
+                  </button>
+                </div>
+              ) : record.status === "suggestions_ready" ? (
+                <div className="tailor-suggestions">
+                  <span>{record.error_message || "Copy these lines into the latest project."}</span>
+                  <ul className="tailor-suggestion-list">
+                    {suggestedLines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  <div className="tailor-ready">
+                    <button className="btn btn-primary btn-sm" type="button" onClick={() => void handleCopySuggestions()}>
+                      {copied ? "Copied" : "Copy Suggested Lines"}
+                    </button>
+                    <button className="btn btn-secondary btn-sm" type="button" onClick={() => void handleDownloadOriginal()}>
+                      Download Original Resume
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="tailor-error-box">
@@ -211,15 +280,13 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
                   {r.status}
                 </span>
                 {r.status === "ready" && (
-                  <a
+                  <button
                     className="tailor-history-dl"
-                    href={apiClient.downloadTailoredResumeUrl(r.id)}
-                    download
-                    target="_blank"
-                    rel="noreferrer"
+                    type="button"
+                    onClick={() => void handleDownloadTailored(r)}
                   >
                     ⬇ Download
-                  </a>
+                  </button>
                 )}
               </li>
             ))}

@@ -2110,10 +2110,13 @@ button:disabled {
 
 .tailor-status { margin: 8px 0; padding: 10px 14px; border-radius: 6px; font-size: 0.875rem; }
 .tailor-status-processing, .tailor-status-pending { background: #e3f2fd; color: #0d47a1; }
-.tailor-status-ready { background: var(--brand-green-soft); color: var(--brand-green-dark); }
+.tailor-status-ready, .tailor-status-suggestions_ready { background: var(--brand-green-soft); color: var(--brand-green-dark); }
 .tailor-status-error { background: #ffebee; color: #c62828; }
 
 .tailor-ready { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tailor-suggestions { display: flex; flex-direction: column; gap: 10px; }
+.tailor-suggestion-list { margin: 0; padding-left: 20px; color: var(--brand-charcoal); }
+.tailor-suggestion-list li { margin-bottom: 6px; line-height: 1.45; }
 
 .tailor-spinner { display: flex; align-items: center; gap: 8px; }
 
@@ -2138,10 +2141,10 @@ button:disabled {
 .tailor-history-item { display: flex; align-items: center; gap: 10px; font-size: 0.825rem; }
 .tailor-history-date { color: var(--brand-muted); }
 .tailor-history-status { font-weight: 600; text-transform: capitalize; }
-.tailor-history-status-ready { color: var(--brand-green-dark); }
+.tailor-history-status-ready, .tailor-history-status-suggestions_ready { color: var(--brand-green-dark); }
 .tailor-history-status-error { color: #c62828; }
 .tailor-history-status-processing, .tailor-history-status-pending { color: #1565c0; }
-.tailor-history-dl { color: var(--brand-green); text-decoration: none; font-weight: 600; }
+.tailor-history-dl { color: var(--brand-green); text-decoration: none; font-weight: 600; border: 0; padding: 0; background: transparent; font: inherit; cursor: pointer; }
 .tailor-history-dl:hover { text-decoration: underline; }
 
 /* ── Resume tailor error box (re-upload hint) ─────────────────────────────── */
