@@ -70,11 +70,21 @@ function toNetworkError(error: unknown) {
 }
 
 export function getStoredAccessToken() {
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  const rawToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!rawToken) return null;
+  const token = rawToken.trim();
+  if (!token || /[\r\n]/.test(token)) {
+    clearStoredAccessToken();
+    return null;
+  }
+  if (token !== rawToken) {
+    window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  }
+  return token;
 }
 
 export function setStoredAccessToken(token: string) {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, token.trim());
 }
 
 export function clearStoredAccessToken() {
