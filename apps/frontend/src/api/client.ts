@@ -40,6 +40,7 @@ import type {
   User,
   UserCreatePayload,
   UserUpdatePayload,
+  WorkQueueDayStats,
   WorkQueueItem,
   WorkQueueReportPayload
 } from "../types";
@@ -187,6 +188,8 @@ export const apiClient = {
     status?: string;
     sort_by?: string;
     sort_order?: string;
+    created_after?: string;
+    created_before?: string;
   }) => request<PaginatedResponse<WorkQueueItem>>(`/api/v1/work-queues${buildQuery(params ?? {})}`),
   createApplication: (payload: ApplicationCreatePayload) =>
     request<Application>("/api/v1/applications", {
@@ -385,6 +388,11 @@ export const apiClient = {
     `${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`,
   downloadTailoredResume: (id: number, fallbackFilename = "tailored_resume.docx") =>
     downloadAuthenticatedUrl(`${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`, fallbackFilename),
+  getWorkQueueStats: (params?: {
+    days?: number;
+    employee_id?: number;
+    candidate_id?: number;
+  }) => request<WorkQueueDayStats[]>(`/api/v1/work-queues/stats${buildQuery(params ?? {})}`),
   listTailoredResumes: (jobId: number, candidateId: number) =>
     request<TailoredResumeRead[]>(`/api/v1/jobs/${jobId}/tailored-resumes?candidate_id=${candidateId}`)
 };

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import Select, asc, desc, func, select
+from sqlalchemy import Select, asc, case, desc, func, select
 from sqlalchemy.orm import Session
 
 from app.models.application import Application
@@ -303,6 +303,8 @@ def list_employee_work_queues(
     employee_id: int | None = None,
     priority_bucket: str | None = None,
     status: str | None = None,
+    created_after: datetime | None = None,
+    created_before: datetime | None = None,
 ) -> tuple[int, list[EmployeeWorkQueue]]:
     stmt: Select = select(EmployeeWorkQueue)
     if candidate_id is not None:
@@ -313,10 +315,46 @@ def list_employee_work_queues(
         stmt = stmt.where(EmployeeWorkQueue.priority_bucket == priority_bucket)
     if status is not None:
         stmt = stmt.where(EmployeeWorkQueue.status == status)
+    if created_after is not None:
+        stmt = stmt.where(EmployeeWorkQueue.created_at >= created_after)
+    if created_before is not None:
+        stmt = stmt.where(EmployeeWorkQueue.created_at <= created_before)
 
     total = _count_rows(db, stmt)
-    stmt = stmt.order_by(_sort_column(EmployeeWorkQueue, sort_by, sort_order, default="score")).offset(offset).limit(limit)
+    stmt = stmt.order_by(_sort_column(EmployeeWorkQueue, sort_by, sort_order, default="created_at")).offset(offset).limit(limit)
     return total, list(db.scalars(stmt))
+
+
+
+def get_work_queue_daily_stats(
+    db: Session,
+    *,
+    days: int = 7,
+    employee_id: int | None = None,
+    candidate_id: int | None = None,
+) -> list[dict]:
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days)
+    stmt = (
+        select(
+            func.date(EmployeeWorkQueue.created_at).label("date"),
+            func.count().label("total"),
+            func.sum(case((EmployeeWorkQueue.status == "applied", 1), else_=0)).label("applied"),
+            func.sum(case((EmployeeWorkQueue.status == "pending", 1), else_=0)).label("pending"),
+        )
+        .where(EmployeeWorkQueue.created_at >= cutoff)
+    )
+    if employee_id is not None:
+        stmt = stmt.where(EmployeeWorkQueue.employee_id == employee_id)
+    if candidate_id is not None:
+        stmt = stmt.where(EmployeeWorkQueue.candidate_id == candidate_id)
+    stmt = stmt.group_by(func.date(EmployeeWorkQueue.created_at)).order_by(
+        func.date(EmployeeWorkQueue.created_at)
+    )
+    rows = db.execute(stmt).all()
+    return [
+        {"date": str(r.date), "total": r.total, "applied": r.applied, "pending": r.pending}
+        for r in rows
+    ]
 
 
 def _count_rows(db: Session, stmt: Select) -> int:

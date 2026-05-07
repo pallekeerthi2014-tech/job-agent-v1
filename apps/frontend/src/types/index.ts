@@ -447,3 +447,12 @@ export type TailorResumeRequest = {
   notes?: string | null;
   confirm_flagged_skills?: string[] | null;
 };
+
+export type WorkQueueDayStats = {
+  date: string;   // "2026-05-07"
+  total: number;
+  applied: number;
+  pending: number;
+};
+
+export type DashboardTimeWindow = "48h" | "today" | "7d" | "all";

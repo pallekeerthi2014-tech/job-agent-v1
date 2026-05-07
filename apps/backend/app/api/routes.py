@@ -59,7 +59,7 @@ from app.schemas.user import (
     UserRead,
     UserUpdate,
 )
-from app.schemas.work_queue import EmployeeWorkQueuePage, WorkQueueReportPayload
+from app.schemas.work_queue import EmployeeWorkQueuePage, WorkQueueDayStatsRead, WorkQueueReportPayload
 from app.services.auth import (
     authenticate_user,
     build_password_reset,
@@ -639,6 +639,20 @@ def create_application(
     )
 
 
+@router.get("/work-queues/stats", response_model=list[WorkQueueDayStatsRead])
+def get_work_queue_stats(
+    days: int = Query(7, ge=1, le=30),
+    employee_id: int | None = Query(None),
+    candidate_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> list[WorkQueueDayStatsRead]:
+    rows = crud.get_work_queue_daily_stats(
+        db, days=days, employee_id=employee_id, candidate_id=candidate_id
+    )
+    return [WorkQueueDayStatsRead(**r) for r in rows]
+
+
 @router.get("/work-queues", response_model=EmployeeWorkQueuePage)
 def list_work_queues(
     db: Session = Depends(get_db),
@@ -666,6 +680,8 @@ def list_work_queues(
         employee_id=scoped_employee_id,
         priority_bucket=priority,
         status=status_value,
+        created_after=created_after,
+        created_before=created_before,
     )
     return EmployeeWorkQueuePage(items=items, meta=PageMeta(total=total, limit=limit, offset=offset))
 

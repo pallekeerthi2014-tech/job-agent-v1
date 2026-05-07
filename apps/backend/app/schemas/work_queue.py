@@ -34,3 +34,10 @@ class EmployeeWorkQueuePage(BaseModel):
 class WorkQueueReportPayload(BaseModel):
     report_status: str   # "invalid" | "outdated" | "not_relevant"
     report_reason: str | None = None
+
+
+class WorkQueueDayStatsRead(BaseModel):
+    date: str        # "2026-05-07"
+    total: int
+    applied: int
+    pending: int

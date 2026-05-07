@@ -30,6 +30,9 @@ import type {
   PriorityFilter,
   User,
   UserCreatePayload,
+  DashboardTimeWindow,
+  PageMeta,
+  WorkQueueDayStats,
   WorkQueueItem,
   WorkQueueReportPayload
 } from "./types";
@@ -54,6 +57,23 @@ const PRIORITY_TO_NUM: Record<Exclude<PriorityFilter, "All">, number> = {
 };
 
 const DASHBOARD_PAGE_LIMIT = 200;
+const SUPPORTING_DATA_LIMIT = 200;
+
+function computeTimeRange(
+  timeWindow: DashboardTimeWindow,
+  dayFilter: string
+): { created_after?: string; created_before?: string } {
+  if (dayFilter !== "all") {
+    return { created_after: `${dayFilter}T00:00:00Z`, created_before: `${dayFilter}T23:59:59Z` };
+  }
+  const now = new Date();
+  switch (timeWindow) {
+    case "48h": { const d = new Date(now.getTime() - 48 * 60 * 60 * 1000); return { created_after: d.toISOString() }; }
+    case "today": { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate()); return { created_after: d.toISOString() }; }
+    case "7d": { const d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); return { created_after: d.toISOString() }; }
+    case "all": return {};
+  }
+}
 const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "gmail-analytics", "admin-whatsapp", "admin-sources", "analytics"];
 const PUBLIC_PATHS = new Set(["/", "/success-stories", "/contact"]);
 
@@ -105,6 +125,12 @@ export default function App() {
   const [dashboardSourceFilter, setDashboardSourceFilter] = useState("all");
   const [dashboardStatusFilter, setDashboardStatusFilter] = useState("pending");
   const [dashboardDayFilter, setDashboardDayFilter] = useState("all");
+  const [dashboardTimeWindow, setDashboardTimeWindow] = useState<DashboardTimeWindow>("48h");
+  const [dashboardPage, setDashboardPage] = useState(1);
+  const [dashboardPageSize, setDashboardPageSize] = useState(10);
+  const [dashboardCandidateFilter, setDashboardCandidateFilter] = useState<number | null>(null);
+  const [workQueueMeta, setWorkQueueMeta] = useState<PageMeta | null>(null);
+  const [workQueueStats, setWorkQueueStats] = useState<WorkQueueDayStats[]>([]);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -338,6 +364,39 @@ export default function App() {
     setTimeout(() => setToastMessage(null), duration);
   }
 
+  async function loadWorkQueueData() {
+    if (!currentUser) return;
+    try {
+      const scopedEmployeeId = currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined;
+      const timeRange = computeTimeRange(dashboardTimeWindow, dashboardDayFilter);
+      const offset = (dashboardPage - 1) * dashboardPageSize;
+      const [wqResponse, statsResponse] = await Promise.all([
+        apiClient.getWorkQueues({
+          limit: dashboardPageSize, offset,
+          employee_id: scopedEmployeeId,
+          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined),
+          priority: selectedPriority === "All" ? undefined : selectedPriority,
+          status: dashboardStatusFilter === "all" ? undefined : dashboardStatusFilter,
+          sort_by: "created_at", sort_order: "desc",
+          ...timeRange
+        }),
+        apiClient.getWorkQueueStats({ days: 7, employee_id: scopedEmployeeId,
+          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined) })
+      ]);
+      setWorkQueues(wqResponse.items);
+      setWorkQueueMeta(wqResponse.meta);
+      setWorkQueueStats(statsResponse);
+    } catch (loadError) {
+      setPageError(loadError instanceof Error ? loadError.message : "Work queue load error");
+    }
+  }
+
+  useEffect(() => { void loadWorkQueueData(); }, [
+    currentUser, selectedCandidateId, selectedEmployeeId, selectedPriority,
+    dashboardPage, dashboardPageSize, dashboardTimeWindow, dashboardDayFilter,
+    dashboardStatusFilter, dashboardCandidateFilter
+  ]);
+
   async function updateApplication(
     params: { candidateId: number; jobId: number; employeeId?: number | null; matchId?: number | null; queueId?: number | null },
     status: "applied" | "skipped"
@@ -352,7 +411,7 @@ export default function App() {
         status,
         notes: status === "applied" ? "Applied from dashboard." : "Skipped from dashboard."
       });
-      await loadData();
+      await Promise.all([loadData(), loadWorkQueueData()]);
       if (status === "applied") showToast("✅ Marked as Applied — moved out of pending queue.");
       if (status === "skipped") showToast("⏭ Skipped — job moved to skipped queue.");
     } finally {
@@ -528,6 +587,18 @@ export default function App() {
           onSourceFilterChange={setDashboardSourceFilter}
           onStatusFilterChange={setDashboardStatusFilter}
           onDayFilterChange={setDashboardDayFilter}
+          meta={workQueueMeta}
+          dayStats={workQueueStats}
+          candidates={candidates}
+          currentUserRole={currentUser.role}
+          timeWindow={dashboardTimeWindow}
+          candidateFilter={dashboardCandidateFilter}
+          page={dashboardPage}
+          pageSize={dashboardPageSize}
+          onTimeWindowChange={setDashboardTimeWindow}
+          onCandidateFilterChange={setDashboardCandidateFilter}
+          onPageChange={setDashboardPage}
+          onPageSizeChange={setDashboardPageSize}
           onOpenMatch={viewQueueItem}
           onMarkApplied={(queueItem) =>
             updateApplication(
