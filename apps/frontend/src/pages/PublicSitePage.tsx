@@ -1,4 +1,28 @@
 import { useEffect, useState } from "react";
+import {
+  ArrowRight,
+  Award,
+  BarChart3,
+  Building,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FileText,
+  Instagram,
+  Linkedin,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  Star,
+  TrendingUp,
+  Twitter,
+  Users
+} from "lucide-react";
+
+import { PublicChatbot } from "./PublicChatbot";
 
 type PublicPage = "home" | "success-stories" | "contact";
 
@@ -10,19 +34,62 @@ type PublicSitePageProps = {
 const services = [
   {
     title: "Business Analyst & Data Analyst Training",
-    copy: "Hands-on BA/DA programs covering SDLC, Agile, SQL, dashboards, domain knowledge, case studies, and interview preparation."
+    copy: "Hands-on BA/DA programs covering SDLC, Agile, SQL, dashboards, domain knowledge, case studies, and interview preparation.",
+    bullets: [
+      "Comprehensive training programs designed for BA/DA roles",
+      "Hands-on project work, case studies, and interview prep",
+      "Focus on SDLC, Agile, SQL, Data Visualization, and domain knowledge"
+    ]
   },
   {
     title: "Career Placement Support",
-    copy: "Resume building, LinkedIn optimization, recruiter visibility, mock interviews, and guided application strategy."
+    copy: "Resume building, LinkedIn optimization, recruiter visibility, mock interviews, and guided application strategy.",
+    bullets: [
+      "Resume building and profile optimization",
+      "LinkedIn branding and recruiter visibility tips",
+      "Mock interviews and proxy interview support",
+      "Connecting candidates with 50+ partner companies"
+    ]
   },
   {
     title: "Certification Guidance",
-    copy: "Support choosing and preparing for credentials across CBAP, CCBA, Tableau, Power BI, SQL, Agile, and Scrum."
+    copy: "Support choosing and preparing for credentials across CBAP, CCBA, Tableau, Power BI, SQL, Agile, and Scrum.",
+    bullets: [
+      "Support choosing relevant certifications",
+      "Assistance with preparation resources and timelines"
+    ]
   },
   {
     title: "End-to-End Job Support",
-    copy: "Guidance from applications through onboarding, background check readiness, and first-project transition support."
+    copy: "Guidance from applications through onboarding, background check readiness, and first-project transition support.",
+    bullets: [
+      "Guidance from job applications to onboarding",
+      "Assistance during the first month of the project",
+      "Background check readiness and compliance support"
+    ]
+  }
+];
+
+const expertise = [
+  {
+    icon: FileText,
+    title: "Application Strategy",
+    description: "Smart, targeted applications to roles that align with your BA/DA skills using data-driven insights."
+  },
+  {
+    icon: Users,
+    title: "Resume & LinkedIn Makeover",
+    description: "Build a professional brand that gets noticed through tailored resumes and optimized LinkedIn profiles."
+  },
+  {
+    icon: MessageCircle,
+    title: "Interview Assistance",
+    description: "Prepare with real-world BA/DA case studies, mock interviews, and role-specific prep sessions."
+  },
+  {
+    icon: ShieldCheck,
+    title: "Verification Support",
+    description: "Guidance for background checks and smooth onboarding with employers."
   }
 ];
 
@@ -66,10 +133,48 @@ const stories = [
 ];
 
 const testimonials = [
-  "With their prep, I landed my first Business Analyst role in finance within 45 days.",
-  "They helped me transition from reporting to a Data Analyst role in healthcare.",
-  "The interview preparation made every technical discussion feel more confident."
+  {
+    quote: "With their comprehensive prep, I landed my first Business Analyst role in finance within 45 days.",
+    role: "Business Analyst at Goldman Sachs",
+    rating: 5
+  },
+  {
+    quote: "They helped me transition from reporting to a Data Analyst role in healthcare seamlessly.",
+    role: "Data Analyst at Kaiser Permanente",
+    rating: 4.5
+  },
+  {
+    quote: "The interview preparation was game-changing. I felt confident in every technical discussion.",
+    role: "Senior BA at McKinsey & Company",
+    rating: 5
+  }
 ];
+
+const industryHighlights = [
+  { icon: Users, title: "Business Analytics", description: "Placing analysts in top business roles worldwide." },
+  { icon: TrendingUp, title: "Data Science", description: "Empowering data professionals to scale their careers." },
+  { icon: Award, title: "Consulting", description: "Connecting consultants to high-impact opportunities." },
+  { icon: Building, title: "Technology", description: "Helping tech analysts achieve their dream roles." }
+];
+
+function CounterAnimation({ end, suffix = "", duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime = 0;
+    let animationFrame = 0;
+    const animate = (currentTime: number) => {
+      if (startTime === 0) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) animationFrame = requestAnimationFrame(animate);
+    };
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [duration, end]);
+
+  return <>{count}{suffix}</>;
+}
 
 function PublicHeader({ activePage, onNavigate }: { activePage: PublicPage; onNavigate: (path: string) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -97,7 +202,7 @@ function PublicHeader({ activePage, onNavigate }: { activePage: PublicPage; onNa
     <header className={`public-header ${scrolled ? "public-header-scrolled" : ""}`}>
       <div className="public-nav">
         <button className="public-brand" onClick={() => go("/")} type="button">
-          <img src="/brand/think-success-logo.jpg" alt="Think Success Consulting" />
+          <img src="/brand/think-success-logo.png" alt="Think Success Consulting" />
           <span>Think Success Consulting</span>
         </button>
 
@@ -139,17 +244,58 @@ function PublicHeader({ activePage, onNavigate }: { activePage: PublicPage; onNa
 }
 
 function PublicFooter({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="public-footer">
-      <div>
-        <strong>Think Success Consulting</strong>
-        <span>Business Analyst and Data Analyst career support.</span>
+      <div className="public-footer-grid">
+        <div className="public-footer-brand">
+          <button onClick={() => onNavigate("/")} type="button">
+            <img src="/brand/think-success-logo.png" alt="Think Success Logo" />
+            <strong>Think Success Consulting</strong>
+          </button>
+          <span>Empowering Analysts to Excel</span>
+          <p>Specialized consultancy helping Business and Data Analysts secure their dream careers through comprehensive support and expert guidance.</p>
+        </div>
+
+        <div>
+          <h3>Quick Links</h3>
+          <div className="public-footer-stack">
+            <button onClick={() => onNavigate("/")} type="button">Home</button>
+            <button onClick={() => onNavigate("/success-stories")} type="button">Success Stories</button>
+            <button onClick={() => onNavigate("/contact")} type="button">Contact Us</button>
+            <button onClick={() => onNavigate("/login")} type="button">Portal Login</button>
+          </div>
+        </div>
+
+        <div>
+          <h3>Our Services</h3>
+          <ul className="public-footer-list">
+            <li>Application Strategy</li>
+            <li>Resume & LinkedIn Makeover</li>
+            <li>Interview Assistance</li>
+            <li>Verification Support</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3>Get in Touch</h3>
+          <div className="public-footer-contact">
+            <span><Mail size={16} /> thinksuccessITconsultants@gmail.com</span>
+            <span><Phone size={16} /> +91 80084 38080</span>
+            <span><MapPin size={16} /> North Carolina, Chicago, Hyderabad</span>
+            <span><Clock size={16} /> Mon-Fri, 9:00 AM-6:00 PM IST</span>
+          </div>
+        </div>
       </div>
-      <div className="public-footer-links">
-        <button onClick={() => onNavigate("/")} type="button">Home</button>
-        <button onClick={() => onNavigate("/success-stories")} type="button">Success Stories</button>
-        <button onClick={() => onNavigate("/contact")} type="button">Contact</button>
-        <button onClick={() => onNavigate("/login")} type="button">Portal Login</button>
+
+      <div className="public-footer-bottom">
+        <p>© {currentYear} Think Success Consulting. All rights reserved.</p>
+        <div className="public-social-row">
+          <a href="#" aria-label="LinkedIn"><Linkedin size={20} /></a>
+          <a href="#" aria-label="Twitter"><Twitter size={20} /></a>
+          <a href="#" aria-label="Instagram"><Instagram size={20} /></a>
+        </div>
       </div>
     </footer>
   );
@@ -172,12 +318,12 @@ function HomePage({ onNavigate }: { onNavigate: (path: string) => void }) {
           <p className="eyebrow">Career consulting for analysts</p>
           <h1>Shaping careers in Business and Data Analysis</h1>
           <p>
-            From applications to interviews to onboarding, Think Success helps analysts build stronger profiles,
-            target better roles, and move through the hiring process with structure.
+            From applications to interviews to background checks, we guide analysts at every step of their career journey.
           </p>
           <div className="public-hero-actions">
             <button className="public-primary-cta" onClick={() => onNavigate("/contact")} type="button">
               Start My Career Journey
+              <ArrowRight size={18} />
             </button>
             <button className="public-secondary-cta" onClick={() => onNavigate("/success-stories")} type="button">
               View Success Stories
@@ -208,43 +354,115 @@ function HomePage({ onNavigate }: { onNavigate: (path: string) => void }) {
           {services.map((service) => (
             <article className="public-service-card" key={service.title}>
               <h3>{service.title}</h3>
-              <p>{service.copy}</p>
+              <ul>
+                {service.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
+              </ul>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="public-band">
-        <div>
-          <p className="eyebrow">Career Systems</p>
-          <h2>One team for training, applications, interviews, and placement operations.</h2>
+      <section className="public-section public-muted-section" id="expertise">
+        <div className="public-section-heading">
+          <p className="eyebrow">Our Expertise</p>
+          <h2>Comprehensive support designed for analyst careers</h2>
         </div>
-        <p>
-          The public website introduces candidates to the company, while the protected portal gives candidates and
-          employees a structured workspace for job matching, profile updates, resume handling, and daily operations.
-        </p>
+        <div className="public-expertise-grid">
+          {expertise.map((item) => {
+            const Icon = item.icon;
+            return (
+              <article className="public-expertise-card" key={item.title}>
+                <Icon size={34} />
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </article>
+            );
+          })}
+        </div>
+        <div className="public-mini-grid">
+          <article>
+            <h3>Training & Upskilling</h3>
+            <p>Hands-on BA/DA training with real project scenarios to strengthen practical experience.</p>
+          </article>
+          <article>
+            <h3>Certification Guidance</h3>
+            <p>Support in completing industry-recognized certifications like CBAP, Tableau, Power BI, and SQL.</p>
+          </article>
+          <article>
+            <h3>On-Project Support</h3>
+            <p>Guidance during your first month on the job to ensure a confident and successful start.</p>
+          </article>
+        </div>
       </section>
 
-      <section className="public-section public-two-column">
+      <section className="public-track-record">
         <div>
-          <p className="eyebrow">Candidate experience</p>
-          <h2>Profile, resume, and job matches in one login.</h2>
-          <p>
-            Candidates can register or sign in, maintain their profile, upload a resume, and review matched roles
-            without needing a separate website.
-          </p>
-          <button className="public-primary-cta" onClick={() => onNavigate("/login")} type="button">
-            Candidate Login
-          </button>
+          <h2>Our Track Record</h2>
+          <p>Measurable results that speak for themselves</p>
         </div>
-        <div className="public-quote-card">
-          <span>"{testimonials[testimonialIndex]}"</span>
-          <div className="public-quote-controls">
-            <button onClick={() => setTestimonialIndex((testimonialIndex + testimonials.length - 1) % testimonials.length)} type="button">Prev</button>
-            <button onClick={() => setTestimonialIndex((testimonialIndex + 1) % testimonials.length)} type="button">Next</button>
+        <div className="public-track-grid">
+          <article>
+            <strong><CounterAnimation end={90} suffix="%" /></strong>
+            <h3>Clients secured interviews within 60 days</h3>
+            <p>Success rate for our comprehensive career support program</p>
+          </article>
+          <article>
+            <strong><CounterAnimation end={200} suffix="+" /></strong>
+            <h3>Business & Data Analysts placed</h3>
+            <p>Professionals successfully placed in top organizations</p>
+          </article>
+          <article>
+            <strong><CounterAnimation end={50} suffix="+" /></strong>
+            <h3>Companies trust our candidates</h3>
+            <p>Organizations that regularly hire our trained analysts</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="public-section">
+        <div className="public-section-heading">
+          <p className="eyebrow">Testimonials</p>
+          <h2>Analysts Who Trusted Us</h2>
+          <p>Real success stories from our professional community</p>
+        </div>
+        <div className="public-testimonial-card">
+          <div className="public-stars">
+            {Array.from({ length: Math.floor(testimonials[testimonialIndex].rating) }).map((_, index) => (
+              <Star key={index} size={24} />
+            ))}
+            {testimonials[testimonialIndex].rating % 1 !== 0 ? <Star size={24} className="public-half-star" /> : null}
+          </div>
+          <blockquote>"{testimonials[testimonialIndex].quote}"</blockquote>
+          <strong>{testimonials[testimonialIndex].role}</strong>
+          <div className="public-testimonial-controls">
+            <button
+              onClick={() => setTestimonialIndex((testimonialIndex + testimonials.length - 1) % testimonials.length)}
+              type="button"
+              aria-label="Previous testimonial"
+            >
+              <ChevronLeft size={22} />
+            </button>
+            <button
+              onClick={() => setTestimonialIndex((testimonialIndex + 1) % testimonials.length)}
+              type="button"
+              aria-label="Next testimonial"
+            >
+              <ChevronRight size={22} />
+            </button>
           </div>
         </div>
       </section>
+
+      <section className="public-cta-band public-green-cta">
+        <h2>Ready to Accelerate Your Analytics Career?</h2>
+        <p>Join hundreds of successful Business and Data Analysts who transformed their careers with our expert guidance.</p>
+        <button className="public-light-cta" onClick={() => onNavigate("/contact")} type="button">
+          Start Your Journey Today
+          <ArrowRight size={18} />
+        </button>
+      </section>
+
+      <PublicChatbot />
     </>
   );
 }
@@ -273,10 +491,29 @@ function SuccessStoriesPage({ onNavigate }: { onNavigate: (path: string) => void
             <article className="public-story-card" key={`${story.company}-${story.role}`}>
               <span>{story.industry}</span>
               <h3>{story.role}</h3>
-              <strong>{story.company}</strong>
+              <strong><Building size={16} /> {story.company}</strong>
               <p>"{story.quote}"</p>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="public-section public-muted-section">
+        <div className="public-section-heading">
+          <p className="eyebrow">Industry Impact</p>
+          <h2>Our reach spans multiple industries and career levels</h2>
+        </div>
+        <div className="public-industry-grid">
+          {industryHighlights.map((highlight) => {
+            const Icon = highlight.icon;
+            return (
+              <article key={highlight.title}>
+                <Icon size={26} />
+                <h3>{highlight.title}</h3>
+                <p>{highlight.description}</p>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -285,6 +522,7 @@ function SuccessStoriesPage({ onNavigate }: { onNavigate: (path: string) => void
         <p>Start with a conversation about your current profile, target roles, and next best move.</p>
         <button className="public-primary-cta" onClick={() => onNavigate("/contact")} type="button">
           Get Started Today
+          <ArrowRight size={18} />
         </button>
       </section>
     </>
@@ -334,7 +572,10 @@ function ContactPage() {
                 <span>Message</span>
                 <textarea name="message" rows={6} required placeholder="Tell us about your career goals and how we can help." />
               </label>
-              <button className="public-primary-cta" type="submit">Send Message</button>
+              <button className="public-primary-cta" type="submit">
+                Send Message
+                <ArrowRight size={18} />
+              </button>
               <small>We respond to inquiries within 24 hours during business days.</small>
             </form>
           )}
@@ -344,22 +585,44 @@ function ContactPage() {
           <h2>Get in Touch</h2>
           <dl>
             <div>
-              <dt>Email</dt>
+              <dt><Mail size={18} /> Email</dt>
               <dd>thinksuccessITconsultants@gmail.com</dd>
+              <dd>We respond within 24 hours</dd>
             </div>
             <div>
-              <dt>Phone</dt>
+              <dt><Phone size={18} /> Phone</dt>
               <dd>+91 80084 38080</dd>
+              <dd>Mon-Fri, 9:00 AM-6:00 PM IST</dd>
             </div>
             <div>
-              <dt>Offices</dt>
+              <dt><MapPin size={18} /> Offices</dt>
               <dd>North Carolina, Chicago, Hyderabad</dd>
+              <dd>By appointment only</dd>
             </div>
             <div>
-              <dt>Business Hours</dt>
+              <dt><Clock size={18} /> Business Hours</dt>
               <dd>Monday-Friday, 9:00 AM-6:00 PM IST. US availability by appointment.</dd>
             </div>
           </dl>
+
+          <div className="public-why-card">
+            <h3>Why Work With Us?</h3>
+            <ul>
+              <li><CheckCircle size={16} /> Specialized BA/DA expertise</li>
+              <li><CheckCircle size={16} /> 90% success rate</li>
+              <li><CheckCircle size={16} /> Personalized career strategy</li>
+              <li><CheckCircle size={16} /> End-to-end support</li>
+            </ul>
+          </div>
+
+          <div className="public-follow-card">
+            <h3>Follow Our Journey</h3>
+            <div className="public-social-row">
+              <a href="#" aria-label="LinkedIn"><Linkedin size={20} /></a>
+              <a href="#" aria-label="Twitter"><Twitter size={20} /></a>
+              <a href="#" aria-label="Instagram"><Instagram size={20} /></a>
+            </div>
+          </div>
         </aside>
       </section>
     </>
