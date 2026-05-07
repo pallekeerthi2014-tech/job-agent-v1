@@ -47,6 +47,7 @@ type LoginPageProps = {
   onGoogleAuth: (credential: string) => Promise<void>;
   onForgotPassword: (payload: { email: string }) => Promise<void>;
   onResetPassword: (payload: { token: string; password: string }) => Promise<void>;
+  onPublicHome?: () => void;
 };
 
 export function LoginPage({
@@ -61,7 +62,8 @@ export function LoginPage({
   onRegister,
   onGoogleAuth,
   onForgotPassword,
-  onResetPassword
+  onResetPassword,
+  onPublicHome
 }: LoginPageProps) {
   const [view, setView] = useState<AuthView>(initialResetToken ? "reset" : "login");
   const [email, setEmail] = useState("");
@@ -184,8 +186,14 @@ export function LoginPage({
           <img className="brand-logo" src="/brand/think-success-logo.jpg" alt="Think Success Consulting" />
           <p className="eyebrow">Candidate &amp; Team Access</p>
           <h1>Think Success</h1>
-          <span>Sign in or register to find your next opportunity.</span>
+          <span>One portal for candidates, employees, and admins.</span>
         </div>
+
+        {onPublicHome ? (
+          <button className="link-button login-home-link" type="button" onClick={onPublicHome}>
+            Back to website
+          </button>
+        ) : null}
 
         <div className="auth-tabs">
           <button className={`link-button ${view === "login" ? "auth-tab-active" : ""}`} onClick={() => setView("login")}>

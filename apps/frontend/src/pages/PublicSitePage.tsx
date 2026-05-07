@@ -1,0 +1,381 @@
+import { useEffect, useState } from "react";
+
+type PublicPage = "home" | "success-stories" | "contact";
+
+type PublicSitePageProps = {
+  page: PublicPage;
+  onNavigate: (path: string) => void;
+};
+
+const services = [
+  {
+    title: "Business Analyst & Data Analyst Training",
+    copy: "Hands-on BA/DA programs covering SDLC, Agile, SQL, dashboards, domain knowledge, case studies, and interview preparation."
+  },
+  {
+    title: "Career Placement Support",
+    copy: "Resume building, LinkedIn optimization, recruiter visibility, mock interviews, and guided application strategy."
+  },
+  {
+    title: "Certification Guidance",
+    copy: "Support choosing and preparing for credentials across CBAP, CCBA, Tableau, Power BI, SQL, Agile, and Scrum."
+  },
+  {
+    title: "End-to-End Job Support",
+    copy: "Guidance from applications through onboarding, background check readiness, and first-project transition support."
+  }
+];
+
+const stories = [
+  {
+    role: "Senior Business Analyst",
+    company: "JPMorgan Chase & Co.",
+    industry: "Financial Services",
+    quote: "Strategic guidance helped me secure a Senior BA role with a major salary increase."
+  },
+  {
+    role: "Data Analyst",
+    company: "Johnson & Johnson",
+    industry: "Healthcare",
+    quote: "The interview preparation helped me move from reporting work into deeper data analysis."
+  },
+  {
+    role: "Business Intelligence Analyst",
+    company: "McKinsey & Company",
+    industry: "Consulting",
+    quote: "The LinkedIn and resume work helped recruiters understand my value much faster."
+  },
+  {
+    role: "Senior Data Analyst",
+    company: "Google",
+    industry: "Technology",
+    quote: "Technical interview preparation made complex data conversations feel natural."
+  },
+  {
+    role: "Business Analyst",
+    company: "Amazon",
+    industry: "E-commerce",
+    quote: "The support was comprehensive from application strategy to offer stage."
+  },
+  {
+    role: "Data Scientist",
+    company: "Pfizer",
+    industry: "Pharmaceuticals",
+    quote: "They helped me translate analytics experience into a stronger data science profile."
+  }
+];
+
+const testimonials = [
+  "With their prep, I landed my first Business Analyst role in finance within 45 days.",
+  "They helped me transition from reporting to a Data Analyst role in healthcare.",
+  "The interview preparation made every technical discussion feel more confident."
+];
+
+function PublicHeader({ activePage, onNavigate }: { activePage: PublicPage; onNavigate: (path: string) => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const navItems = [
+    { path: "/", label: "Home", page: "home" as const },
+    { path: "/success-stories", label: "Success Stories", page: "success-stories" as const },
+    { path: "/contact", label: "Contact", page: "contact" as const }
+  ];
+
+  function go(path: string) {
+    setMenuOpen(false);
+    onNavigate(path);
+  }
+
+  return (
+    <header className={`public-header ${scrolled ? "public-header-scrolled" : ""}`}>
+      <div className="public-nav">
+        <button className="public-brand" onClick={() => go("/")} type="button">
+          <img src="/brand/think-success-logo.jpg" alt="Think Success Consulting" />
+          <span>Think Success Consulting</span>
+        </button>
+
+        <nav className="public-nav-links">
+          {navItems.map((item) => (
+            <button
+              key={item.path}
+              className={activePage === item.page ? "public-nav-active" : ""}
+              onClick={() => go(item.path)}
+              type="button"
+            >
+              {item.label}
+            </button>
+          ))}
+          <button className="public-login-button" onClick={() => go("/login")} type="button">
+            Portal Login
+          </button>
+        </nav>
+
+        <button className="public-menu-button" onClick={() => setMenuOpen((value) => !value)} type="button">
+          {menuOpen ? "Close" : "Menu"}
+        </button>
+      </div>
+
+      {menuOpen ? (
+        <nav className="public-mobile-nav">
+          {navItems.map((item) => (
+            <button key={item.path} onClick={() => go(item.path)} type="button">
+              {item.label}
+            </button>
+          ))}
+          <button className="public-login-button" onClick={() => go("/login")} type="button">
+            Portal Login
+          </button>
+        </nav>
+      ) : null}
+    </header>
+  );
+}
+
+function PublicFooter({ onNavigate }: { onNavigate: (path: string) => void }) {
+  return (
+    <footer className="public-footer">
+      <div>
+        <strong>Think Success Consulting</strong>
+        <span>Business Analyst and Data Analyst career support.</span>
+      </div>
+      <div className="public-footer-links">
+        <button onClick={() => onNavigate("/")} type="button">Home</button>
+        <button onClick={() => onNavigate("/success-stories")} type="button">Success Stories</button>
+        <button onClick={() => onNavigate("/contact")} type="button">Contact</button>
+        <button onClick={() => onNavigate("/login")} type="button">Portal Login</button>
+      </div>
+    </footer>
+  );
+}
+
+function HomePage({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const [testimonialIndex, setTestimonialIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setTestimonialIndex((index) => (index + 1) % testimonials.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <>
+      <section className="public-hero">
+        <div className="public-hero-copy">
+          <p className="eyebrow">Career consulting for analysts</p>
+          <h1>Shaping careers in Business and Data Analysis</h1>
+          <p>
+            From applications to interviews to onboarding, Think Success helps analysts build stronger profiles,
+            target better roles, and move through the hiring process with structure.
+          </p>
+          <div className="public-hero-actions">
+            <button className="public-primary-cta" onClick={() => onNavigate("/contact")} type="button">
+              Start My Career Journey
+            </button>
+            <button className="public-secondary-cta" onClick={() => onNavigate("/success-stories")} type="button">
+              View Success Stories
+            </button>
+          </div>
+        </div>
+
+        <div className="public-hero-card" aria-label="Think Success results">
+          <div>
+            <strong>90%</strong>
+            <span>Success Rate</span>
+          </div>
+          <div className="public-stat-grid">
+            <span><b>200+</b> Analysts Placed</span>
+            <span><b>50+</b> Partner Companies</span>
+            <span><b>45</b> Avg. Days to Hire</span>
+            <span><b>24h</b> Response Time</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="public-section">
+        <div className="public-section-heading">
+          <p className="eyebrow">Our Services</p>
+          <h2>Support for every step of the analyst career path</h2>
+        </div>
+        <div className="public-service-grid">
+          {services.map((service) => (
+            <article className="public-service-card" key={service.title}>
+              <h3>{service.title}</h3>
+              <p>{service.copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="public-band">
+        <div>
+          <p className="eyebrow">Career Systems</p>
+          <h2>One team for training, applications, interviews, and placement operations.</h2>
+        </div>
+        <p>
+          The public website introduces candidates to the company, while the protected portal gives candidates and
+          employees a structured workspace for job matching, profile updates, resume handling, and daily operations.
+        </p>
+      </section>
+
+      <section className="public-section public-two-column">
+        <div>
+          <p className="eyebrow">Candidate experience</p>
+          <h2>Profile, resume, and job matches in one login.</h2>
+          <p>
+            Candidates can register or sign in, maintain their profile, upload a resume, and review matched roles
+            without needing a separate website.
+          </p>
+          <button className="public-primary-cta" onClick={() => onNavigate("/login")} type="button">
+            Candidate Login
+          </button>
+        </div>
+        <div className="public-quote-card">
+          <span>"{testimonials[testimonialIndex]}"</span>
+          <div className="public-quote-controls">
+            <button onClick={() => setTestimonialIndex((testimonialIndex + testimonials.length - 1) % testimonials.length)} type="button">Prev</button>
+            <button onClick={() => setTestimonialIndex((testimonialIndex + 1) % testimonials.length)} type="button">Next</button>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function SuccessStoriesPage({ onNavigate }: { onNavigate: (path: string) => void }) {
+  return (
+    <>
+      <section className="public-page-hero">
+        <p className="eyebrow">Success Stories</p>
+        <h1>Analysts who moved into stronger roles</h1>
+        <p>Real career transformations across finance, healthcare, consulting, technology, and analytics teams.</p>
+        <div className="public-page-stats">
+          <span><b>90%</b> Average Success Rate</span>
+          <span><b>45</b> Average Days to Hire</span>
+          <span><b>45%</b> Average Salary Increase</span>
+        </div>
+      </section>
+
+      <section className="public-section">
+        <div className="public-section-heading">
+          <p className="eyebrow">Recent Outcomes</p>
+          <h2>Representative placements and transitions</h2>
+        </div>
+        <div className="public-story-grid">
+          {stories.map((story) => (
+            <article className="public-story-card" key={`${story.company}-${story.role}`}>
+              <span>{story.industry}</span>
+              <h3>{story.role}</h3>
+              <strong>{story.company}</strong>
+              <p>"{story.quote}"</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="public-cta-band">
+        <h2>Ready to write your success story?</h2>
+        <p>Start with a conversation about your current profile, target roles, and next best move.</p>
+        <button className="public-primary-cta" onClick={() => onNavigate("/contact")} type="button">
+          Get Started Today
+        </button>
+      </section>
+    </>
+  );
+}
+
+function ContactPage() {
+  const [submitted, setSubmitted] = useState(false);
+
+  return (
+    <>
+      <section className="public-page-hero">
+        <p className="eyebrow">Contact</p>
+        <h1>Talk to a career expert in analytics</h1>
+        <p>Ready to accelerate your BA/DA career? Tell us where you are now and where you want to go next.</p>
+      </section>
+
+      <section className="public-contact-section">
+        <div className="public-contact-form-shell">
+          {submitted ? (
+            <div className="public-submit-state">
+              <h2>Thank you.</h2>
+              <p>We received your message. The team will follow up as soon as possible.</p>
+            </div>
+          ) : (
+            <form
+              className="public-contact-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setSubmitted(true);
+              }}
+            >
+              <h2>Start your career transformation</h2>
+              <label>
+                <span>Name</span>
+                <input name="name" required placeholder="Enter your full name" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input name="email" type="email" required placeholder="your.email@example.com" />
+              </label>
+              <label>
+                <span>Phone</span>
+                <input name="phone" type="tel" placeholder="+1 555 000 0000" />
+              </label>
+              <label>
+                <span>Message</span>
+                <textarea name="message" rows={6} required placeholder="Tell us about your career goals and how we can help." />
+              </label>
+              <button className="public-primary-cta" type="submit">Send Message</button>
+              <small>We respond to inquiries within 24 hours during business days.</small>
+            </form>
+          )}
+        </div>
+
+        <aside className="public-contact-card">
+          <h2>Get in Touch</h2>
+          <dl>
+            <div>
+              <dt>Email</dt>
+              <dd>thinksuccessITconsultants@gmail.com</dd>
+            </div>
+            <div>
+              <dt>Phone</dt>
+              <dd>+91 80084 38080</dd>
+            </div>
+            <div>
+              <dt>Offices</dt>
+              <dd>North Carolina, Chicago, Hyderabad</dd>
+            </div>
+            <div>
+              <dt>Business Hours</dt>
+              <dd>Monday-Friday, 9:00 AM-6:00 PM IST. US availability by appointment.</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+    </>
+  );
+}
+
+export function PublicSitePage({ page, onNavigate }: PublicSitePageProps) {
+  return (
+    <div className="public-site-shell">
+      <PublicHeader activePage={page} onNavigate={onNavigate} />
+      <main className="public-main">
+        {page === "home" ? <HomePage onNavigate={onNavigate} /> : null}
+        {page === "success-stories" ? <SuccessStoriesPage onNavigate={onNavigate} /> : null}
+        {page === "contact" ? <ContactPage /> : null}
+      </main>
+      <PublicFooter onNavigate={onNavigate} />
+    </div>
+  );
+}

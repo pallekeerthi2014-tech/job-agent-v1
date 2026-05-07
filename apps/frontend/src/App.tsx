@@ -16,6 +16,7 @@ import { GmailAnalyticsAdminPage } from "./pages/GmailAnalyticsAdminPage";
 import { JobMatchDetailPage } from "./pages/JobMatchDetailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OperationsDashboardPage } from "./pages/OperationsDashboardPage";
+import { PublicSitePage } from "./pages/PublicSitePage";
 import type {
   AlertRecipient,
   AlertRecipientCreatePayload,
@@ -54,6 +55,7 @@ const PRIORITY_TO_NUM: Record<Exclude<PriorityFilter, "All">, number> = {
 
 const DASHBOARD_PAGE_LIMIT = 200;
 const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "gmail-analytics", "admin-whatsapp", "admin-sources", "analytics"];
+const PUBLIC_PATHS = new Set(["/", "/success-stories", "/contact"]);
 
 // Decode invite token to extract pre-fill email (no verification needed — server verifies on submit)
 function extractInviteEmail(token: string | null): string | null {
@@ -70,6 +72,7 @@ export default function App() {
   const params = new URLSearchParams(window.location.search);
   const initialResetToken = params.get("reset_token");
   const initialInviteEmail = extractInviteEmail(params.get("invite"));
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [activePage, setActivePage] = useState<ActivePage>("operations-dashboard");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -117,6 +120,23 @@ export default function App() {
   const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [candidateAdminBusy, setCandidateAdminBusy] = useState(false);
   const [candidateAdminError, setCandidateAdminError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onPopState = () => setCurrentPath(window.location.pathname);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  function navigateTo(path: string, replace = false) {
+    if (window.location.pathname === path && !window.location.search) {
+      setCurrentPath(path);
+      return;
+    }
+    const method = replace ? "replaceState" : "pushState";
+    window.history[method]({}, "", path);
+    setCurrentPath(path);
+    window.scrollTo({ top: 0 });
+  }
 
   // ── Auth bootstrap ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -234,6 +254,7 @@ export default function App() {
       setStoredAccessToken(response.access_token);
       setCurrentUser(response.user);
       setActivePage("operations-dashboard");
+      navigateTo(response.user.role === "candidate" ? "/candidate" : response.user.role === "super_admin" ? "/admin" : "/employee", true);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Login failed");
     } finally { setAuthBusy(false); }
@@ -245,6 +266,7 @@ export default function App() {
       const response = await apiClient.candidateRegister(payload);
       setStoredAccessToken(response.access_token);
       setCurrentUser(response.user);
+      navigateTo("/candidate", true);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Registration failed");
     } finally { setAuthBusy(false); }
@@ -256,6 +278,7 @@ export default function App() {
       const response = await apiClient.portalGoogleAuth(credential);
       setStoredAccessToken(response.access_token);
       setCurrentUser(response.user);
+      navigateTo("/candidate", true);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Google sign-in failed");
     } finally { setAuthBusy(false); }
@@ -293,6 +316,7 @@ export default function App() {
     setMatches([]); setApplications([]); setWorkQueues([]);
     setWhatsappRecipients([]); setAnalyticsData(null);
     setSelectedCandidateId(null); setSelectedEmployeeId(null); setSelectedMatchId(null);
+    navigateTo("/login", true);
   }
 
   // ── Navigation ──────────────────────────────────────────────────────────────
@@ -417,6 +441,16 @@ export default function App() {
   // ── Render ──────────────────────────────────────────────────────────────────
   if (!authReady) return <main className="login-shell">Loading...</main>;
 
+  const hasAuthUrlIntent = Boolean(initialResetToken || initialInviteEmail);
+  const publicPage =
+    currentPath === "/success-stories" ? "success-stories" :
+    currentPath === "/contact" ? "contact" :
+    "home";
+
+  if (!currentUser && PUBLIC_PATHS.has(currentPath) && !hasAuthUrlIntent) {
+    return <PublicSitePage page={publicPage} onNavigate={navigateTo} />;
+  }
+
   if (!currentUser) {
     return (
       <LoginPage
@@ -432,6 +466,7 @@ export default function App() {
         onGoogleAuth={handleGoogleAuth}
         onForgotPassword={handleForgotPassword}
         onResetPassword={handleSelfResetPassword}
+        onPublicHome={() => navigateTo("/")}
       />
     );
   }
