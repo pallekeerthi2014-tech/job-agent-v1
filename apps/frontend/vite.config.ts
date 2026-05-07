@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  // Load .env from the monorepo root (two levels up from apps/frontend)
+  envDir: "../../",
   server: {
     host: "0.0.0.0",
     port: Number(process.env.FRONTEND_PORT ?? 5173),
