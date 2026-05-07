@@ -34,6 +34,13 @@ class Settings(BaseSettings):
         default="http://localhost:5173,http://127.0.0.1:5173",
         alias="ALLOWED_ORIGINS",
     )
+    allowed_origin_regex: str | None = Field(
+        default=(
+            r"https://(www\.)?thinksuccessitconsulting\.com|"
+            r"https://job-agent-frontend-production-c54d\.up\.railway\.app"
+        ),
+        alias="ALLOWED_ORIGIN_REGEX",
+    )
 
     # ── Scheduler ─────────────────────────────────────────────────────────────
     scheduler_enabled: bool = Field(default=True, alias="SCHEDULER_ENABLED")
