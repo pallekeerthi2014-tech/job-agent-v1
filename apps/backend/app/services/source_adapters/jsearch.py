@@ -32,7 +32,7 @@ from typing import Any
 import httpx
 
 from app.services.source_adapters.base import JobRecord, JobSourceAdapter
-from app.services.role_filtering import passes_title_filter
+from app.services.role_filtering import is_relevant_analyst_role
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ class JSearchAdapter(JobSourceAdapter):
                             continue
 
                         title = job.get("job_title", "")
-                        if not passes_title_filter(title, include_titles, exclude_titles):
+                        if not is_relevant_analyst_role(title, include_titles=include_titles, exclude_titles=exclude_titles):
                             continue
 
                         seen_ids.add(job_id)
