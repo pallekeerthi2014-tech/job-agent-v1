@@ -13,12 +13,9 @@ import type {
   CandidateSelfRegisterPayload,
   CandidateSkill,
   CandidateUpdatePayload,
-  CandidateMailbox,
   Employee,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
-  GmailAnalyticsRunResponse,
-  GmailOAuthUrlResponse,
   IngestionRunPage,
   InviteCandidatePayload,
   InviteCandidateResponse,
@@ -45,46 +42,15 @@ import type {
   WorkQueueReportPayload
 } from "../types";
 
-const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const ACCESS_TOKEN_KEY = "job-agent-access-token";
 
-function getApiBaseUrl() {
-  const baseUrl = RAW_API_BASE_URL?.trim();
-  if (!baseUrl) {
-    throw new Error("API URL is not configured. Set VITE_API_BASE_URL and redeploy the frontend.");
-  }
-  return baseUrl.replace(/\/+$/, "");
-}
-
-function apiUrl(path: string) {
-  return `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-function toNetworkError(error: unknown) {
-  if (error instanceof TypeError) {
-    return new Error(
-      "Unable to reach the backend API. Check that VITE_API_BASE_URL points to the deployed backend and that CORS allows this site."
-    );
-  }
-  return error;
-}
-
 export function getStoredAccessToken() {
-  const rawToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
-  if (!rawToken) return null;
-  const token = rawToken.trim();
-  if (!token || /[\r\n]/.test(token)) {
-    clearStoredAccessToken();
-    return null;
-  }
-  if (token !== rawToken) {
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
-  }
-  return token;
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
 export function setStoredAccessToken(token: string) {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, token.trim());
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
 }
 
 export function clearStoredAccessToken() {
@@ -92,10 +58,16 @@ export function clearStoredAccessToken() {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  if (!API_BASE_URL) {
+    throw new Error(
+      "Backend URL is not configured. Set VITE_API_BASE_URL to your deployed backend URL."
+    );
+  }
+
   const token = getStoredAccessToken();
   let response: Response;
   try {
-    response = await fetch(apiUrl(path), {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -103,8 +75,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       },
       ...options
     });
-  } catch (error) {
-    throw toNetworkError(error);
+  } catch {
+    throw new Error(
+      `Unable to reach the backend API at ${API_BASE_URL}. ` +
+      `Check that VITE_API_BASE_URL points to the deployed backend and that CORS allows this origin.`
+    );
   }
 
   // 204 No Content — return empty object (DELETE endpoints)
@@ -113,55 +88,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    let message = `API request failed: ${response.status}`;
+    // Extract FastAPI's detail field for a meaningful error message
+    let detail = "";
     try {
-      const errorBody = await response.json();
-      if (typeof errorBody?.detail === "string") {
-        message = errorBody.detail;
-      }
-    } catch {
-      // Keep the generic status message when the response is not JSON.
-    }
-    throw new Error(message);
+      const body = await response.json() as { detail?: string | unknown[] };
+      if (typeof body.detail === "string") detail = body.detail;
+      else if (Array.isArray(body.detail)) detail = JSON.stringify(body.detail);
+    } catch { /* ignore parse errors */ }
+    throw new Error(detail || `API error ${response.status}: ${path}`);
   }
 
   return response.json() as Promise<T>;
-}
-
-async function downloadAuthenticatedUrl(url: string, fallbackFilename: string) {
-  const token = getStoredAccessToken();
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-  } catch (error) {
-    throw toNetworkError(error);
-  }
-  if (!response.ok) {
-    let message = `Download failed: ${response.status}`;
-    try {
-      const errorBody = await response.json();
-      if (typeof errorBody?.detail === "string") {
-        message = errorBody.detail;
-      }
-    } catch {
-      // Keep the generic status message when the response is not JSON.
-    }
-    throw new Error(message);
-  }
-  const blob = await response.blob();
-  const disposition = response.headers.get("content-disposition") ?? "";
-  const match = disposition.match(/filename="?([^"]+)"?/i);
-  const filename = match?.[1] ?? fallbackFilename;
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = objectUrl;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(objectUrl);
 }
 
 function buildQuery(params: Record<string, string | number | undefined | null>) {
@@ -232,6 +169,11 @@ export const apiClient = {
     created_after?: string;
     created_before?: string;
   }) => request<PaginatedResponse<WorkQueueItem>>(`/api/v1/work-queues${buildQuery(params ?? {})}`),
+  getWorkQueueStats: (params?: {
+    days?: number;
+    employee_id?: number;
+    candidate_id?: number;
+  }) => request<WorkQueueDayStats[]>(`/api/v1/work-queues/stats${buildQuery(params ?? {})}`),
   createApplication: (payload: ApplicationCreatePayload) =>
     request<Application>("/api/v1/applications", {
       method: "POST",
@@ -272,23 +214,17 @@ export const apiClient = {
     const token = getStoredAccessToken();
     const formData = new FormData();
     formData.append("file", file);
-    return fetch(apiUrl(`/api/v1/candidates/${candidateId}/resume`), {
+    return fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData
-    })
-      .catch((error) => {
-        throw toNetworkError(error);
-      })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-        return res.json() as Promise<{ message: string; filename: string }>;
-      });
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      return res.json() as Promise<{ message: string; filename: string }>;
+    });
   },
   getResumeUrl: (candidateId: number) =>
-    apiUrl(`/api/v1/candidates/${candidateId}/resume`),
-  downloadResume: (candidateId: number, fallbackFilename = "resume") =>
-    downloadAuthenticatedUrl(apiUrl(`/api/v1/candidates/${candidateId}/resume`), fallbackFilename),
+    `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
 
   // ── Phase 3: Work queue reporting ───────────────────────────────────────────
   reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>
@@ -326,21 +262,6 @@ export const apiClient = {
   getAnalyticsOverview: () =>
     request<AnalyticsOverview>("/api/v1/analytics/overview"),
 
-  // ── Gmail candidate analytics ───────────────────────────────────────────────
-  getCandidateMailboxes: () =>
-    request<CandidateMailbox[]>("/api/v1/admin/gmail/mailboxes"),
-  createCandidateMailbox: (payload: { candidate_id: number; email: string }) =>
-    request<CandidateMailbox>("/api/v1/admin/gmail/mailboxes", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  getCandidateGmailOAuthUrl: (candidateId: number) =>
-    request<GmailOAuthUrlResponse>(`/api/v1/admin/gmail/oauth-url?candidate_id=${candidateId}`),
-  runGmailAnalytics: (publishSheets = true) =>
-    request<GmailAnalyticsRunResponse>(`/api/v1/admin/gmail/run?publish_sheets=${publishSheets ? "true" : "false"}`, {
-      method: "POST"
-    }),
-
   // ── Candidate Portal ─────────────────────────────────────────────────────────
   candidateRegister: (payload: CandidateSelfRegisterPayload) =>
     request<LoginResponse>("/api/v1/portal/register", {
@@ -367,21 +288,17 @@ export const apiClient = {
     const token = getStoredAccessToken();
     const formData = new FormData();
     formData.append("file", file);
-    return fetch(apiUrl("/api/v1/portal/me/resume"), {
+    return fetch(`${API_BASE_URL}/api/v1/portal/me/resume`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData
-    })
-      .catch((error) => {
-        throw toNetworkError(error);
-      })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-        return res.json() as Promise<Candidate>;
-      });
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      return res.json() as Promise<Candidate>;
+    });
   },
   portalResumeUrl: () =>
-    apiUrl("/api/v1/portal/me/resume"),
+    `${API_BASE_URL}/api/v1/portal/me/resume`,
 
   // ── Phase 4: Source / Feed Management ─────────────────────────────────────
   listSourceTypes: () =>
@@ -434,14 +351,7 @@ export const apiClient = {
   getTailoredResume: (id: number) =>
     request<TailoredResumeRead>(`/api/v1/tailored-resumes/${id}`),
   downloadTailoredResumeUrl: (id: number) =>
-    apiUrl(`/api/v1/tailored-resumes/${id}/download`),
-  downloadTailoredResume: (id: number, fallbackFilename = "tailored_resume.docx") =>
-    downloadAuthenticatedUrl(apiUrl(`/api/v1/tailored-resumes/${id}/download`), fallbackFilename),
-  getWorkQueueStats: (params?: {
-    days?: number;
-    employee_id?: number;
-    candidate_id?: number;
-  }) => request<WorkQueueDayStats[]>(`/api/v1/work-queues/stats${buildQuery(params ?? {})}`),
+    `${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`,
   listTailoredResumes: (jobId: number, candidateId: number) =>
     request<TailoredResumeRead[]>(`/api/v1/jobs/${jobId}/tailored-resumes?candidate_id=${candidateId}`)
 };
