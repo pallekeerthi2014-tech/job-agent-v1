@@ -228,8 +228,8 @@ export default function App() {
           priority: selectedPriority === "All" ? undefined : selectedPriority,
           sort_by: "created_at", sort_order: "desc"
         }),
-        currentUser.role === "super_admin" ? apiClient.getUsers() : Promise.resolve([]),
-        currentUser.role === "super_admin" ? apiClient.getWhatsappRecipients() : Promise.resolve([])
+        currentUser.role === "super_admin" ? apiClient.getUsers().catch(() => []) : Promise.resolve([]),
+        currentUser.role === "super_admin" ? apiClient.getWhatsappRecipients().catch(() => []) : Promise.resolve([])
       ]);
 
       setCandidates(candidateResponse.items);
@@ -367,6 +367,7 @@ export default function App() {
   async function loadWorkQueueData() {
     if (!currentUser) return;
     try {
+      setPageError(null);
       const scopedEmployeeId = currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined;
       const timeRange = computeTimeRange(dashboardTimeWindow, dashboardDayFilter);
       const offset = (dashboardPage - 1) * dashboardPageSize;
@@ -381,7 +382,7 @@ export default function App() {
           ...timeRange
         }),
         apiClient.getWorkQueueStats({ days: 7, employee_id: scopedEmployeeId,
-          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined) })
+          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined) }).catch(() => [])
       ]);
       setWorkQueues(wqResponse.items);
       setWorkQueueMeta(wqResponse.meta);
