@@ -254,7 +254,7 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
                   <span className="tailor-error">❌ {record.error_message || "Tailoring failed"}</span>
                   {(record.error_message || "").toLowerCase().includes("re-upload") && (
                     <p className="tailor-reupload-hint">
-                      Go to <strong>Admin → Candidates</strong>, open this candidate's profile, and upload their DOCX resume again.
+                      Go to <strong>Admin → Candidates</strong>, open this candidate's profile, and upload their resume again.
                     </p>
                   )}
                 </div>

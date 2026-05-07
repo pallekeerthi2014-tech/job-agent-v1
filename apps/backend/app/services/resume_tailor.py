@@ -63,6 +63,25 @@ def _candidate_resume_bytes(candidate: Candidate | None, path: Path) -> bytes | 
     return None
 
 
+def _save_suggestions_record(
+    record: TailoredResume,
+    suggestions: list[str],
+    message: str,
+    db: Session,
+) -> tuple[TailoredResume, list[str]]:
+    if not suggestions:
+        record.status = "error"
+        record.error_message = "No truthful copy-paste lines could be generated from this resume and job description."
+        db.commit()
+        return record, []
+    record.status = "suggestions_ready"
+    record.suggested_lines = "\n".join(suggestions)
+    record.error_message = message
+    db.commit()
+    db.refresh(record)
+    return record, []
+
+
 def _restore_resume_cache(candidate: Candidate | None, path: Path) -> bool:
     content = _candidate_resume_bytes(candidate, path)
     if not content:
@@ -405,8 +424,30 @@ def tailor_resume(
 
     source_bytes = _candidate_resume_bytes(candidate, path)
     if not source_bytes:
+        resume_text = (candidate.resume_text or "").strip()
+        if resume_text:
+            record.status = "processing"
+            db.commit()
+            try:
+                suggestions = _call_openai_suggestions(resume_text, jd_text, notes)
+            except Exception as exc:
+                record.status = "error"
+                record.error_message = f"AI service error: {exc}"
+                db.commit()
+                return record, []
+            return _save_suggestions_record(
+                record,
+                suggestions,
+                (
+                    "The original resume file is missing from storage, so a tailored download cannot be created. "
+                    "Copy these lines into the latest project, or re-upload the resume once to enable direct DOCX downloads."
+                ),
+                db,
+            )
         record.status = "error"
-        record.error_message = "Resume file not found. Please re-upload the candidate's resume."
+        record.error_message = (
+            "Resume file not found in storage. Please re-upload the candidate's resume once so the system can save it."
+        )
         db.commit()
         return record, []
 
@@ -432,20 +473,15 @@ def tailor_resume(
             record.error_message = f"AI service error: {exc}"
             db.commit()
             return record, []
-        if not suggestions:
-            record.status = "error"
-            record.error_message = "No truthful copy-paste lines could be generated from this resume and job description."
-            db.commit()
-            return record, []
-        record.status = "suggestions_ready"
-        record.suggested_lines = "\n".join(suggestions)
-        record.error_message = (
-            "This resume format cannot be safely edited automatically. "
-            "Copy these suggested lines into the latest project, or upload DOCX for direct download."
+        return _save_suggestions_record(
+            record,
+            suggestions,
+            (
+                "This resume format cannot be safely edited automatically. "
+                "Copy these suggested lines into the latest project, or upload DOCX for direct download."
+            ),
+            db,
         )
-        db.commit()
-        db.refresh(record)
-        return record, []
 
     if not path.exists() and not _restore_resume_cache(candidate, path):
         record.status = "error"
