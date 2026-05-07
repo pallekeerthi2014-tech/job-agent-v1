@@ -1,6 +1,6 @@
 [
   {
-    "name": "Live Feed — The Muse, Arbeitnow, RemoteOK",
+    "name": "Live Feed \u2014 The Muse, Arbeitnow, RemoteOK",
     "adapter_type": "live_feed",
     "config": {
       "themuse_query": "Business Analyst",
@@ -305,6 +305,288 @@
     "enabled": true
   },
   {
+    "name": "Flatiron Health Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "flatironhealth",
+      "company_name": "Flatiron Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "clinical analyst",
+        "oncology analyst",
+        "operations analyst",
+        "business intelligence",
+        "healthcare analyst",
+        "product analyst",
+        "informatics",
+        "implementation",
+        "solutions"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "scientist",
+        "physician",
+        "nurse",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Garner Health Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "garnerhealth",
+      "company_name": "Garner Health",
+      "include_titles": [
+        "data analyst",
+        "business analyst",
+        "operations analyst",
+        "healthcare analytics",
+        "strategy analyst",
+        "senior analyst",
+        "business intelligence",
+        "clinical analyst",
+        "product analyst"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "scientist",
+        "director",
+        "manager",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Alma Health Greenhouse",
+    "adapter_type": "greenhouse_board",
+    "config": {
+      "board_token": "alma",
+      "company_name": "Alma Health",
+      "include_titles": [
+        "business intelligence",
+        "data analyst",
+        "business analyst",
+        "operations analyst",
+        "analytics",
+        "reporting",
+        "informatics",
+        "implementation"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "scientist",
+        "therapist",
+        "counselor",
+        "credentialing",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Included Health Lever",
+    "adapter_type": "lever_postings",
+    "config": {
+      "company_handle": "includedhealth",
+      "company_name": "Included Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "clinical analyst",
+        "healthcare analyst",
+        "operations analyst",
+        "business intelligence",
+        "product analyst",
+        "informatics",
+        "implementation",
+        "solutions",
+        "project"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "physician",
+        "nurse",
+        "therapist",
+        "counselor",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Ro Health Lever",
+    "adapter_type": "lever_postings",
+    "config": {
+      "company_handle": "ro",
+      "company_name": "Ro Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "clinical analyst",
+        "business intelligence",
+        "analytics",
+        "implementation",
+        "product analyst",
+        "informatics"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "physician",
+        "nurse",
+        "therapist",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Sword Health Lever",
+    "adapter_type": "lever_postings",
+    "config": {
+      "company_handle": "swordhealth",
+      "company_name": "Sword Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "revenue operations",
+        "clinical analyst",
+        "business intelligence",
+        "analytics",
+        "implementation",
+        "product analyst",
+        "governance",
+        "compliance analyst"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "physical therapist",
+        "physiotherapist",
+        "physician",
+        "nurse",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Arcadia Lever",
+    "adapter_type": "lever_postings",
+    "config": {
+      "company_handle": "arcadia",
+      "company_name": "Arcadia",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "clinical analyst",
+        "principal analyst",
+        "implementation",
+        "customer insights",
+        "solutions",
+        "project",
+        "informatics"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Color Health Lever",
+    "adapter_type": "lever_postings",
+    "config": {
+      "company_handle": "color",
+      "company_name": "Color Health",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "clinical analyst",
+        "business intelligence",
+        "implementation",
+        "informatics",
+        "solutions"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "Transcarent Lever",
+    "adapter_type": "lever_postings",
+    "config": {
+      "company_handle": "transcarent",
+      "company_name": "Transcarent",
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "operations analyst",
+        "healthcare analyst",
+        "clinical analyst",
+        "business intelligence",
+        "implementation",
+        "informatics",
+        "solutions",
+        "project"
+      ],
+      "exclude_titles": [
+        "financial analyst",
+        "actuarial analyst",
+        "security analyst",
+        "engineer",
+        "developer",
+        "intern"
+      ]
+    },
+    "enabled": true
+  },
+  {
     "name": "LinkedIn Healthcare BA Search",
     "adapter_type": "linkedin_jobs",
     "config": {
@@ -352,7 +634,7 @@
     "enabled": true
   },
   {
-    "name": "SimplyHired — Healthcare Business Analyst",
+    "name": "SimplyHired \u2014 Healthcare Business Analyst",
     "adapter_type": "simplyhired_jobs",
     "config": {
       "search_query": "healthcare business analyst",
@@ -361,10 +643,10 @@
       "max_pages": 5,
       "delay_seconds": 2.5
     },
-    "enabled": false
+    "enabled": true
   },
   {
-    "name": "SimplyHired — Clinical Data Analyst",
+    "name": "SimplyHired \u2014 Clinical Data Analyst",
     "adapter_type": "simplyhired_jobs",
     "config": {
       "search_query": "clinical data analyst healthcare",
@@ -373,10 +655,10 @@
       "max_pages": 5,
       "delay_seconds": 2.5
     },
-    "enabled": false
+    "enabled": true
   },
   {
-    "name": "SimplyHired — EHR Systems Analyst",
+    "name": "SimplyHired \u2014 EHR Systems Analyst",
     "adapter_type": "simplyhired_jobs",
     "config": {
       "search_query": "ehr systems analyst",
@@ -385,22 +667,10 @@
       "max_pages": 5,
       "delay_seconds": 2.5
     },
-    "enabled": false
+    "enabled": true
   },
   {
-    "name": "SimplyHired — Healthcare BA (US)",
-    "adapter_type": "simplyhired_jobs",
-    "config": {
-      "search_query": "healthcare business analyst",
-      "location": "united states",
-      "days_back": 30,
-      "max_pages": 5,
-      "delay_seconds": 2.5
-    },
-    "enabled": false
-  },
-  {
-    "name": "SimplyHired — Clinical Analyst (US)",
+    "name": "SimplyHired \u2014 Clinical Analyst (US)",
     "adapter_type": "simplyhired_jobs",
     "config": {
       "search_query": "clinical analyst healthcare",
@@ -409,10 +679,10 @@
       "max_pages": 5,
       "delay_seconds": 2.5
     },
-    "enabled": false
+    "enabled": true
   },
   {
-    "name": "SimplyHired — Epic EHR Analyst (US)",
+    "name": "SimplyHired \u2014 Epic EHR Analyst (US)",
     "adapter_type": "simplyhired_jobs",
     "config": {
       "search_query": "epic ehr analyst",
@@ -421,7 +691,108 @@
       "max_pages": 5,
       "delay_seconds": 2.5
     },
-    "enabled": false
+    "enabled": true
+  },
+  {
+    "name": "SimplyHired \u2014 Payer Healthcare Analyst",
+    "adapter_type": "simplyhired_jobs",
+    "config": {
+      "search_query": "payer managed care business analyst",
+      "location": "united states",
+      "days_back": 30,
+      "max_pages": 5,
+      "delay_seconds": 2.5
+    },
+    "enabled": true
+  },
+  {
+    "name": "JSearch \u2014 Healthcare BA (LinkedIn/Indeed/Glassdoor)",
+    "adapter_type": "jsearch_jobs",
+    "config": {
+      "search_queries": [
+        "healthcare business analyst",
+        "clinical systems analyst",
+        "health informatics analyst",
+        "epic ehr analyst",
+        "payer business analyst",
+        "revenue cycle analyst",
+        "managed care analyst",
+        "health IT business analyst"
+      ],
+      "location": "United States",
+      "date_posted": "week",
+      "num_pages": 3,
+      "remote_only": false,
+      "delay_seconds": 1.5,
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "clinical analyst",
+        "healthcare analyst",
+        "systems analyst",
+        "health informatics",
+        "ehr analyst",
+        "epic analyst",
+        "payer analyst",
+        "revenue cycle",
+        "managed care",
+        "operations analyst",
+        "implementation",
+        "informatics"
+      ],
+      "exclude_titles": [
+        "data engineer",
+        "software engineer",
+        "devops",
+        "marketing analyst",
+        "financial analyst",
+        "sales analyst",
+        "actuar",
+        "physician",
+        "nurse",
+        "therapist"
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "name": "JSearch \u2014 Remote Healthcare Analyst",
+    "adapter_type": "jsearch_jobs",
+    "config": {
+      "search_queries": [
+        "remote healthcare business analyst",
+        "remote clinical data analyst",
+        "remote health informatics"
+      ],
+      "location": "United States",
+      "date_posted": "week",
+      "num_pages": 2,
+      "remote_only": true,
+      "delay_seconds": 1.5,
+      "include_titles": [
+        "business analyst",
+        "data analyst",
+        "clinical analyst",
+        "healthcare analyst",
+        "systems analyst",
+        "informatics",
+        "operations analyst",
+        "implementation"
+      ],
+      "exclude_titles": [
+        "data engineer",
+        "software engineer",
+        "devops",
+        "marketing analyst",
+        "financial analyst",
+        "sales analyst",
+        "actuar",
+        "physician",
+        "nurse",
+        "therapist"
+      ]
+    },
+    "enabled": true
   },
   {
     "name": "Example Greenhouse Board",
