@@ -324,9 +324,9 @@ def _score_remote_location_fit(candidate: Candidate, job: JobNormalized) -> tupl
 
 
 def _priority_bucket(total_score: float) -> str:
-    if total_score >= 75:
-        return "High"
     if total_score >= 55:
+        return "High"
+    if total_score >= 35:
         return "Medium"
     return "Low"
 

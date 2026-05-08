@@ -125,13 +125,21 @@ function buildWhyMatchedBullets(match: Match, candidate?: Candidate | null, job?
     reasons.push(`Source: ${job.source}; posted ${job.posted_date ?? "date unavailable"}.`);
   }
   if ((match.title_score ?? 0) > 0) {
-    reasons.push(`Title alignment scored ${formatScore(match.title_score, 25)}.`);
+    reasons.push(`Title alignment scored ${formatScore(match.title_score, 20)}.`);
   }
   if ((match.domain_score ?? 0) > 0) {
-    reasons.push(`Healthcare domain fit scored ${formatScore(match.domain_score, 20)}.`);
+    reasons.push(`Healthcare domain fit scored ${formatScore(match.domain_score, 15)}.`);
   }
   if ((match.skills_score ?? 0) > 0) {
-    reasons.push(`Skills and keyword overlap scored ${formatScore(match.skills_score, 20)}.`);
+    reasons.push(`Skills match scored ${formatScore(match.skills_score, 15)}.`);
+  }
+  if ((match.location_score ?? 0) > 0) {
+    const locLabel = (match as { location_match_mode?: string }).location_match_mode === "remote"
+      ? "Remote"
+      : (match as { location_match_mode?: string }).location_match_mode === "hybrid_city"
+      ? "Hybrid (same city)"
+      : "Location";
+    reasons.push(`${locLabel} fit scored ${formatScore(match.location_score, 15)}.`);
   }
   if ((match.visa_score ?? 0) > 0) {
     reasons.push(`Work authorization fit scored ${formatScore(match.visa_score, 10)}.`);

@@ -55,7 +55,8 @@ const PRIORITY_TO_NUM: Record<Exclude<PriorityFilter, "All">, number> = {
   Low: 3
 };
 
-const SUPPORTING_DATA_LIMIT = 200; // candidates, jobs, matches — lookup maps
+const SUPPORTING_DATA_LIMIT = 200; // candidates, matches — lookup maps
+const JOBS_LOAD_LIMIT = 2000;       // jobs need a wider net so jobMap covers all match job_ids
 const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "admin-whatsapp", "admin-sources", "analytics", "gmail-analytics"];
 
 /** Convert a DashboardTimeWindow + optional specific day into ISO created_after/created_before strings. */
@@ -201,7 +202,7 @@ export default function App() {
       ] = await Promise.all([
         apiClient.getCandidates({ limit: SUPPORTING_DATA_LIMIT, offset: 0, employee_id: scopedEmployeeId }),
         apiClient.getEmployees(),
-        apiClient.getJobs({ limit: SUPPORTING_DATA_LIMIT, offset: 0 }),
+        apiClient.getJobs({ limit: JOBS_LOAD_LIMIT, offset: 0 }),
         apiClient.getMatches({
           limit: SUPPORTING_DATA_LIMIT, offset: 0,
           candidate_id: selectedCandidateId ?? undefined,

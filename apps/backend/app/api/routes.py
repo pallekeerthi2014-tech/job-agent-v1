@@ -490,7 +490,7 @@ def create_job_raw(
 @router.get("/jobs/normalized", response_model=JobNormalizedPage, include_in_schema=False)
 def list_jobs_normalized(
     db: Session = Depends(get_db),
-    limit: int = Query(default=20, ge=1, le=200),
+    limit: int = Query(default=20, ge=1, le=2000),
     offset: int = Query(default=0, ge=0),
     sort_by: str = Query(default="posted_date"),
     sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
@@ -997,6 +997,45 @@ def report_work_queue_item(
     item.status = "skipped"
     db.commit()
     return {"status": "ok", "report_status": item.report_status}
+
+
+# ── Admin: Job cleanup ────────────────────────────────────────────────────────
+
+_PLACEHOLDER_TITLES = {
+    "", "unknown", "unknown job", "n/a", "na", "none", "null", "untitled",
+    "job title", "position", "title", "test", "sample", "example",
+}
+_PLACEHOLDER_COMPANIES = {
+    "", "unknown", "unknown company", "n/a", "na", "none", "null",
+    "company name", "company", "test", "sample", "example",
+}
+
+
+@router.post("/admin/jobs/cleanup-unknown")
+def cleanup_unknown_jobs(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> dict:
+    """Deactivate jobs whose title or company are empty / placeholder strings.
+
+    These records typically come from failed scraper parses or test ingestion.
+    The job records are *deactivated* (is_active=False) rather than deleted so
+    they remain in the audit trail.
+    """
+    all_jobs = db.scalars(select(JobNormalized)).all()
+    deactivated: list[int] = []
+    for job in all_jobs:
+        bad_title   = job.title.strip().lower() in _PLACEHOLDER_TITLES
+        bad_company = job.company.strip().lower() in _PLACEHOLDER_COMPANIES
+        if (bad_title or bad_company) and job.is_active:
+            job.is_active = False
+            deactivated.append(job.id)
+    db.commit()
+    return {
+        "status": "ok",
+        "deactivated_count": len(deactivated),
+        "deactivated_ids": deactivated[:50],  # preview first 50
+    }
 
 
 # ── Analytics ─────────────────────────────────────────────────────────────────

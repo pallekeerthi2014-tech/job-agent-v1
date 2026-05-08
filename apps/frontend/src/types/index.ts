@@ -80,6 +80,10 @@ export type Match = {
   employment_preference_score?: number | null;
   visa_score?: number | null;
   location_score?: number | null;
+  keyword_score?: number | null;
+  keyword_match_count?: number | null;
+  keyword_match_total?: number | null;
+  location_match_mode?: string | null;
   explanation?: string | null;
   status?: string | null;
 };

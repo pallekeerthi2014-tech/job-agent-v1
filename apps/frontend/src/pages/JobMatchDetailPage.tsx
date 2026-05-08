@@ -23,17 +23,11 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
   const [history, setHistory] = useState<TailoredResumeRead[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const hasResume = Boolean(candidate.resume_filename);
   const hasMasterDocx = Boolean(
     candidate.resume_filename && candidate.resume_filename.toLowerCase().endsWith(".docx")
   );
-  const suggestedLines = (record?.suggested_lines || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
 
   // Load history on mount
   useEffect(() => {
@@ -81,7 +75,6 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
     setError(null);
     setRecord(null);
     setFlaggedSkills([]);
-    setCopied(false);
     try {
       const resp: TailoredResumeReadWithFlags = await apiClient.tailorResume(job.id, {
         candidate_id: candidate.id,
@@ -94,11 +87,6 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
         setConfirmSkillsOpen(true);
       } else if (resp.status === "processing" || resp.status === "pending") {
         startPolling(resp.id);
-      } else {
-        apiClient
-          .listTailoredResumes(job.id, candidate.id)
-          .then(setHistory)
-          .catch(() => {});
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
@@ -117,65 +105,27 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
     void handleSubmit([]);
   };
 
-  const handleDownloadTailored = async (downloadRecord: TailoredResumeRead) => {
-    setError(null);
-    try {
-      await apiClient.downloadTailoredResume(downloadRecord.id, downloadRecord.filename || "tailored_resume.docx");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Download failed");
-    }
-  };
-
-  const handleDownloadOriginal = async () => {
-    setError(null);
-    try {
-      await apiClient.downloadResume(candidate.id, candidate.resume_filename || "resume");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Download failed");
-    }
-  };
-
-  const handleCopySuggestions = async () => {
-    if (!record?.suggested_lines) return;
-    try {
-      await navigator.clipboard.writeText(record.suggested_lines);
-      setCopied(true);
-    } catch {
-      setError("Could not copy suggestions. Select the lines and copy them manually.");
-    }
-  };
-
   return (
     <section className="panel tailor-panel">
       <div className="section-heading">
         <h3>✦ AI Resume Tailor</h3>
-        <p>
-          {hasMasterDocx
-            ? <>Generate a tailored DOCX for <strong>{candidate.name}</strong> targeting this role.</>
-            : <>Generate copy-paste lines for <strong>{candidate.name}</strong> targeting this role.</>}
-        </p>
+        <p>Generate a tailored DOCX for <strong>{candidate.name}</strong> targeting this role.</p>
       </div>
 
-      {!hasResume && (
+      {!hasMasterDocx && (
         <div className="tailor-warning">
-          ⚠️ Upload a resume for {candidate.name} to enable tailoring.
+          ⚠️ Upload a <strong>.docx</strong> resume for {candidate.name} to enable tailoring.
         </div>
       )}
 
-      {hasResume && !hasMasterDocx && (
-        <div className="tailor-warning">
-          This resume is not DOCX, so the system will provide copy-paste lines and the original resume download.
-        </div>
-      )}
-
-      {hasResume && (
+      {hasMasterDocx && (
         <>
           <div className="tailor-form">
             <label className="tailor-label">Notes / Instructions (optional)</label>
             <textarea
               className="tailor-notes"
               rows={3}
-              placeholder="e.g. Add 2-3 healthcare claims bullets to the latest project, only if supported by the resume..."
+              placeholder="e.g. Emphasise Python skills, remove references to Java, highlight cloud experience..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={submitting}
@@ -183,13 +133,9 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
             <button
               className="btn btn-primary tailor-btn"
               onClick={() => void handleSubmit()}
-              disabled={submitting}
+              disabled={submitting || !hasMasterDocx}
             >
-              {submitting
-                ? "Tailoring…"
-                : hasMasterDocx
-                  ? "✦ Tailor Resume for This Job"
-                  : "✦ Generate Copy-Paste Lines"}
+              {submitting ? "Tailoring…" : "✦ Tailor Resume for This Job"}
             </button>
           </div>
 
@@ -224,37 +170,22 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
               ) : record.status === "ready" ? (
                 <div className="tailor-ready">
                   <span>✅ {record.error_message || "Tailored resume ready!"}</span>
-                  <button
+                  <a
                     className="btn btn-primary btn-sm"
-                    type="button"
-                    onClick={() => void handleDownloadTailored(record)}
+                    href={apiClient.downloadTailoredResumeUrl(record.id)}
+                    download
+                    target="_blank"
+                    rel="noreferrer"
                   >
                     ⬇ Download Tailored Resume
-                  </button>
-                </div>
-              ) : record.status === "suggestions_ready" ? (
-                <div className="tailor-suggestions">
-                  <span>{record.error_message || "Copy these lines into the latest project."}</span>
-                  <ul className="tailor-suggestion-list">
-                    {suggestedLines.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                  <div className="tailor-ready">
-                    <button className="btn btn-primary btn-sm" type="button" onClick={() => void handleCopySuggestions()}>
-                      {copied ? "Copied" : "Copy Suggested Lines"}
-                    </button>
-                    <button className="btn btn-secondary btn-sm" type="button" onClick={() => void handleDownloadOriginal()}>
-                      Download Original Resume
-                    </button>
-                  </div>
+                  </a>
                 </div>
               ) : (
                 <div className="tailor-error-box">
                   <span className="tailor-error">❌ {record.error_message || "Tailoring failed"}</span>
                   {(record.error_message || "").toLowerCase().includes("re-upload") && (
                     <p className="tailor-reupload-hint">
-                      Go to <strong>Admin → Candidates</strong>, open this candidate's profile, and upload their resume again.
+                      Go to <strong>Admin → Candidates</strong>, open this candidate's profile, and upload their DOCX resume again.
                     </p>
                   )}
                 </div>
@@ -280,13 +211,15 @@ function TailoringPanel({ job, candidate }: { job: Job; candidate: Candidate }) 
                   {r.status}
                 </span>
                 {r.status === "ready" && (
-                  <button
+                  <a
                     className="tailor-history-dl"
-                    type="button"
-                    onClick={() => void handleDownloadTailored(r)}
+                    href={apiClient.downloadTailoredResumeUrl(r.id)}
+                    download
+                    target="_blank"
+                    rel="noreferrer"
                   >
                     ⬇ Download
-                  </button>
+                  </a>
                 )}
               </li>
             ))}
@@ -316,105 +249,164 @@ export function JobMatchDetailPage({
     );
   }
 
+  const kwCount = match.keyword_match_count ?? null;
+  const kwTotal = match.keyword_match_total ?? null;
+  const kwLine = kwTotal != null && kwTotal > 0
+    ? `${kwCount ?? 0}/${kwTotal} JD keywords in resume (${Math.round(((kwCount ?? 0) / kwTotal) * 100)}%)`
+    : null;
+
+  const locationMode = (match as { location_match_mode?: string }).location_match_mode;
+  const locationModeLabel = locationMode === "remote"
+    ? "🌐 Remote"
+    : locationMode === "hybrid_city"
+    ? "🏙️ Hybrid (same city)"
+    : locationMode === "onsite_city"
+    ? "📍 On-site (matching city)"
+    : null;
+
   return (
-    <div className="detail-grid">
-      <section className="panel">
-        <p className="eyebrow">Job Match Detail</p>
-        <JobCard
-          match={match}
-          candidate={candidate}
-          job={job}
-          disabled={busy}
-          onViewJob={() => window.open(job.apply_url ?? "#", "_blank", "noopener,noreferrer")}
-          onApply={() => void onMarkApplied()}
-          onSkip={() => void onSkip()}
-        />
-      </section>
+    <div className="detail-stack">
+      {/* Row 1: Job card + Score side by side */}
+      <div className="detail-grid-row">
+        <section className="panel">
+          <p className="eyebrow">Job Match Detail</p>
+          <JobCard
+            match={match}
+            candidate={candidate}
+            job={job}
+            disabled={busy}
+            onViewJob={() => window.open(job.apply_url ?? "#", "_blank", "noopener,noreferrer")}
+            onApply={() => void onMarkApplied()}
+            onSkip={() => void onSkip()}
+          />
+        </section>
 
-      <section className="panel">
-        <div className="section-heading">
-          <h3>Score Breakdown</h3>
-          <p>Weighted sub-scores behind the recommendation.</p>
-        </div>
+        <section className="panel">
+          <div className="section-heading">
+            <h3>Score Breakdown</h3>
+            <p>Weighted sub-scores — total 100 points.</p>
+          </div>
 
-        <div className="score-grid">
-          <div className="score-row"><span>Title Match</span><strong>{match.title_score?.toFixed(1) ?? "0.0"}/25</strong></div>
-          <div className="score-row"><span>Domain Match</span><strong>{match.domain_score?.toFixed(1) ?? "0.0"}/20</strong></div>
-          <div className="score-row"><span>Skills Match</span><strong>{match.skills_score?.toFixed(1) ?? "0.0"}/20</strong></div>
-          <div className="score-row"><span>Experience Fit</span><strong>{match.experience_score?.toFixed(1) ?? "0.0"}/10</strong></div>
-          <div className="score-row"><span>Employment Fit</span><strong>{match.employment_preference_score?.toFixed(1) ?? "0.0"}/10</strong></div>
-          <div className="score-row"><span>Visa Fit</span><strong>{match.visa_score?.toFixed(1) ?? "0.0"}/10</strong></div>
-          <div className="score-row"><span>Remote / Location Fit</span><strong>{match.location_score?.toFixed(1) ?? "0.0"}/5</strong></div>
-        </div>
-
-        <div className="explanation-block">
-          <h4>Explanation</h4>
-          <p>{match.explanation ?? "No explanation available yet."}</p>
-        </div>
-      </section>
-
-      {/* Phase 2: Job intelligence panel — domain tags, keywords, visa hints */}
-      <section className="panel">
-        <div className="section-heading">
-          <h3>Job Intelligence</h3>
-          <p>Tags and signals extracted from the live job posting.</p>
-        </div>
-
-        {(job.domain_tags?.length ?? 0) > 0 && (
-          <div className="intel-group">
-            <h4>Domain Tags</h4>
-            <div className="job-tags">
-              {job.domain_tags.map((tag) => (
-                <span key={tag} className="job-tag job-tag-domain">{tag}</span>
-              ))}
+          <div className="score-grid">
+            <div className="score-row">
+              <span>Title Match</span>
+              <strong>{match.title_score?.toFixed(1) ?? "0.0"}/20</strong>
+            </div>
+            <div className="score-row">
+              <span>Domain Match</span>
+              <strong>{match.domain_score?.toFixed(1) ?? "0.0"}/15</strong>
+            </div>
+            <div className="score-row">
+              <span>Skills Match</span>
+              <strong>{match.skills_score?.toFixed(1) ?? "0.0"}/15</strong>
+            </div>
+            <div className="score-row">
+              <span>Experience Fit</span>
+              <strong>{match.experience_score?.toFixed(1) ?? "0.0"}/10</strong>
+            </div>
+            <div className="score-row">
+              <span>Employment Fit</span>
+              <strong>{match.employment_preference_score?.toFixed(1) ?? "0.0"}/5</strong>
+            </div>
+            <div className="score-row">
+              <span>Visa Fit</span>
+              <strong>{match.visa_score?.toFixed(1) ?? "0.0"}/10</strong>
+            </div>
+            <div className="score-row">
+              <span>
+                Remote / Location
+                {locationModeLabel && (
+                  <span style={{ marginLeft: "0.4rem", fontSize: "0.78rem", fontWeight: 400, color: "var(--brand-muted)" }}>
+                    {locationModeLabel}
+                  </span>
+                )}
+              </span>
+              <strong>{match.location_score?.toFixed(1) ?? "0.0"}/15</strong>
+            </div>
+            <div className="score-row">
+              <span>
+                Keyword Overlap
+                {kwLine && (
+                  <span style={{ marginLeft: "0.4rem", fontSize: "0.78rem", fontWeight: 400, color: "var(--brand-muted)" }}>
+                    {kwLine}
+                  </span>
+                )}
+              </span>
+              <strong>{match.keyword_score?.toFixed(1) ?? "0.0"}/10</strong>
             </div>
           </div>
-        )}
 
-        {(job.keywords_extracted?.length ?? 0) > 0 && (
-          <div className="intel-group">
-            <h4>Keywords Extracted</h4>
-            <div className="job-tags">
-              {job.keywords_extracted.map((kw) => (
-                <span key={kw} className="job-tag">{kw}</span>
-              ))}
+          <div className="explanation-block">
+            <h4>Explanation</h4>
+            <p>{match.explanation ?? "No explanation available yet."}</p>
+          </div>
+        </section>
+      </div>
+
+      {/* Row 2: Job intelligence + AI Tailoring */}
+      <div className="detail-grid-row">
+        <section className="panel">
+          <div className="section-heading">
+            <h3>Job Intelligence</h3>
+            <p>Tags and signals extracted from the live job posting.</p>
+          </div>
+
+          {(job.domain_tags?.length ?? 0) > 0 && (
+            <div className="intel-group">
+              <h4>Domain Tags</h4>
+              <div className="job-tags">
+                {job.domain_tags.map((tag) => (
+                  <span key={tag} className="job-tag job-tag-domain">{tag}</span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {(job.visa_hints?.length ?? 0) > 0 && (
-          <div className="intel-group">
-            <h4>Visa / Authorization Signals</h4>
-            <div className="job-tags">
-              {job.visa_hints.map((hint) => (
-                <span key={hint} className="job-tag job-tag-visa">{hint}</span>
-              ))}
+          {(job.keywords_extracted?.length ?? 0) > 0 && (
+            <div className="intel-group">
+              <h4>Keywords Extracted</h4>
+              <div className="job-tags">
+                {job.keywords_extracted.map((kw) => (
+                  <span key={kw} className="job-tag">{kw}</span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {(job.domain_tags?.length ?? 0) === 0 &&
-          (job.keywords_extracted?.length ?? 0) === 0 &&
-          (job.visa_hints?.length ?? 0) === 0 && (
-            <p className="intel-empty">No signals extracted yet — run the pipeline to populate tags.</p>
-        )}
+          {(job.visa_hints?.length ?? 0) > 0 && (
+            <div className="intel-group">
+              <h4>Visa / Authorization Signals</h4>
+              <div className="job-tags">
+                {job.visa_hints.map((hint) => (
+                  <span key={hint} className="job-tag job-tag-visa">{hint}</span>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {(job.apply_url || job.canonical_apply_url) && (
-          <div className="intel-group">
-            <a
-              className="link-button apply-now-button"
-              href={job.apply_url ?? job.canonical_apply_url ?? "#"}
-              target="_blank"
-              rel="noreferrer"
-            >
-              ↗ Apply Now on {job.company}
-            </a>
-          </div>
-        )}
-      </section>
+          {(job.domain_tags?.length ?? 0) === 0 &&
+            (job.keywords_extracted?.length ?? 0) === 0 &&
+            (job.visa_hints?.length ?? 0) === 0 && (
+              <p className="intel-empty">No signals extracted yet — run the pipeline to populate tags.</p>
+          )}
 
-      {/* Phase 8: AI Resume Tailoring */}
-      <TailoringPanel job={job} candidate={candidate} />
+          {(job.apply_url || job.canonical_apply_url) && (
+            <div className="intel-group" style={{ marginTop: "1rem" }}>
+              <a
+                className="link-button apply-now-button"
+                href={job.apply_url ?? job.canonical_apply_url ?? "#"}
+                target="_blank"
+                rel="noreferrer"
+              >
+                ↗ Apply Now on {job.company}
+              </a>
+            </div>
+          )}
+        </section>
+
+        {/* AI Resume Tailoring */}
+        <TailoringPanel job={job} candidate={candidate} />
+      </div>
     </div>
   );
 }
