@@ -4,7 +4,7 @@
   "installCommand": "cd apps/frontend && npm install",
   "framework": null,
   "env": {
-    "VITE_API_BASE_URL": "https://job-agent-backend.onrender.com"
+    "VITE_API_BASE_URL": "https://job-agent-backend-production-a463.up.railway.app"
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }

@@ -34,10 +34,16 @@ class Settings(BaseSettings):
         default="http://localhost:5173,http://127.0.0.1:5173",
         alias="ALLOWED_ORIGINS",
     )
-    # Regex for dynamic deployment origins (onrender.com, vercel.app, etc.)
-    # Avoids having to hard-code preview URLs. Set ALLOWED_ORIGIN_REGEX="" to disable.
+    # Regex for dynamic deployment origins — covers Railway, Render, Vercel and the
+    # custom production domain. Set ALLOWED_ORIGIN_REGEX="" to disable.
     allowed_origin_regex: str = Field(
-        default=r"https://.*\.onrender\.com|https://.*\.vercel\.app",
+        default=(
+            r"https://.*\.onrender\.com"
+            r"|https://.*\.vercel\.app"
+            r"|https://.*\.railway\.app"
+            r"|https://thinksuccessitconsulting\.com"
+            r"|https://www\.thinksuccessitconsulting\.com"
+        ),
         alias="ALLOWED_ORIGIN_REGEX",
     )
 
