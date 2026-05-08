@@ -20,11 +20,11 @@ const COMMON_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   { id: "admin-candidates", label: "➕ Manage Candidates" },
-  { id: "gmail-analytics", label: "✉️ Gmail Analytics" },
   { id: "admin-users", label: "👤 User Admin" },
   { id: "admin-whatsapp", label: "📱 WhatsApp Alerts" },
   { id: "admin-sources", label: "🔌 Sources" },
-  { id: "analytics", label: "📊 Analytics" }
+  { id: "analytics", label: "📊 Analytics" },
+  { id: "gmail-analytics", label: "✉️ Gmail Analytics" }
 ];
 
 export function Layout({ activePage, onNavigate, currentUser, onLogout, children }: LayoutProps) {

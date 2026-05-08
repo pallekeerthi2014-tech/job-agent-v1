@@ -8,6 +8,7 @@ import type {
   ApplicationCreatePayload,
   Candidate,
   CandidateCreatePayload,
+  CandidateMailbox,
   CandidatePreference,
   CandidateProfileUpdatePayload,
   CandidateSelfRegisterPayload,
@@ -16,6 +17,8 @@ import type {
   Employee,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
+  GmailAnalyticsRunResponse,
+  GmailOAuthUrlResponse,
   IngestionRunPage,
   InviteCandidatePayload,
   InviteCandidateResponse,
@@ -341,6 +344,21 @@ export const apiClient = {
     request<IngestionRunPage>(`/api/v1/admin/sources/${sourceId}/runs${buildQuery(params ?? {})}`),
   getSourcesHealth: () =>
     request<SourceHealth[]>("/api/v1/admin/sources/health"),
+
+  // ── Gmail Analytics ───────────────────────────────────────────────────────
+  getCandidateMailboxes: () =>
+    request<CandidateMailbox[]>("/api/v1/admin/gmail/mailboxes"),
+  createCandidateMailbox: (payload: { candidate_id: number; email: string }) =>
+    request<CandidateMailbox>("/api/v1/admin/gmail/mailboxes", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getCandidateGmailOAuthUrl: (candidateId: number) =>
+    request<GmailOAuthUrlResponse>(`/api/v1/admin/gmail/oauth-url?candidate_id=${candidateId}`),
+  runGmailAnalytics: (publishSheets = true) =>
+    request<GmailAnalyticsRunResponse>(`/api/v1/admin/gmail/run?publish_sheets=${publishSheets ? "true" : "false"}`, {
+      method: "POST",
+    }),
 
   // ── Full pipeline (ingest → normalize → score → queue) ───────────────────
   runDailyPipeline: () =>

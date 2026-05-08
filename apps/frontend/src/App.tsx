@@ -8,15 +8,14 @@ import { AdminSourcesPage } from "./pages/AdminSourcesPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminWhatsappPage } from "./pages/AdminWhatsappPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { GmailAnalyticsAdminPage } from "./pages/GmailAnalyticsAdminPage";
 import { CandidateDetailPage } from "./pages/CandidateDetailPage";
 import { CandidateListPage } from "./pages/CandidateListPage";
 import { CandidatePortalPage } from "./pages/CandidatePortalPage";
 import { EmployeeWorkQueuePage } from "./pages/EmployeeWorkQueuePage";
-import { GmailAnalyticsAdminPage } from "./pages/GmailAnalyticsAdminPage";
 import { JobMatchDetailPage } from "./pages/JobMatchDetailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OperationsDashboardPage } from "./pages/OperationsDashboardPage";
-import { PublicSitePage } from "./pages/PublicSitePage";
 import type {
   AlertRecipient,
   AlertRecipientCreatePayload,
@@ -24,14 +23,14 @@ import type {
   Application,
   Candidate,
   CandidateCreatePayload,
+  DashboardTimeWindow,
   Employee,
   Job,
   Match,
+  PageMeta,
   PriorityFilter,
   User,
   UserCreatePayload,
-  DashboardTimeWindow,
-  PageMeta,
   WorkQueueDayStats,
   WorkQueueItem,
   WorkQueueReportPayload
@@ -45,10 +44,10 @@ type ActivePage =
   | "job-match-detail"
   | "admin-users"
   | "admin-candidates"
-  | "gmail-analytics"
   | "admin-whatsapp"
   | "admin-sources"
-  | "analytics";
+  | "analytics"
+  | "gmail-analytics";
 
 const PRIORITY_TO_NUM: Record<Exclude<PriorityFilter, "All">, number> = {
   High: 1,
@@ -56,26 +55,39 @@ const PRIORITY_TO_NUM: Record<Exclude<PriorityFilter, "All">, number> = {
   Low: 3
 };
 
-const DASHBOARD_PAGE_LIMIT = 200;
-const SUPPORTING_DATA_LIMIT = 200;
+const SUPPORTING_DATA_LIMIT = 200; // candidates, jobs, matches — lookup maps
+const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "admin-whatsapp", "admin-sources", "analytics", "gmail-analytics"];
 
+/** Convert a DashboardTimeWindow + optional specific day into ISO created_after/created_before strings. */
 function computeTimeRange(
   timeWindow: DashboardTimeWindow,
   dayFilter: string
 ): { created_after?: string; created_before?: string } {
   if (dayFilter !== "all") {
-    return { created_after: `${dayFilter}T00:00:00Z`, created_before: `${dayFilter}T23:59:59Z` };
+    // Filter to exact day in UTC
+    return {
+      created_after: `${dayFilter}T00:00:00Z`,
+      created_before: `${dayFilter}T23:59:59Z`
+    };
   }
   const now = new Date();
   switch (timeWindow) {
-    case "48h": { const d = new Date(now.getTime() - 48 * 60 * 60 * 1000); return { created_after: d.toISOString() }; }
-    case "today": { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate()); return { created_after: d.toISOString() }; }
-    case "7d": { const d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); return { created_after: d.toISOString() }; }
-    case "all": return {};
+    case "48h": {
+      const d = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+      return { created_after: d.toISOString() };
+    }
+    case "today": {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return { created_after: d.toISOString() };
+    }
+    case "7d": {
+      const d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return { created_after: d.toISOString() };
+    }
+    case "all":
+      return {};
   }
 }
-const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "gmail-analytics", "admin-whatsapp", "admin-sources", "analytics"];
-const PUBLIC_PATHS = new Set(["/", "/success-stories", "/contact"]);
 
 // Decode invite token to extract pre-fill email (no verification needed — server verifies on submit)
 function extractInviteEmail(token: string | null): string | null {
@@ -92,7 +104,6 @@ export default function App() {
   const params = new URLSearchParams(window.location.search);
   const initialResetToken = params.get("reset_token");
   const initialInviteEmail = extractInviteEmail(params.get("invite"));
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [activePage, setActivePage] = useState<ActivePage>("operations-dashboard");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -129,6 +140,7 @@ export default function App() {
   const [dashboardPage, setDashboardPage] = useState(1);
   const [dashboardPageSize, setDashboardPageSize] = useState(10);
   const [dashboardCandidateFilter, setDashboardCandidateFilter] = useState<number | null>(null);
+  // Work queue pagination + stats
   const [workQueueMeta, setWorkQueueMeta] = useState<PageMeta | null>(null);
   const [workQueueStats, setWorkQueueStats] = useState<WorkQueueDayStats[]>([]);
 
@@ -146,23 +158,6 @@ export default function App() {
   const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [candidateAdminBusy, setCandidateAdminBusy] = useState(false);
   const [candidateAdminError, setCandidateAdminError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const onPopState = () => setCurrentPath(window.location.pathname);
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
-
-  function navigateTo(path: string, replace = false) {
-    if (window.location.pathname === path && !window.location.search) {
-      setCurrentPath(path);
-      return;
-    }
-    const method = replace ? "replaceState" : "pushState";
-    window.history[method]({}, "", path);
-    setCurrentPath(path);
-    window.scrollTo({ top: 0 });
-  }
 
   // ── Auth bootstrap ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -191,45 +186,36 @@ export default function App() {
     }
   }, [activePage, currentUser]);
 
-  // ── Main data load ──────────────────────────────────────────────────────────
+  // ── Supporting data load (candidates, jobs, matches — lookup maps) ──────────
   async function loadData() {
     if (!currentUser) return;
     try {
       setDataLoading(true);
       setPageError(null);
       const priorityValue = selectedPriority === "All" ? undefined : PRIORITY_TO_NUM[selectedPriority];
+      const scopedEmployeeId = currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined;
 
       const [
         candidateResponse, employeeResponse, jobResponse, matchResponse,
-        applicationResponse, workQueueResponse, userResponse, waResponse
+        applicationResponse, userResponse, waResponse
       ] = await Promise.all([
-        apiClient.getCandidates({
-          limit: DASHBOARD_PAGE_LIMIT, offset: 0,
-          employee_id: currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined
-        }),
+        apiClient.getCandidates({ limit: SUPPORTING_DATA_LIMIT, offset: 0, employee_id: scopedEmployeeId }),
         apiClient.getEmployees(),
-        apiClient.getJobs({ limit: DASHBOARD_PAGE_LIMIT, offset: 0 }),
+        apiClient.getJobs({ limit: SUPPORTING_DATA_LIMIT, offset: 0 }),
         apiClient.getMatches({
-          limit: DASHBOARD_PAGE_LIMIT, offset: 0,
+          limit: SUPPORTING_DATA_LIMIT, offset: 0,
           candidate_id: selectedCandidateId ?? undefined,
-          employee_id: currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined,
+          employee_id: scopedEmployeeId,
           priority: priorityValue,
           sort_by: "score", sort_order: "desc"
         }),
         apiClient.getApplications({
-          limit: DASHBOARD_PAGE_LIMIT, offset: 0,
+          limit: SUPPORTING_DATA_LIMIT, offset: 0,
           candidate_id: selectedCandidateId ?? undefined,
-          employee_id: currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined
+          employee_id: scopedEmployeeId
         }),
-        apiClient.getWorkQueues({
-          limit: DASHBOARD_PAGE_LIMIT, offset: 0,
-          candidate_id: selectedCandidateId ?? undefined,
-          employee_id: currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined,
-          priority: selectedPriority === "All" ? undefined : selectedPriority,
-          sort_by: "created_at", sort_order: "desc"
-        }),
-        currentUser.role === "super_admin" ? apiClient.getUsers().catch(() => []) : Promise.resolve([]),
-        currentUser.role === "super_admin" ? apiClient.getWhatsappRecipients().catch(() => []) : Promise.resolve([])
+        currentUser.role === "super_admin" ? apiClient.getUsers() : Promise.resolve([]),
+        currentUser.role === "super_admin" ? apiClient.getWhatsappRecipients() : Promise.resolve([])
       ]);
 
       setCandidates(candidateResponse.items);
@@ -237,7 +223,6 @@ export default function App() {
       setJobs(jobResponse.items);
       setMatches(matchResponse.items);
       setApplications(applicationResponse.items);
-      setWorkQueues(workQueueResponse.items);
       setUsers(userResponse);
       setWhatsappRecipients(waResponse as AlertRecipient[]);
     } catch (loadError) {
@@ -247,7 +232,47 @@ export default function App() {
     }
   }
 
+  // ── Work queue data load (paginated, time-windowed) ─────────────────────────
+  async function loadWorkQueueData() {
+    if (!currentUser) return;
+    try {
+      const scopedEmployeeId = currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined;
+      const timeRange = computeTimeRange(dashboardTimeWindow, dashboardDayFilter);
+      const offset = (dashboardPage - 1) * dashboardPageSize;
+
+      const [wqResponse, statsResponse] = await Promise.all([
+        apiClient.getWorkQueues({
+          limit: dashboardPageSize,
+          offset,
+          employee_id: scopedEmployeeId,
+          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined),
+          priority: selectedPriority === "All" ? undefined : selectedPriority,
+          status: dashboardStatusFilter === "all" ? undefined : dashboardStatusFilter,
+          sort_by: "created_at",
+          sort_order: "desc",
+          ...timeRange
+        }),
+        apiClient.getWorkQueueStats({
+          days: 7,
+          employee_id: scopedEmployeeId,
+          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined)
+        })
+      ]);
+
+      setWorkQueues(wqResponse.items);
+      setWorkQueueMeta(wqResponse.meta);
+      setWorkQueueStats(statsResponse);
+    } catch (loadError) {
+      setPageError(loadError instanceof Error ? loadError.message : "Work queue load error");
+    }
+  }
+
   useEffect(() => { void loadData(); }, [currentUser, selectedCandidateId, selectedEmployeeId, selectedPriority]);
+  useEffect(() => { void loadWorkQueueData(); }, [
+    currentUser, selectedCandidateId, selectedEmployeeId, selectedPriority,
+    dashboardPage, dashboardPageSize, dashboardTimeWindow, dashboardDayFilter,
+    dashboardStatusFilter, dashboardCandidateFilter
+  ]);
 
   // Load analytics when navigating to analytics page
   useEffect(() => {
@@ -280,7 +305,6 @@ export default function App() {
       setStoredAccessToken(response.access_token);
       setCurrentUser(response.user);
       setActivePage("operations-dashboard");
-      navigateTo(response.user.role === "candidate" ? "/candidate" : response.user.role === "super_admin" ? "/admin" : "/employee", true);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Login failed");
     } finally { setAuthBusy(false); }
@@ -292,7 +316,6 @@ export default function App() {
       const response = await apiClient.candidateRegister(payload);
       setStoredAccessToken(response.access_token);
       setCurrentUser(response.user);
-      navigateTo("/candidate", true);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Registration failed");
     } finally { setAuthBusy(false); }
@@ -304,7 +327,6 @@ export default function App() {
       const response = await apiClient.portalGoogleAuth(credential);
       setStoredAccessToken(response.access_token);
       setCurrentUser(response.user);
-      navigateTo("/candidate", true);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Google sign-in failed");
     } finally { setAuthBusy(false); }
@@ -342,7 +364,6 @@ export default function App() {
     setMatches([]); setApplications([]); setWorkQueues([]);
     setWhatsappRecipients([]); setAnalyticsData(null);
     setSelectedCandidateId(null); setSelectedEmployeeId(null); setSelectedMatchId(null);
-    navigateTo("/login", true);
   }
 
   // ── Navigation ──────────────────────────────────────────────────────────────
@@ -364,40 +385,6 @@ export default function App() {
     setTimeout(() => setToastMessage(null), duration);
   }
 
-  async function loadWorkQueueData() {
-    if (!currentUser) return;
-    try {
-      setPageError(null);
-      const scopedEmployeeId = currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined;
-      const timeRange = computeTimeRange(dashboardTimeWindow, dashboardDayFilter);
-      const offset = (dashboardPage - 1) * dashboardPageSize;
-      const [wqResponse, statsResponse] = await Promise.all([
-        apiClient.getWorkQueues({
-          limit: dashboardPageSize, offset,
-          employee_id: scopedEmployeeId,
-          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined),
-          priority: selectedPriority === "All" ? undefined : selectedPriority,
-          status: dashboardStatusFilter === "all" ? undefined : dashboardStatusFilter,
-          sort_by: "created_at", sort_order: "desc",
-          ...timeRange
-        }),
-        apiClient.getWorkQueueStats({ days: 7, employee_id: scopedEmployeeId,
-          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined) }).catch(() => [])
-      ]);
-      setWorkQueues(wqResponse.items);
-      setWorkQueueMeta(wqResponse.meta);
-      setWorkQueueStats(statsResponse);
-    } catch (loadError) {
-      setPageError(loadError instanceof Error ? loadError.message : "Work queue load error");
-    }
-  }
-
-  useEffect(() => { void loadWorkQueueData(); }, [
-    currentUser, selectedCandidateId, selectedEmployeeId, selectedPriority,
-    dashboardPage, dashboardPageSize, dashboardTimeWindow, dashboardDayFilter,
-    dashboardStatusFilter, dashboardCandidateFilter
-  ]);
-
   async function updateApplication(
     params: { candidateId: number; jobId: number; employeeId?: number | null; matchId?: number | null; queueId?: number | null },
     status: "applied" | "skipped"
@@ -412,7 +399,7 @@ export default function App() {
         status,
         notes: status === "applied" ? "Applied from dashboard." : "Skipped from dashboard."
       });
-      await Promise.all([loadData(), loadWorkQueueData()]);
+      await loadWorkQueueData();
       if (status === "applied") showToast("✅ Marked as Applied — moved out of pending queue.");
       if (status === "skipped") showToast("⏭ Skipped — job moved to skipped queue.");
     } finally {
@@ -501,16 +488,6 @@ export default function App() {
   // ── Render ──────────────────────────────────────────────────────────────────
   if (!authReady) return <main className="login-shell">Loading...</main>;
 
-  const hasAuthUrlIntent = Boolean(initialResetToken || initialInviteEmail);
-  const publicPage =
-    currentPath === "/success-stories" ? "success-stories" :
-    currentPath === "/contact" ? "contact" :
-    "home";
-
-  if (!currentUser && PUBLIC_PATHS.has(currentPath) && !hasAuthUrlIntent) {
-    return <PublicSitePage page={publicPage} onNavigate={navigateTo} />;
-  }
-
   if (!currentUser) {
     return (
       <LoginPage
@@ -526,7 +503,6 @@ export default function App() {
         onGoogleAuth={handleGoogleAuth}
         onForgotPassword={handleForgotPassword}
         onResetPassword={handleSelfResetPassword}
-        onPublicHome={() => navigateTo("/")}
       />
     );
   }
@@ -575,28 +551,28 @@ export default function App() {
       ) : activePage === "operations-dashboard" ? (
         <OperationsDashboardPage
           queueItems={workQueues}
+          meta={workQueueMeta}
+          dayStats={workQueueStats}
           candidateMap={candidateMap}
           employeeMap={employeeMap}
           jobMap={jobMap}
           matchMap={matchMap}
+          candidates={candidates}
           busyQueueId={busyQueueId}
+          currentUserRole={currentUser.role}
           searchTerm={dashboardSearchTerm}
           sourceFilter={dashboardSourceFilter}
           statusFilter={dashboardStatusFilter}
-          dayFilter={dashboardDayFilter}
-          onSearchTermChange={setDashboardSearchTerm}
-          onSourceFilterChange={setDashboardSourceFilter}
-          onStatusFilterChange={setDashboardStatusFilter}
-          onDayFilterChange={setDashboardDayFilter}
-          meta={workQueueMeta}
-          dayStats={workQueueStats}
-          candidates={candidates}
-          currentUserRole={currentUser.role}
           timeWindow={dashboardTimeWindow}
+          dayFilter={dashboardDayFilter}
           candidateFilter={dashboardCandidateFilter}
           page={dashboardPage}
           pageSize={dashboardPageSize}
+          onSearchTermChange={setDashboardSearchTerm}
+          onSourceFilterChange={setDashboardSourceFilter}
+          onStatusFilterChange={setDashboardStatusFilter}
           onTimeWindowChange={setDashboardTimeWindow}
+          onDayFilterChange={setDashboardDayFilter}
           onCandidateFilterChange={setDashboardCandidateFilter}
           onPageChange={setDashboardPage}
           onPageSizeChange={setDashboardPageSize}
@@ -692,15 +668,6 @@ export default function App() {
         />
       ) : null}
 
-      {activePage === "gmail-analytics" && currentUser.role === "super_admin" ? (
-        <GmailAnalyticsAdminPage
-          candidates={candidates}
-          employees={employees}
-          onCreateCandidate={handleCreateCandidate}
-          onRefreshCandidates={loadData}
-        />
-      ) : null}
-
       {activePage === "admin-whatsapp" && currentUser.role === "super_admin" ? (
         <AdminWhatsappPage
           recipients={whatsappRecipients}
@@ -728,6 +695,15 @@ export default function App() {
               .catch((e) => setAnalyticsError(e instanceof Error ? e.message : "Analytics load failed"))
               .finally(() => setAnalyticsBusy(false));
           }}
+        />
+      ) : null}
+
+      {activePage === "gmail-analytics" && currentUser.role === "super_admin" ? (
+        <GmailAnalyticsAdminPage
+          candidates={candidates}
+          employees={employees}
+          onCreateCandidate={handleCreateCandidate}
+          onRefreshCandidates={loadData}
         />
       ) : null}
 

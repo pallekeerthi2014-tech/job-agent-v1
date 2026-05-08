@@ -119,6 +119,15 @@ export type ApplicationCreatePayload = {
   notes?: string | null;
 };
 
+export type WorkQueueDayStats = {
+  date: string;   // "2026-05-07"
+  total: number;
+  applied: number;
+  pending: number;
+};
+
+export type DashboardTimeWindow = "48h" | "today" | "7d" | "all";
+
 export type PriorityFilter = "All" | "High" | "Medium" | "Low";
 
 export type LoginPayload = {
@@ -205,32 +214,6 @@ export type CandidateCreatePayload = {
 };
 
 export type CandidateUpdatePayload = Partial<CandidateCreatePayload>;
-
-export type CandidateMailbox = {
-  id: number;
-  candidate_id: number;
-  email: string;
-  status: string;
-  gmail_connected: boolean;
-  calendar_connected: boolean;
-  last_email_scan_at?: string | null;
-  last_calendar_scan_at?: string | null;
-  last_successful_scan_at?: string | null;
-  last_error?: string | null;
-};
-
-export type GmailOAuthUrlResponse = {
-  candidate_id: number;
-  authorization_url: string;
-};
-
-export type GmailAnalyticsRunResponse = {
-  mailboxes_scanned: number;
-  email_events_created: number;
-  calendar_events_upserted: number;
-  sheets_published: boolean;
-  failures: number;
-};
 
 export type AlertRecipientCreatePayload = {
   phone_number: string;
@@ -430,10 +413,9 @@ export type TailoredResumeRead = {
   id: number;
   candidate_id: number;
   job_id: number;
-  status: "pending" | "processing" | "ready" | "suggestions_ready" | "error";
+  status: "pending" | "processing" | "ready" | "error";
   filename: string | null;
   notes: string | null;
-  suggested_lines?: string | null;
   created_at: string;
   error_message: string | null;
 };
@@ -448,11 +430,30 @@ export type TailorResumeRequest = {
   confirm_flagged_skills?: string[] | null;
 };
 
-export type WorkQueueDayStats = {
-  date: string;   // "2026-05-07"
-  total: number;
-  applied: number;
-  pending: number;
+// ── Gmail Analytics ───────────────────────────────────────────────────────────
+
+export type CandidateMailbox = {
+  id: number;
+  candidate_id: number;
+  email: string;
+  status: string;
+  gmail_connected: boolean;
+  calendar_connected: boolean;
+  last_email_scan_at?: string | null;
+  last_calendar_scan_at?: string | null;
+  last_successful_scan_at?: string | null;
+  last_error?: string | null;
 };
 
-export type DashboardTimeWindow = "48h" | "today" | "7d" | "all";
+export type GmailOAuthUrlResponse = {
+  candidate_id: number;
+  authorization_url: string;
+};
+
+export type GmailAnalyticsRunResponse = {
+  mailboxes_scanned: number;
+  email_events_created: number;
+  calendar_events_upserted: number;
+  sheets_published: boolean;
+  failures: number;
+};
