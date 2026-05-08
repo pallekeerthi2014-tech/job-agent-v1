@@ -22,6 +22,8 @@ from app.models.work_queue import EmployeeWorkQueue
 from app.schemas.alert_recipient import AlertRecipientCreate, AlertRecipientRead, AlertRecipientUpdate
 from app.schemas.application import ApplicationCreate, ApplicationPage, ApplicationRead
 from app.schemas.candidate import (
+    AlertSettingsRead,
+    AlertSettingsUpdate,
     CandidateCreate,
     CandidatePage,
     CandidatePreferenceCreate,
@@ -342,6 +344,68 @@ def delete_candidate(
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/candidates/{candidate_id}/alert-settings", response_model=AlertSettingsRead)
+def get_candidate_alert_settings(
+    candidate_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> AlertSettingsRead:
+    """Return the current alert-settings for a candidate."""
+    candidate = _get_candidate_or_404(db, candidate_id)
+    _ensure_candidate_access(current_user, candidate)
+    return AlertSettingsRead(
+        candidate_id=candidate.id,
+        candidate_name=candidate.name,
+        smart_alerts_enabled=candidate.smart_alerts_enabled,
+        alert_threshold_override=candidate.alert_threshold_override,
+    )
+
+
+@router.patch("/candidates/{candidate_id}/alert-settings", response_model=AlertSettingsRead)
+def update_candidate_alert_settings(
+    candidate_id: int,
+    payload: AlertSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_authenticated_user),
+) -> AlertSettingsRead:
+    """Toggle smart-alert mode and/or set a per-candidate score threshold.
+
+    smart_alerts_enabled=True  (default for all candidates)
+      → Alert fires whenever a remote OR hybrid-in-city job arrives with
+        matching experience, regardless of overall score.
+        The team sees an ⚡ Smart Alert WhatsApp message.
+
+    smart_alerts_enabled=False
+      → Alert fires only when score >= alert_threshold_override
+        (or the global ALERT_MIN_SCORE if no override is set).
+        The team sees a 🎯 Score Match WhatsApp message.
+
+    alert_threshold_override: float (e.g. 70.0)
+      → Only used when smart_alerts_enabled=False.
+        Set to null to fall back to the global ALERT_MIN_SCORE.
+    """
+    candidate = _get_candidate_or_404(db, candidate_id)
+    _ensure_candidate_access(current_user, candidate)
+
+    if payload.smart_alerts_enabled is not None:
+        candidate.smart_alerts_enabled = payload.smart_alerts_enabled
+
+    # Only make sense to set a threshold override when smart mode is off,
+    # but we store it either way so it's ready when the toggle is flipped.
+    if "alert_threshold_override" in payload.model_fields_set:
+        candidate.alert_threshold_override = payload.alert_threshold_override
+
+    db.commit()
+    db.refresh(candidate)
+
+    return AlertSettingsRead(
+        candidate_id=candidate.id,
+        candidate_name=candidate.name,
+        smart_alerts_enabled=candidate.smart_alerts_enabled,
+        alert_threshold_override=candidate.alert_threshold_override,
+    )
 
 
 @router.get("/candidate-preferences", response_model=list[CandidatePreferenceRead])

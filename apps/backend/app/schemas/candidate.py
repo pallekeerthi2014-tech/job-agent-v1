@@ -40,6 +40,26 @@ class CandidateRead(CandidateBase):
 
     id: int
     resume_filename: str | None = None
+    smart_alerts_enabled: bool = True
+    alert_threshold_override: float | None = None
+
+
+class AlertSettingsUpdate(BaseModel):
+    """PATCH /candidates/{id}/alert-settings — update per-candidate alert config."""
+    smart_alerts_enabled: bool | None = None
+    alert_threshold_override: float | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AlertSettingsRead(BaseModel):
+    """Response for alert-settings endpoints."""
+    model_config = ConfigDict(from_attributes=True)
+
+    candidate_id: int
+    candidate_name: str
+    smart_alerts_enabled: bool
+    alert_threshold_override: float | None
 
 
 class CandidatePreferenceBase(BaseModel):

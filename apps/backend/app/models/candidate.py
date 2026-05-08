@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, LargeBinary, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -27,6 +27,16 @@ class Candidate(Base):
     # Raw file bytes stored in DB — survives container restarts / redeployments
     resume_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     resume_content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # ── Alert settings ────────────────────────────────────────────────────────
+    # smart_alerts_enabled=True  → alert fires when a remote/hybrid-in-city job
+    #   arrives with matching experience, bypassing the global score threshold.
+    # smart_alerts_enabled=False → alert fires only when score >= threshold
+    #   (global ALERT_MIN_SCORE or per-candidate alert_threshold_override).
+    smart_alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Override the global ALERT_MIN_SCORE just for this candidate (used when
+    # smart_alerts_enabled=False).  NULL → use global setting.
+    alert_threshold_override: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     employee = relationship("Employee", back_populates="assigned_candidates")
     preference = relationship("CandidatePreference", back_populates="candidate", uselist=False, cascade="all, delete-orphan")

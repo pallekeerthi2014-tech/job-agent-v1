@@ -36,12 +36,13 @@ def score_job_candidate_matches(db: Session) -> int:
     for candidate in candidates:
         for job in jobs:
             result = score_candidate_to_job(candidate, job)
-            # Phase 2: AI enrichment — writes ai_summary into explanation field
+            # AI enrichment — writes ai_summary into explanation field
             if _AI_ENABLED:
                 result = enrich_with_ai_explanation(result, candidate, job)
                 if result.ai_summary:
                     from dataclasses import replace as _replace
                     result = _replace(result, explanation=result.ai_summary)
+
             existing = db.scalar(
                 select(JobCandidateMatch).where(
                     JobCandidateMatch.candidate_id == candidate.id,
@@ -50,20 +51,26 @@ def score_job_candidate_matches(db: Session) -> int:
             )
 
             values = {
-                "score": result.total_score,
-                "priority": _priority_rank(result.priority_bucket),
-                "title_score": result.title_score,
-                "domain_score": result.domain_score,
-                "skills_score": result.skills_score,
-                "experience_score": result.experience_score,
-                "employment_preference_score": result.employment_preference_score,
-                "visa_score": result.visa_score,
-                "location_score": result.location_score,
-                "explanation": result.explanation,
-                "status": result.priority_bucket,
+                "score":                        result.total_score,
+                "priority":                     _priority_rank(result.priority_bucket),
+                "title_score":                  result.title_score,
+                "domain_score":                 result.domain_score,
+                "skills_score":                 result.skills_score,
+                "experience_score":             result.experience_score,
+                "employment_preference_score":  result.employment_preference_score,
+                "visa_score":                   result.visa_score,
+                "location_score":               result.location_score,
+                "keyword_score":                result.keyword_score,
+                "keyword_match_count":          result.keyword_match_count,
+                "keyword_match_total":          result.keyword_match_total,
+                "location_match_mode":          result.location_match_mode,
+                "explanation":                  result.explanation,
+                "status":                       result.priority_bucket,
             }
 
             if existing:
+                # Only update score/explanation fields — never touch alerted_at
+                # (resetting it would cause re-alerts on the same match).
                 for key, value in values.items():
                     setattr(existing, key, value)
             else:
@@ -81,4 +88,4 @@ def score_job_candidate_matches(db: Session) -> int:
 
 
 def _priority_rank(priority_bucket: str) -> int:
-    return {"High": 1, "Medium": 2, "Low": 3}[priority_bucket]
+    return {"High": 1, "Medium": 2, "Low": 3}.get(priority_bucket, 3)
