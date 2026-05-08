@@ -34,11 +34,10 @@ class Settings(BaseSettings):
         default="http://localhost:5173,http://127.0.0.1:5173",
         alias="ALLOWED_ORIGINS",
     )
-    allowed_origin_regex: str | None = Field(
-        default=(
-            r"https://(www\.)?thinksuccessitconsulting\.com|"
-            r"https://job-agent-frontend-production-c54d\.up\.railway\.app"
-        ),
+    # Regex for dynamic deployment origins (onrender.com, vercel.app, etc.)
+    # Avoids having to hard-code preview URLs. Set ALLOWED_ORIGIN_REGEX="" to disable.
+    allowed_origin_regex: str = Field(
+        default=r"https://.*\.onrender\.com|https://.*\.vercel\.app",
         alias="ALLOWED_ORIGIN_REGEX",
     )
 
@@ -97,16 +96,6 @@ class Settings(BaseSettings):
 
     # ── Google OAuth ──────────────────────────────────────────────────────────
     google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
-    google_client_secret: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
-    google_oauth_redirect_uri: str = Field(default="http://localhost:8000/api/v1/admin/gmail/oauth/callback", alias="GOOGLE_OAUTH_REDIRECT_URI")
-    google_token_encryption_key: str = Field(default="", alias="GOOGLE_TOKEN_ENCRYPTION_KEY")
-    gmail_analytics_enabled: bool = Field(default=False, alias="GMAIL_ANALYTICS_ENABLED")
-    gmail_ai_classification_enabled: bool = Field(default=True, alias="GMAIL_AI_CLASSIFICATION_ENABLED")
-    gmail_scan_interval_minutes: int = Field(default=30, alias="GMAIL_SCAN_INTERVAL_MINUTES")
-    gmail_scan_lookback_days: int = Field(default=14, alias="GMAIL_SCAN_LOOKBACK_DAYS")
-    gmail_calendar_lookahead_days: int = Field(default=30, alias="GMAIL_CALENDAR_LOOKAHEAD_DAYS")
-    google_sheets_report_id: str = Field(default="", alias="GOOGLE_SHEETS_REPORT_ID")
-    google_service_account_json: str = Field(default="", alias="GOOGLE_SERVICE_ACCOUNT_JSON")
 
     # ── USAJobs ───────────────────────────────────────────────────────────────
     usajobs_api_key: str = Field(default="", alias="USAJOBS_API_KEY")
@@ -170,11 +159,7 @@ class Settings(BaseSettings):
                 issues.append("AI_SCORING_ENABLED=true (openai) but OPENAI_API_KEY is not set.")
             if self.ai_provider == "anthropic" and not self.anthropic_api_key:
                 issues.append("AI_SCORING_ENABLED=true (anthropic) but ANTHROPIC_API_KEY is not set.")
-        if self.gmail_analytics_enabled:
-            if not self.google_client_id or not self.google_client_secret:
-                issues.append("GMAIL_ANALYTICS_ENABLED=true but GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET are incomplete.")
-            if not self.google_token_encryption_key:
-                issues.append("GMAIL_ANALYTICS_ENABLED=true but GOOGLE_TOKEN_ENCRYPTION_KEY is not set.")
+
         for issue in issues:
             warnings.warn(f"[config] {issue}", stacklevel=2)
 

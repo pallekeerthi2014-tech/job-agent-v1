@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd apps/frontend && npm install && npm run build",
+  "outputDirectory": "apps/frontend/dist",
+  "installCommand": "cd apps/frontend && npm install",
+  "framework": null,
+  "env": {
+    "VITE_API_BASE_URL": "https://job-agent-backend.onrender.com"
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

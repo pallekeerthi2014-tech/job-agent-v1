@@ -8,7 +8,7 @@ services:
   - name: job-agent-backend
     type: web
     runtime: docker
-    plan: free
+    plan: starter
     rootDir: apps/backend
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -23,7 +23,7 @@ services:
       - key: API_PORT
         value: "8000"
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: "https://job-agent-frontend.onrender.com,http://localhost:5173,http://127.0.0.1:5173"
       - key: FRESH_JOB_MAX_AGE_HOURS
         value: "168"
       - key: SCHEDULER_ENABLED
@@ -78,7 +78,7 @@ services:
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_BASE_URL
-        sync: false
+        value: "https://job-agent-backend.onrender.com"
     routes:
       - type: rewrite
         source: /*
