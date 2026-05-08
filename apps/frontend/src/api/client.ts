@@ -342,6 +342,22 @@ export const apiClient = {
   getSourcesHealth: () =>
     request<SourceHealth[]>("/api/v1/admin/sources/health"),
 
+  // ── Full pipeline (ingest → normalize → score → queue) ───────────────────
+  runDailyPipeline: () =>
+    request<{
+      status: string;
+      summary: {
+        raw_jobs_stored: number;
+        sources_processed: number;
+        source_failures: number;
+        jobs_skipped_irrelevant: number;
+        normalized_jobs: number;
+        duplicate_groups: number;
+        scored_matches: number;
+        work_queue_items: number;
+      };
+    }>("/api/v1/admin/run-daily-pipeline", { method: "POST" }),
+
   // ── Phase 8: Resume Tailoring ─────────────────────────────────────────────
   tailorResume: (jobId: number, payload: TailorResumeRequest) =>
     request<TailoredResumeReadWithFlags>(`/api/v1/jobs/${jobId}/tailor-resume`, {

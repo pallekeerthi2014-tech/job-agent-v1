@@ -695,9 +695,17 @@ export function AdminSourcesPage() {
   const [sortBy, setSortBy] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  // Run All
+  // Run All (raw ingestion only)
   const [runAllBusy, setRunAllBusy] = useState(false);
   const [runAllResults, setRunAllResults] = useState<SourceRunResult[]>([]);
+
+  // Full pipeline (ingest → normalize → score → queue)
+  const [pipelineBusy, setPipelineBusy] = useState(false);
+  const [pipelineResult, setPipelineResult] = useState<{
+    raw_jobs_stored: number; sources_processed: number; source_failures: number;
+    normalized_jobs: number; scored_matches: number; work_queue_items: number;
+  } | null>(null);
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     setLoadError(null);
@@ -801,6 +809,21 @@ export function AdminSourcesPage() {
     await loadAll();
   }
 
+  async function handleRunPipeline() {
+    setPipelineBusy(true);
+    setPipelineError(null);
+    setPipelineResult(null);
+    try {
+      const res = await apiClient.runDailyPipeline();
+      setPipelineResult(res.summary);
+      await loadAll();
+    } catch (e) {
+      setPipelineError(e instanceof Error ? e.message : "Pipeline run failed");
+    } finally {
+      setPipelineBusy(false);
+    }
+  }
+
   async function handleRunNow(source: Source) {
     setBusySourceId(source.id);
     setActionError(null);
@@ -848,16 +871,25 @@ export function AdminSourcesPage() {
             <h3>Job Sources</h3>
             <p>Manage the external feeds that the daily pipeline ingests. Runs automatically at 6 AM UTC.</p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               className="secondary-button"
               onClick={() => void handleRunAll()}
-              disabled={runAllBusy || sources.filter((s) => s.enabled).length === 0}
-              title="Run all enabled sources now"
+              disabled={runAllBusy || pipelineBusy || sources.filter((s) => s.enabled).length === 0}
+              title="Fetch raw jobs from all enabled sources (no scoring yet)"
             >
-              {runAllBusy ? "⏳ Running All…" : "▶▶ Run All"}
+              {runAllBusy ? "⏳ Fetching…" : "▶ Fetch All Sources"}
             </button>
-            <button className="primary-button" onClick={openAdd}>
+            <button
+              className="primary-button"
+              onClick={() => void handleRunPipeline()}
+              disabled={pipelineBusy || runAllBusy}
+              title="Run the full pipeline: ingest → normalize → score → create work queue items"
+              style={{ background: "var(--brand-green-dark, #005c2e)" }}
+            >
+              {pipelineBusy ? "⏳ Running Pipeline…" : "▶▶ Run Full Pipeline"}
+            </button>
+            <button className="secondary-button" onClick={openAdd}>
               + Add Source
             </button>
           </div>
@@ -865,6 +897,31 @@ export function AdminSourcesPage() {
 
         {actionError && (
           <div className="error-banner" style={{ marginTop: 12 }}>{actionError}</div>
+        )}
+        {pipelineError && (
+          <div className="error-banner" style={{ marginTop: 12 }}>Pipeline error: {pipelineError}</div>
+        )}
+        {pipelineResult && (
+          <div style={{ marginTop: 12, padding: "14px 18px", borderRadius: 14, background: "var(--brand-green-soft, #e8f5e9)", border: "1px solid rgba(0,122,61,0.25)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <strong style={{ fontSize: "0.9rem", color: "var(--brand-green-dark, #005c2e)" }}>✅ Full Pipeline Complete</strong>
+              <button onClick={() => setPipelineResult(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--brand-muted)", fontSize: "1rem" }}>✕</button>
+            </div>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontSize: "0.85rem" }}>
+              <span><strong>{pipelineResult.raw_jobs_stored}</strong> jobs stored</span>
+              <span><strong>{pipelineResult.normalized_jobs}</strong> normalized</span>
+              <span><strong>{pipelineResult.scored_matches}</strong> matches scored</span>
+              <span><strong>{pipelineResult.work_queue_items}</strong> queue items created</span>
+              {pipelineResult.source_failures > 0 && (
+                <span style={{ color: "#8a2b1f" }}><strong>{pipelineResult.source_failures}</strong> source failures</span>
+              )}
+            </div>
+            {pipelineResult.work_queue_items > 0 && (
+              <p style={{ marginTop: 8, fontSize: "0.82rem", color: "var(--brand-green-dark, #005c2e)" }}>
+                ✓ Work queue updated — go to the Operations Dashboard to see the new jobs.
+              </p>
+            )}
+          </div>
         )}
         {runResult && (
           <div style={{ marginTop: 12 }}>

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import logging
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -15,7 +14,6 @@ from app.db import crud
 from app.models.alert_recipient import AlertRecipient
 from app.models.candidate import Candidate
 from app.models.employee import Employee
-from app.models.gmail_analytics import CandidateMailbox
 from app.models.job import JobNormalized, JobRaw
 from app.models.match_score import JobCandidateMatch
 from app.models.user import User
@@ -34,12 +32,6 @@ from app.schemas.candidate import (
     CandidateUpdate,
 )
 from app.schemas.employee import EmployeeCreate, EmployeeRead
-from app.schemas.gmail_analytics import (
-    CandidateMailboxCreate,
-    CandidateMailboxRead,
-    GmailAnalyticsRunResponse,
-    GmailOAuthUrlResponse,
-)
 from app.schemas.job import JobNormalizedCreate, JobNormalizedPage, JobNormalizedRead, JobRawCreate, JobRawRead
 from app.schemas.match import JobCandidateMatchCreate, JobCandidateMatchPage, JobCandidateMatchRead
 from app.schemas.pagination import PageMeta
@@ -68,7 +60,6 @@ from app.services.auth import (
     reset_password_with_token,
 )
 from app.services.emailer import send_password_reset_email, smtp_enabled
-from app.services.gmail_analytics import build_candidate_oauth_url, exchange_candidate_oauth_code, run_gmail_analytics_cycle
 from app.services.pipeline import run_daily_pipeline
 from app.schemas.source import (
     AdapterTypeList,
@@ -98,7 +89,6 @@ from app.services.source_adapters.form_schemas import get_adapter_form_schemas
 _RESUME_DIR = Path(os.getenv("RESUME_STORAGE_PATH", "/app/resumes"))
 
 router = APIRouter(prefix="/api/v1")
-logger = logging.getLogger(__name__)
 
 
 def _scoped_employee_id(current_user: User, requested_employee_id: int | None) -> int | None:
@@ -147,78 +137,6 @@ def _build_user_create_payload(db: Session, payload: UserCreate) -> UserCreate:
         is_active=payload.is_active,
         employee_id=employee_id,
     )
-
-
-@router.get("/admin/gmail/mailboxes", response_model=list[CandidateMailboxRead])
-def list_candidate_mailboxes(
-    db: Session = Depends(get_db),
-    _: User = Depends(require_super_admin),
-) -> list[CandidateMailboxRead]:
-    return list(db.scalars(select(CandidateMailbox).order_by(CandidateMailbox.id.desc())))
-
-
-@router.post("/admin/gmail/mailboxes", response_model=CandidateMailboxRead, status_code=status.HTTP_201_CREATED)
-def create_candidate_mailbox(
-    payload: CandidateMailboxCreate,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_super_admin),
-) -> CandidateMailboxRead:
-    candidate = _get_candidate_or_404(db, payload.candidate_id)
-    existing = db.scalar(select(CandidateMailbox).where(CandidateMailbox.candidate_id == payload.candidate_id))
-    if existing is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Candidate mailbox already exists")
-    mailbox = CandidateMailbox(
-        candidate_id=candidate.id,
-        email=payload.email.lower(),
-        status="pending",
-        gmail_connected=False,
-        calendar_connected=False,
-    )
-    db.add(mailbox)
-    db.commit()
-    db.refresh(mailbox)
-    return mailbox
-
-
-@router.get("/admin/gmail/oauth-url", response_model=GmailOAuthUrlResponse)
-def gmail_oauth_url(
-    candidate_id: int = Query(..., ge=1),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_super_admin),
-) -> GmailOAuthUrlResponse:
-    _get_candidate_or_404(db, candidate_id)
-    return GmailOAuthUrlResponse(candidate_id=candidate_id, authorization_url=build_candidate_oauth_url(candidate_id=candidate_id))
-
-
-@router.get("/admin/gmail/oauth/callback")
-def gmail_oauth_callback(
-    code: str = Query(...),
-    state: str = Query(...),
-    db: Session = Depends(get_db),
-) -> dict[str, str]:
-    try:
-        mailbox = exchange_candidate_oauth_code(db, code=code, state=state)
-    except Exception as exc:
-        logger.exception("gmail_oauth_callback_failed")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Gmail connection failed: {exc}",
-        ) from exc
-    return {
-        "message": "Candidate Gmail and Calendar connected successfully.",
-        "candidate_email": mailbox.email,
-        "status": mailbox.status,
-    }
-
-
-@router.post("/admin/gmail/run", response_model=GmailAnalyticsRunResponse)
-def run_gmail_analytics_now(
-    publish_sheets: bool = Query(default=True),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_super_admin),
-) -> GmailAnalyticsRunResponse:
-    summary = run_gmail_analytics_cycle(db, publish_sheets=publish_sheets)
-    return GmailAnalyticsRunResponse(**summary.__dict__)
 
 
 @router.post("/auth/login", response_model=TokenResponse)
@@ -641,16 +559,23 @@ def create_application(
 
 @router.get("/work-queues/stats", response_model=list[WorkQueueDayStatsRead])
 def get_work_queue_stats(
-    days: int = Query(7, ge=1, le=30),
-    employee_id: int | None = Query(None),
-    candidate_id: int | None = Query(None),
     db: Session = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
+    days: int = Query(default=7, ge=1, le=30),
+    employee_id: int | None = Query(default=None),
+    candidate_id: int | None = Query(default=None),
+    current_user: User = Depends(require_authenticated_user),
 ) -> list[WorkQueueDayStatsRead]:
-    rows = crud.get_work_queue_daily_stats(
-        db, days=days, employee_id=employee_id, candidate_id=candidate_id
+    scoped_employee_id = _scoped_employee_id(current_user, employee_id)
+    if candidate_id is not None and current_user.role != "super_admin":
+        candidate = _get_candidate_or_404(db, candidate_id)
+        _ensure_candidate_access(current_user, candidate)
+    stats = crud.get_work_queue_daily_stats(
+        db,
+        days=days,
+        employee_id=scoped_employee_id,
+        candidate_id=candidate_id,
     )
-    return [WorkQueueDayStatsRead(**r) for r in rows]
+    return [WorkQueueDayStatsRead(**s) for s in stats]
 
 
 @router.get("/work-queues", response_model=EmployeeWorkQueuePage)
@@ -658,12 +583,14 @@ def list_work_queues(
     db: Session = Depends(get_db),
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-    sort_by: str = Query(default="score"),
+    sort_by: str = Query(default="created_at"),
     sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
     candidate_id: int | None = Query(default=None),
     employee_id: int | None = Query(default=None),
     priority: str | None = Query(default=None),
     status_value: str | None = Query(default=None, alias="status"),
+    created_after: datetime | None = Query(default=None),
+    created_before: datetime | None = Query(default=None),
     current_user: User = Depends(require_authenticated_user),
 ) -> EmployeeWorkQueuePage:
     scoped_employee_id = _scoped_employee_id(current_user, employee_id)
@@ -1371,6 +1298,93 @@ def admin_list_sources(
     return out
 
 
+# NOTE: /admin/sources/health MUST be declared before /admin/sources/{source_id}
+# so FastAPI routes to the explicit path rather than trying to parse "health" as an int.
+@router.get("/admin/sources/health", response_model=list[SourceHealthRead])
+def admin_sources_health(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+) -> list[SourceHealthRead]:
+    """Return a health snapshot for all sources (enabled + disabled).
+
+    Health status logic:
+    - "paused"  — source.enabled is False
+    - "healthy" — last_successful_run_at within 24 h AND recent error rate < 20%
+    - "warning" — last_successful_run_at between 24 h and 48 h ago OR error rate 20–60%
+    - "critical" — no success in 48 h+ OR error rate > 60% in last 5 runs
+    """
+    from app.models.ingestion_run import IngestionRun
+    from app.models.source import JobSource
+    from datetime import datetime, timezone
+    from sqlalchemy import func
+
+    now = datetime.now(timezone.utc)
+    sources = list(db.scalars(select(JobSource).order_by(JobSource.id.asc())))
+
+    result: list[SourceHealthRead] = []
+    for source in sources:
+        if not source.enabled:
+            result.append(
+                SourceHealthRead(
+                    source_id=source.id,
+                    source_name=source.name,
+                    enabled=False,
+                    last_run_at=source.last_run_at,
+                    last_successful_run_at=source.last_successful_run_at,
+                    last_error=source.last_error,
+                    health_status="paused",
+                    recent_error_rate=0.0,
+                    runs_last_24h=0,
+                )
+            )
+            continue
+
+        # Count runs in last 24h
+        cutoff_24h = now - __import__("datetime").timedelta(hours=24)
+        runs_24h: int = db.scalar(
+            select(func.count(IngestionRun.id))
+            .where(IngestionRun.source_id == source.id)
+            .where(IngestionRun.started_at >= cutoff_24h)
+        ) or 0
+
+        # Error rate from last 5 runs
+        last_5 = list(
+            db.scalars(
+                select(IngestionRun.status)
+                .where(IngestionRun.source_id == source.id)
+                .order_by(IngestionRun.started_at.desc())
+                .limit(5)
+            )
+        )
+        error_rate = (last_5.count("error") / len(last_5)) if last_5 else 0.0
+
+        # Determine health
+        last_ok = source.last_successful_run_at
+        if last_ok is None:
+            health = "critical"
+        elif (now - last_ok).total_seconds() < 86_400:   # < 24h
+            health = "healthy" if error_rate < 0.2 else "warning"
+        elif (now - last_ok).total_seconds() < 172_800:  # 24–48h
+            health = "warning"
+        else:
+            health = "critical"
+
+        result.append(
+            SourceHealthRead(
+                source_id=source.id,
+                source_name=source.name,
+                enabled=source.enabled,
+                last_run_at=source.last_run_at,
+                last_successful_run_at=source.last_successful_run_at,
+                last_error=source.last_error,
+                health_status=health,
+                recent_error_rate=round(error_rate, 3),
+                runs_last_24h=runs_24h,
+            )
+        )
+    return result
+
+
 @router.get("/admin/sources/{source_id}", response_model=SourceRead)
 def admin_get_source(
     source_id: int,
@@ -1504,91 +1518,6 @@ def admin_list_source_runs(
     return IngestionRunPage(items=items, total=total)
 
 
-@router.get("/admin/sources/health", response_model=list[SourceHealthRead])
-def admin_sources_health(
-    db: Session = Depends(get_db),
-    _: User = Depends(require_super_admin),
-) -> list[SourceHealthRead]:
-    """Return a health snapshot for all sources (enabled + disabled).
-
-    Health status logic:
-    - "paused"  — source.enabled is False
-    - "healthy" — last_successful_run_at within 24 h AND recent error rate < 20%
-    - "warning" — last_successful_run_at between 24 h and 48 h ago OR error rate 20–60%
-    - "critical" — no success in 48 h+ OR error rate > 60% in last 5 runs
-    """
-    from app.models.ingestion_run import IngestionRun
-    from app.models.source import JobSource
-    from datetime import datetime, timezone
-    from sqlalchemy import func
-
-    now = datetime.now(timezone.utc)
-    sources = list(db.scalars(select(JobSource).order_by(JobSource.id.asc())))
-
-    result: list[SourceHealthRead] = []
-    for source in sources:
-        if not source.enabled:
-            result.append(
-                SourceHealthRead(
-                    source_id=source.id,
-                    source_name=source.name,
-                    enabled=False,
-                    last_run_at=source.last_run_at,
-                    last_successful_run_at=source.last_successful_run_at,
-                    last_error=source.last_error,
-                    health_status="paused",
-                    recent_error_rate=0.0,
-                    runs_last_24h=0,
-                )
-            )
-            continue
-
-        # Count runs in last 24h
-        cutoff_24h = now - __import__("datetime").timedelta(hours=24)
-        runs_24h: int = db.scalar(
-            select(func.count(IngestionRun.id))
-            .where(IngestionRun.source_id == source.id)
-            .where(IngestionRun.started_at >= cutoff_24h)
-        ) or 0
-
-        # Error rate from last 5 runs
-        last_5 = list(
-            db.scalars(
-                select(IngestionRun.status)
-                .where(IngestionRun.source_id == source.id)
-                .order_by(IngestionRun.started_at.desc())
-                .limit(5)
-            )
-        )
-        error_rate = (last_5.count("error") / len(last_5)) if last_5 else 0.0
-
-        # Determine health
-        last_ok = source.last_successful_run_at
-        if last_ok is None:
-            health = "critical"
-        elif (now - last_ok).total_seconds() < 86_400:   # < 24h
-            health = "healthy" if error_rate < 0.2 else "warning"
-        elif (now - last_ok).total_seconds() < 172_800:  # 24–48h
-            health = "warning"
-        else:
-            health = "critical"
-
-        result.append(
-            SourceHealthRead(
-                source_id=source.id,
-                source_name=source.name,
-                enabled=source.enabled,
-                last_run_at=source.last_run_at,
-                last_successful_run_at=source.last_successful_run_at,
-                last_error=source.last_error,
-                health_status=health,
-                recent_error_rate=round(error_rate, 3),
-                runs_last_24h=runs_24h,
-            )
-        )
-    return result
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Phase 8 — Resume Tailoring
 # Employee-facing routes to generate and download AI-tailored DOCX resumes.
@@ -1648,7 +1577,7 @@ def tailor_resume_for_job(
     if not candidate.resume_filename:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Candidate has no resume on file. Upload a resume first.",
+            detail="Candidate has no resume on file. Upload a DOCX resume first.",
         )
 
     master_path = _RESUME_DIR / candidate.resume_filename
@@ -1693,7 +1622,7 @@ def download_tailored_resume(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_authenticated_user),
 ) -> Response:
-    """Download the generated DOCX file, using DB bytes if disk cache is gone."""
+    """Download the generated DOCX file."""
     from fastapi.responses import FileResponse
 
     _require_employee_or_admin(current_user)
@@ -1711,20 +1640,8 @@ def download_tailored_resume(
     tailored_dir = _RESUME_DIR / "tailored"
     path = tailored_dir / record.filename
     if not path.exists():
-        if record.file_bytes:
-            media_type = record.content_type or "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            try:
-                tailored_dir.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(record.file_bytes)
-                return FileResponse(str(path), filename=record.filename, media_type=media_type)
-            except Exception:
-                return Response(
-                    content=record.file_bytes,
-                    media_type=media_type,
-                    headers={"Content-Disposition": f'attachment; filename="{record.filename}"'},
-                )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
-    return FileResponse(str(path), filename=record.filename, media_type=record.content_type or "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
+    return FileResponse(str(path), filename=record.filename, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 
 @router.get("/jobs/{job_id}/tailored-resumes", response_model=list[TailoredResumeRead])
