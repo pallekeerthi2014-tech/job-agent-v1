@@ -100,8 +100,20 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
 
-    # ── Google OAuth ──────────────────────────────────────────────────────────
+    # ── Google OAuth / Gmail analytics ───────────────────────────────────────
     google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
+    google_oauth_redirect_uri: str = Field(default="", alias="GOOGLE_OAUTH_REDIRECT_URI")
+    google_token_encryption_key: str = Field(default="", alias="GOOGLE_TOKEN_ENCRYPTION_KEY")
+    google_service_account_json: str = Field(default="", alias="GOOGLE_SERVICE_ACCOUNT_JSON")
+    google_sheets_report_id: str = Field(default="", alias="GOOGLE_SHEETS_REPORT_ID")
+
+    # ── Gmail analytics ───────────────────────────────────────────────────────
+    gmail_analytics_enabled: bool = Field(default=False, alias="GMAIL_ANALYTICS_ENABLED")
+    gmail_ai_classification_enabled: bool = Field(default=False, alias="GMAIL_AI_CLASSIFICATION_ENABLED")
+    gmail_scan_interval_minutes: int = Field(default=60, alias="GMAIL_SCAN_INTERVAL_MINUTES")
+    gmail_scan_lookback_days: int = Field(default=30, alias="GMAIL_SCAN_LOOKBACK_DAYS")
+    gmail_calendar_lookahead_days: int = Field(default=14, alias="GMAIL_CALENDAR_LOOKAHEAD_DAYS")
 
     # ── USAJobs ───────────────────────────────────────────────────────────────
     usajobs_api_key: str = Field(default="", alias="USAJOBS_API_KEY")
