@@ -14,8 +14,9 @@ import { CandidateListPage } from "./pages/CandidateListPage";
 import { CandidatePortalPage } from "./pages/CandidatePortalPage";
 import { EmployeeWorkQueuePage } from "./pages/EmployeeWorkQueuePage";
 import { JobMatchDetailPage } from "./pages/JobMatchDetailPage";
-import { LandingPage } from "./pages/LandingPage";
+
 import { LoginPage } from "./pages/LoginPage";
+import { PublicSitePage } from "./pages/PublicSitePage";
 import { OperationsDashboardPage } from "./pages/OperationsDashboardPage";
 import type {
   AlertRecipient,
@@ -58,6 +59,7 @@ const PRIORITY_TO_NUM: Record<Exclude<PriorityFilter, "All">, number> = {
 
 const SUPPORTING_DATA_LIMIT = 200; // candidates, matches — lookup maps
 const JOBS_LOAD_LIMIT = 2000;       // jobs need a wider net so jobMap covers all match job_ids
+const PUBLIC_PATHS = new Set(["/", "/success-stories", "/contact"]);
 const ADMIN_ONLY_PAGES: ActivePage[] = ["admin-users", "admin-candidates", "admin-whatsapp", "admin-sources", "analytics", "gmail-analytics"];
 
 /** Convert a DashboardTimeWindow + optional specific day into ISO created_after/created_before strings. */
@@ -106,8 +108,7 @@ export default function App() {
   const params = new URLSearchParams(window.location.search);
   const initialResetToken = params.get("reset_token");
   const initialInviteEmail = extractInviteEmail(params.get("invite"));
-  // Show login form directly if arriving via invite/reset link
-  const [showLogin, setShowLogin] = useState<boolean>(
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
     !!(initialResetToken || initialInviteEmail)
   );
   const [activePage, setActivePage] = useState<ActivePage>("operations-dashboard");
@@ -191,6 +192,24 @@ export default function App() {
       }
     }
   }, [activePage, currentUser]);
+
+
+  useEffect(() => {
+    const onPopState = () => setCurrentPath(window.location.pathname);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  function navigateTo(path: string, replace = false) {
+    if (window.location.pathname === path && !window.location.search) {
+      setCurrentPath(path);
+      return;
+    }
+    const method = replace ? "replaceState" : "pushState";
+    window.history[method]({}, "", path);
+    setCurrentPath(path);
+    window.scrollTo({ top: 0 });
+  }
 
   // ── Supporting data load (candidates, jobs, matches — lookup maps) ──────────
   async function loadData() {
@@ -494,10 +513,17 @@ export default function App() {
   // ── Render ──────────────────────────────────────────────────────────────────
   if (!authReady) return <main className="login-shell">Loading...</main>;
 
+  const hasAuthUrlIntent = Boolean(initialResetToken || initialInviteEmail);
+  const publicPage =
+    currentPath === "/success-stories" ? "success-stories" :
+    currentPath === "/contact" ? "contact" :
+    "home";
+
+  if (!currentUser && PUBLIC_PATHS.has(currentPath) && !hasAuthUrlIntent) {
+    return <PublicSitePage page={publicPage} onNavigate={navigateTo} />;
+  }
+
   if (!currentUser) {
-    if (!showLogin) {
-      return <LandingPage onSignIn={() => setShowLogin(true)} />;
-    }
     return (
       <LoginPage
         error={authError}
@@ -512,6 +538,7 @@ export default function App() {
         onGoogleAuth={handleGoogleAuth}
         onForgotPassword={handleForgotPassword}
         onResetPassword={handleSelfResetPassword}
+        onPublicHome={() => navigateTo("/")}
       />
     );
   }
