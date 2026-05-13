@@ -109,8 +109,6 @@ export default function App() {
   const initialResetToken = params.get("reset_token");
   const initialInviteEmail = extractInviteEmail(params.get("invite"));
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
-    !!(initialResetToken || initialInviteEmail)
-  );
   const [activePage, setActivePage] = useState<ActivePage>("operations-dashboard");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
