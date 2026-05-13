@@ -14,6 +14,7 @@ import { CandidateListPage } from "./pages/CandidateListPage";
 import { CandidatePortalPage } from "./pages/CandidatePortalPage";
 import { EmployeeWorkQueuePage } from "./pages/EmployeeWorkQueuePage";
 import { JobMatchDetailPage } from "./pages/JobMatchDetailPage";
+import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OperationsDashboardPage } from "./pages/OperationsDashboardPage";
 import type {
@@ -105,6 +106,10 @@ export default function App() {
   const params = new URLSearchParams(window.location.search);
   const initialResetToken = params.get("reset_token");
   const initialInviteEmail = extractInviteEmail(params.get("invite"));
+  // Show login form directly if arriving via invite/reset link
+  const [showLogin, setShowLogin] = useState<boolean>(
+    !!(initialResetToken || initialInviteEmail)
+  );
   const [activePage, setActivePage] = useState<ActivePage>("operations-dashboard");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -490,6 +495,9 @@ export default function App() {
   if (!authReady) return <main className="login-shell">Loading...</main>;
 
   if (!currentUser) {
+    if (!showLogin) {
+      return <LandingPage onSignIn={() => setShowLogin(true)} />;
+    }
     return (
       <LoginPage
         error={authError}
