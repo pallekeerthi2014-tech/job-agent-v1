@@ -68,11 +68,9 @@ function computeTimeRange(
   dayFilter: string
 ): { created_after?: string; created_before?: string } {
   if (dayFilter !== "all") {
-    // Filter to exact day in UTC
-    return {
-      created_after: `${dayFilter}T00:00:00Z`,
-      created_before: `${dayFilter}T23:59:59Z`
-    };
+    const start = new Date(`${dayFilter}T00:00:00`);
+    const end = new Date(`${dayFilter}T23:59:59.999`);
+    return { created_after: start.toISOString(), created_before: end.toISOString() };
   }
   const now = new Date();
   switch (timeWindow) {
@@ -259,9 +257,13 @@ export default function App() {
   async function loadWorkQueueData() {
     if (!currentUser) return;
     try {
+      setPageError(null);
       const scopedEmployeeId = currentUser.role === "employee" ? currentUser.employee_id ?? undefined : selectedEmployeeId ?? undefined;
       const timeRange = computeTimeRange(dashboardTimeWindow, dashboardDayFilter);
       const offset = (dashboardPage - 1) * dashboardPageSize;
+      const source = dashboardSourceFilter === "all" ? undefined : dashboardSourceFilter;
+      const status = dashboardStatusFilter === "all" ? undefined : dashboardStatusFilter;
+      const search = dashboardSearchTerm.trim() || undefined;
 
       const [wqResponse, statsResponse] = await Promise.all([
         apiClient.getWorkQueues({
@@ -270,7 +272,9 @@ export default function App() {
           employee_id: scopedEmployeeId,
           candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined),
           priority: selectedPriority === "All" ? undefined : selectedPriority,
-          status: dashboardStatusFilter === "all" ? undefined : dashboardStatusFilter,
+          status,
+          source,
+          search,
           sort_by: "created_at",
           sort_order: "desc",
           ...timeRange
@@ -278,8 +282,11 @@ export default function App() {
         apiClient.getWorkQueueStats({
           days: 7,
           employee_id: scopedEmployeeId,
-          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined)
-        })
+          candidate_id: dashboardCandidateFilter ?? (selectedCandidateId ?? undefined),
+          source,
+          status,
+          search
+        }).catch(() => [])
       ]);
 
       setWorkQueues(wqResponse.items);
@@ -294,7 +301,7 @@ export default function App() {
   useEffect(() => { void loadWorkQueueData(); }, [
     currentUser, selectedCandidateId, selectedEmployeeId, selectedPriority,
     dashboardPage, dashboardPageSize, dashboardTimeWindow, dashboardDayFilter,
-    dashboardStatusFilter, dashboardCandidateFilter
+    dashboardStatusFilter, dashboardCandidateFilter, dashboardSourceFilter, dashboardSearchTerm
   ]);
 
   // Load analytics when navigating to analytics page
@@ -592,8 +599,8 @@ export default function App() {
           jobMap={jobMap}
           matchMap={matchMap}
           candidates={candidates}
+          sourceOptions={Array.from(new Set(jobs.map((job) => job.source).filter(Boolean))).sort((a, b) => a.localeCompare(b))}
           busyQueueId={busyQueueId}
-          currentUserRole={currentUser.role}
           searchTerm={dashboardSearchTerm}
           sourceFilter={dashboardSourceFilter}
           statusFilter={dashboardStatusFilter}
@@ -602,8 +609,8 @@ export default function App() {
           candidateFilter={dashboardCandidateFilter}
           page={dashboardPage}
           pageSize={dashboardPageSize}
-          onSearchTermChange={setDashboardSearchTerm}
-          onSourceFilterChange={setDashboardSourceFilter}
+          onSearchTermChange={(value) => { setDashboardSearchTerm(value); setDashboardPage(1); }}
+          onSourceFilterChange={(value) => { setDashboardSourceFilter(value); setDashboardPage(1); }}
           onStatusFilterChange={setDashboardStatusFilter}
           onTimeWindowChange={setDashboardTimeWindow}
           onDayFilterChange={setDashboardDayFilter}

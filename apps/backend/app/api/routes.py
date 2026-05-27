@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user, require_authenticated_user, require_super_admin, require_candidate_user
 from app.db import crud
 from app.models.alert_recipient import AlertRecipient
-from app.models.candidate import Candidate
+from app.models.candidate import Candidate, CandidatePreference
 from app.models.gmail_analytics import CandidateMailbox
 from app.models.employee import Employee
 from app.models.job import JobNormalized, JobRaw
@@ -635,6 +635,9 @@ def get_work_queue_stats(
     days: int = Query(default=7, ge=1, le=30),
     employee_id: int | None = Query(default=None),
     candidate_id: int | None = Query(default=None),
+    source: str | None = Query(default=None),
+    status_value: str | None = Query(default=None, alias="status"),
+    search: str | None = Query(default=None),
     current_user: User = Depends(require_authenticated_user),
 ) -> list[WorkQueueDayStatsRead]:
     scoped_employee_id = _scoped_employee_id(current_user, employee_id)
@@ -646,6 +649,9 @@ def get_work_queue_stats(
         days=days,
         employee_id=scoped_employee_id,
         candidate_id=candidate_id,
+        source=source,
+        status=status_value,
+        search=search.strip() if search and search.strip() else None,
     )
     return [WorkQueueDayStatsRead(**s) for s in stats]
 
@@ -661,6 +667,8 @@ def list_work_queues(
     employee_id: int | None = Query(default=None),
     priority: str | None = Query(default=None),
     status_value: str | None = Query(default=None, alias="status"),
+    source: str | None = Query(default=None),
+    search: str | None = Query(default=None),
     created_after: datetime | None = Query(default=None),
     created_before: datetime | None = Query(default=None),
     current_user: User = Depends(require_authenticated_user),
@@ -679,6 +687,8 @@ def list_work_queues(
         employee_id=scoped_employee_id,
         priority_bucket=priority,
         status=status_value,
+        source=source,
+        search=search.strip() if search and search.strip() else None,
         created_after=created_after,
         created_before=created_before,
     )
@@ -1327,6 +1337,40 @@ def portal_update_profile(
     return candidate
 
 
+@router.get("/portal/preferences", response_model=CandidatePreferenceRead)
+def portal_get_preferences(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_candidate_user),
+) -> CandidatePreferenceRead:
+    """Return the authenticated candidate's job-search preferences."""
+    candidate_id = current_user.candidate_id
+    if candidate_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
+    preference = db.get(CandidatePreference, candidate_id)
+    if preference is None:
+        preference = crud.upsert_candidate_preference(
+            db,
+            CandidatePreferenceCreate(candidate_id=candidate_id),
+        )
+    return preference
+
+
+@router.put("/portal/preferences", response_model=CandidatePreferenceRead)
+def portal_update_preferences(
+    payload: CandidatePreferenceUpsert,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_candidate_user),
+) -> CandidatePreferenceRead:
+    """Candidate updates their target roles, location, work-mode, and keyword preferences."""
+    candidate_id = current_user.candidate_id
+    if candidate_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
+    return crud.upsert_candidate_preference(
+        db,
+        CandidatePreferenceCreate(candidate_id=candidate_id, **payload.model_dump()),
+    )
+
+
 @router.get("/portal/matches", response_model=JobCandidateMatchPage)
 def portal_list_matches(
     db: Session = Depends(get_db),
@@ -1346,6 +1390,25 @@ def portal_list_matches(
     return JobCandidateMatchPage(items=items, meta=PageMeta(total=total, limit=limit, offset=offset))
 
 
+@router.get("/portal/applications", response_model=ApplicationPage)
+def portal_list_applications(
+    db: Session = Depends(get_db),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(require_candidate_user),
+) -> ApplicationPage:
+    """Return the authenticated candidate's own application history."""
+    total, items = crud.list_applications(
+        db,
+        limit=limit,
+        offset=offset,
+        sort_by="applied_at",
+        sort_order="desc",
+        candidate_id=current_user.candidate_id,
+    )
+    return ApplicationPage(items=items, meta=PageMeta(total=total, limit=limit, offset=offset))
+
+
 @router.get("/portal/jobs/{job_id}", response_model=JobNormalizedRead)
 def portal_get_job(
     job_id: int,
@@ -1357,6 +1420,44 @@ def portal_get_job(
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     return job
+
+
+@router.post("/portal/jobs/{job_id}/apply", response_model=ApplicationRead, status_code=status.HTTP_201_CREATED)
+def portal_apply_to_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_candidate_user),
+) -> ApplicationRead:
+    """Mark a job as applied for the authenticated candidate."""
+    candidate_id = current_user.candidate_id
+    if candidate_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
+
+    job = db.get(JobNormalized, job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    existing = db.scalar(
+        select(Application)
+        .where(Application.candidate_id == candidate_id)
+        .where(Application.job_id == job_id)
+        .order_by(Application.applied_at.desc())
+    )
+    if existing is not None:
+        existing.status = "applied"
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    return crud.create_application(
+        db,
+        ApplicationCreate(
+            candidate_id=candidate_id,
+            job_id=job_id,
+            status="applied",
+            notes="Applied from candidate portal.",
+        ),
+    )
 
 
 @router.post("/portal/me/resume", response_model=CandidateRead)

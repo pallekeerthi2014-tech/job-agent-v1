@@ -45,15 +45,46 @@ import type {
   WorkQueueReportPayload
 } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const ACCESS_TOKEN_KEY = "job-agent-access-token";
 
+function getApiBaseUrl() {
+  const baseUrl = RAW_API_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new Error("API URL is not configured. Set VITE_API_BASE_URL and redeploy the frontend.");
+  }
+  return baseUrl.replace(/\/+$/, "");
+}
+
+function apiUrl(path: string) {
+  return `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function toNetworkError(error: unknown) {
+  if (error instanceof TypeError) {
+    return new Error(
+      "Unable to reach the backend API. Check that VITE_API_BASE_URL points to the deployed backend and that CORS allows this site."
+    );
+  }
+  return error;
+}
+
 export function getStoredAccessToken() {
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  const rawToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!rawToken) return null;
+  const token = rawToken.trim();
+  if (!token || /[\r\n]/.test(token)) {
+    clearStoredAccessToken();
+    return null;
+  }
+  if (token !== rawToken) {
+    window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  }
+  return token;
 }
 
 export function setStoredAccessToken(token: string) {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, token.trim());
 }
 
 export function clearStoredAccessToken() {
@@ -61,16 +92,10 @@ export function clearStoredAccessToken() {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  if (!API_BASE_URL) {
-    throw new Error(
-      "Backend URL is not configured. Set VITE_API_BASE_URL to your deployed backend URL."
-    );
-  }
-
   const token = getStoredAccessToken();
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(apiUrl(path), {
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -78,11 +103,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       },
       ...options
     });
-  } catch {
-    throw new Error(
-      "We're having trouble connecting to the server. Please try again in a moment. " +
-      "If this keeps happening, contact support."
-    );
+  } catch (error) {
+    throw toNetworkError(error);
   }
 
   // 204 No Content — return empty object (DELETE endpoints)
@@ -102,6 +124,27 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+async function downloadAuthenticatedUrl(url: string, fallbackFilename: string) {
+  const token = getStoredAccessToken();
+  const response = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  }).catch((error) => {
+    throw toNetworkError(error);
+  });
+
+  if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fallbackFilename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(objectUrl);
 }
 
 function buildQuery(params: Record<string, string | number | undefined | null>) {
@@ -167,6 +210,8 @@ export const apiClient = {
     employee_id?: number;
     priority?: string;
     status?: string;
+    source?: string;
+    search?: string;
     sort_by?: string;
     sort_order?: string;
     created_after?: string;
@@ -176,6 +221,9 @@ export const apiClient = {
     days?: number;
     employee_id?: number;
     candidate_id?: number;
+    source?: string;
+    status?: string;
+    search?: string;
   }) => request<WorkQueueDayStats[]>(`/api/v1/work-queues/stats${buildQuery(params ?? {})}`),
   createApplication: (payload: ApplicationCreatePayload) =>
     request<Application>("/api/v1/applications", {
@@ -217,7 +265,7 @@ export const apiClient = {
     const token = getStoredAccessToken();
     const formData = new FormData();
     formData.append("file", file);
-    return fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`, {
+    return fetch(apiUrl(`/api/v1/candidates/${candidateId}/resume`), {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData
@@ -227,7 +275,7 @@ export const apiClient = {
     });
   },
   getResumeUrl: (candidateId: number) =>
-    `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume`,
+    apiUrl(`/api/v1/candidates/${candidateId}/resume`),
 
   // ── Phase 3: Work queue reporting ───────────────────────────────────────────
   reportWorkQueueItem: (queueId: number, payload: WorkQueueReportPayload) =>
@@ -283,15 +331,28 @@ export const apiClient = {
       method: "PATCH",
       body: JSON.stringify(payload)
     }),
+  portalGetPreferences: () =>
+    request<CandidatePreference>("/api/v1/portal/preferences"),
+  portalUpdatePreferences: (payload: Omit<CandidatePreference, "candidate_id">) =>
+    request<CandidatePreference>("/api/v1/portal/preferences", {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }),
   portalGetMatches: (params?: { limit?: number; offset?: number }) =>
     request<PaginatedResponse<Match>>(`/api/v1/portal/matches${buildQuery(params ?? {})}`),
+  portalGetApplications: (params?: { limit?: number; offset?: number }) =>
+    request<PaginatedResponse<Application>>(`/api/v1/portal/applications${buildQuery(params ?? {})}`),
   portalGetJob: (jobId: number) =>
     request<Job>(`/api/v1/portal/jobs/${jobId}`),
+  portalApplyToJob: (jobId: number) =>
+    request<Application>(`/api/v1/portal/jobs/${jobId}/apply`, {
+      method: "POST"
+    }),
   portalUploadResume: (file: File) => {
     const token = getStoredAccessToken();
     const formData = new FormData();
     formData.append("file", file);
-    return fetch(`${API_BASE_URL}/api/v1/portal/me/resume`, {
+    return fetch(apiUrl("/api/v1/portal/me/resume"), {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData
@@ -301,7 +362,7 @@ export const apiClient = {
     });
   },
   portalResumeUrl: () =>
-    `${API_BASE_URL}/api/v1/portal/me/resume`,
+    apiUrl("/api/v1/portal/me/resume"),
 
   // ── Phase 4: Source / Feed Management ─────────────────────────────────────
   listSourceTypes: () =>
@@ -385,7 +446,9 @@ export const apiClient = {
   getTailoredResume: (id: number) =>
     request<TailoredResumeRead>(`/api/v1/tailored-resumes/${id}`),
   downloadTailoredResumeUrl: (id: number) =>
-    `${API_BASE_URL}/api/v1/tailored-resumes/${id}/download`,
+    apiUrl(`/api/v1/tailored-resumes/${id}/download`),
+  downloadTailoredResume: (id: number, fallbackFilename = "tailored_resume.docx") =>
+    downloadAuthenticatedUrl(apiUrl(`/api/v1/tailored-resumes/${id}/download`), fallbackFilename),
   listTailoredResumes: (jobId: number, candidateId: number) =>
     request<TailoredResumeRead[]>(`/api/v1/jobs/${jobId}/tailored-resumes?candidate_id=${candidateId}`)
 };

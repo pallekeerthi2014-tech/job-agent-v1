@@ -22,8 +22,8 @@ type OperationsDashboardPageProps = {
   jobMap: Map<number, Job>;
   matchMap: Map<number, Match>;
   candidates: Candidate[]; // for candidate filter dropdown
+  sourceOptions: string[];
   busyQueueId: number | null;
-  currentUserRole: string; // "super_admin" | "employee"
   // filters
   searchTerm: string;
   sourceFilter: string;
@@ -69,13 +69,13 @@ export function OperationsDashboardPage({
   matchMap,
   candidates,
   busyQueueId,
-  currentUserRole,
   searchTerm,
   sourceFilter,
   statusFilter,
   timeWindow,
   dayFilter,
   candidateFilter,
+  sourceOptions,
   page,
   pageSize,
   onSearchTermChange,
@@ -90,23 +90,7 @@ export function OperationsDashboardPage({
   onMarkApplied,
   onSkip
 }: OperationsDashboardPageProps) {
-  // Client-side secondary filters (search + source applied within the loaded page)
-  const filteredItems = queueItems.filter((item) => {
-    const candidate = candidateMap.get(item.candidate_id);
-    const employee = employeeMap.get(item.employee_id);
-    const job = jobMap.get(item.job_id);
-    const haystack = [candidate?.name, employee?.name, job?.title, job?.company, job?.source, item.explanation]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    const matchesSearch = !searchTerm || haystack.includes(searchTerm.trim().toLowerCase());
-    const matchesSource = sourceFilter === "all" || job?.source === sourceFilter;
-    return matchesSearch && matchesSource;
-  });
-
-  const sources = Array.from(
-    new Set(queueItems.map((i) => jobMap.get(i.job_id)?.source).filter((v): v is string => Boolean(v)))
-  ).sort((a, b) => a.localeCompare(b));
+  const visibleItems = queueItems;
 
   // Server total from meta (accurate, uncapped)
   const totalJobs = meta?.total ?? 0;
@@ -196,7 +180,7 @@ export function OperationsDashboardPage({
             <span>Source</span>
             <select value={sourceFilter} onChange={(e) => onSourceFilterChange(e.target.value)}>
               <option value="all">All sources</option>
-              {sources.map((s) => <option key={s} value={s}>{s}</option>)}
+              {sourceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
 
@@ -249,13 +233,13 @@ export function OperationsDashboardPage({
         </div>
 
         {/* Day-grouped rows */}
-        {filteredItems.length === 0 ? (
+        {visibleItems.length === 0 ? (
           <div className="empty-state" style={{ minHeight: 120, display: "grid", placeItems: "center" }}>
             <p>No jobs match these filters. Try widening your search or time window.</p>
           </div>
         ) : (
           <div className="ops-job-list">
-            {groupByDay(filteredItems).map(([day, items]) => (
+            {groupByDay(visibleItems).map(([day, items]) => (
               <div key={day}>
                 {/* Day separator */}
                 <div className="ops-day-sep">
@@ -407,7 +391,7 @@ function DayStatsChart({ stats, selectedDay, onDayClick }: DayStatsChartProps) {
     const placeholders: WorkQueueDayStats[] = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today);
       d.setDate(today.getDate() - (6 - i));
-      return { date: d.toISOString().slice(0, 10), total: 0, applied: 0, pending: 0 };
+      return { date: toLocalDateKey(d), total: 0, applied: 0, pending: 0 };
     });
     return <DayStatsChart stats={placeholders} selectedDay={selectedDay} onDayClick={onDayClick} />;
   }
@@ -417,12 +401,12 @@ function DayStatsChart({ stats, selectedDay, onDayClick }: DayStatsChartProps) {
   const days: WorkQueueDayStats[] = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (6 - i));
-    const key = d.toISOString().slice(0, 10);
+    const key = toLocalDateKey(d);
     return stats.find((s) => s.date === key) ?? { date: key, total: 0, applied: 0, pending: 0 };
   });
 
   const maxTotal = Math.max(...days.map((d) => d.total), 1);
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey = toLocalDateKey(today);
 
   return (
     <div className="ops-chart-bars">
@@ -480,9 +464,16 @@ function formatDayLabel(dateStr: string) {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (dateStr === today.toISOString().slice(0, 10)) return "Today";
-  if (dateStr === yesterday.toISOString().slice(0, 10)) return "Yesterday";
+  if (dateStr === toLocalDateKey(today)) return "Today";
+  if (dateStr === toLocalDateKey(yesterday)) return "Yesterday";
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+function toLocalDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function capitalize(s: string) {

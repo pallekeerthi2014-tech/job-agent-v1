@@ -3092,7 +3092,136 @@ button:disabled {
   transition: background 0.15s;
 }
 .portal-btn-apply:hover { background: var(--brand-green-dark); }
+.portal-btn-applied {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
 .portal-no-link { font-size: 0.75rem; color: #94a3b8; }
+
+.portal-profile-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.portal-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.portal-profile-stats div,
+.portal-preference-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+}
+
+.portal-profile-stats div {
+  padding: 16px;
+}
+
+.portal-profile-stats strong {
+  display: block;
+  color: #0f172a;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.portal-profile-stats span {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.portal-preference-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.portal-preference-card h3 {
+  margin: 0 0 4px;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.portal-preference-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.portal-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.portal-choice-chip {
+  border: 1px solid #d8e2dc;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.portal-choice-chip-active {
+  background: var(--brand-green-soft);
+  border-color: var(--brand-green);
+  color: var(--brand-green-dark);
+}
+
+.portal-preference-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.portal-preference-grid label {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.portal-preference-grid input {
+  width: 100%;
+  border: 1px solid #d8e2dc;
+  border-radius: 8px;
+  padding: 10px 11px;
+  color: #0f172a;
+}
+
+.portal-preference-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.portal-preference-actions span {
+  color: var(--brand-green-dark);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
 
 /* Loading + empty states */
 .portal-v2-loading {
@@ -3180,6 +3309,10 @@ button:disabled {
   .portal-sidebar-signout { width: auto; margin: 0; }
   .portal-v2-main { padding: 16px; }
   .portal-v2-cards { grid-template-columns: 1fr; }
+  .portal-profile-stats,
+  .portal-preference-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Phase 8: Resume Tailoring Panel ──────────────────────────────────────── */
@@ -3392,9 +3525,8 @@ button:disabled {
 .tailor-status-ready { background: var(--brand-green-soft); color: var(--brand-green-dark); }
 .tailor-history-status-ready { color: var(--brand-green-dark); }
 .tailor-history-dl { color: var(--brand-green); text-decoration: none; font-weight: 600; }
-/* ═══════════════════════════════════════════════════════════════════════════
-   Operations Dashboard v2 — bar chart, time toggle, pagination
-   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Operations Dashboard v2: bar chart, time toggle, pagination */
 
 /* ── Chart ───────────────────────────────────────────────────────────────── */
 .ops-chart-header {
@@ -3413,6 +3545,7 @@ button:disabled {
   font-size: 0.75rem;
   color: var(--brand-muted);
   margin-top: 2px;
+}
 .ops-chart-legend {
   display: flex;
   gap: 14px;
@@ -3446,6 +3579,7 @@ button:disabled {
   border-radius: 8px;
   padding: 4px 2px;
   transition: background 0.15s;
+}
 .ops-bar-col:hover { background: rgba(0, 122, 61, 0.06); }
 .ops-bar-col-selected { background: rgba(0, 122, 61, 0.1) !important; outline: 2px solid rgba(0, 122, 61, 0.3); }
 .ops-bar-count {
@@ -3492,6 +3626,7 @@ button:disabled {
   grid-template-columns: minmax(0, 1.6fr) auto repeat(3, minmax(150px, 1fr));
   gap: 14px;
   align-items: end;
+}
 .ops-search-field { /* inherits from .filter-field */ }
 .ops-time-toggle {
   display: flex;
@@ -3537,6 +3672,7 @@ button:disabled {
   font-size: 0.75rem;
   line-height: 1;
   opacity: 0.7;
+}
 .ops-day-chip-clear:hover { opacity: 1; }
 /* ── Job list ────────────────────────────────────────────────────────────── */
 .ops-list-panel { padding: 0; overflow: hidden; }
@@ -3546,6 +3682,7 @@ button:disabled {
   align-items: center;
   padding: 14px 20px;
   border-bottom: 1px solid var(--brand-border);
+}
 .ops-list-header strong { font-size: 0.9rem; color: var(--brand-black); }
 .ops-list-meta { font-size: 0.78rem; color: var(--brand-muted); }
 .ops-job-list { display: flex; flex-direction: column; }
@@ -3569,6 +3706,7 @@ button:disabled {
 .ops-day-sep-chip {
   font-size: 0.75rem;
   color: var(--brand-muted);
+}
 /* Job row */
 .ops-job-row {
   display: grid;
@@ -3576,6 +3714,7 @@ button:disabled {
   gap: 0;
   border-bottom: 1px solid var(--brand-border);
   align-items: stretch;
+}
 .ops-job-row:last-child { border-bottom: none; }
 .ops-job-row:hover { background: rgba(0, 122, 61, 0.02); }
 .ops-job-row-meta {
@@ -3681,3 +3820,4 @@ button:disabled {
   .ops-filters-row { grid-template-columns: 1fr; }
   .ops-time-toggle { flex-wrap: wrap; }
   .ops-pagination { flex-direction: column; align-items: flex-start; }
+}

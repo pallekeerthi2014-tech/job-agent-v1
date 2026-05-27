@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import Select, asc, case, desc, func, select
+from sqlalchemy import Select, asc, case, desc, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.application import Application
@@ -303,10 +303,19 @@ def list_employee_work_queues(
     employee_id: int | None = None,
     priority_bucket: str | None = None,
     status: str | None = None,
+    source: str | None = None,
+    search: str | None = None,
     created_after: datetime | None = None,
     created_before: datetime | None = None,
 ) -> tuple[int, list[EmployeeWorkQueue]]:
     stmt: Select = select(EmployeeWorkQueue)
+    if source is not None or search:
+        stmt = stmt.join(JobNormalized, EmployeeWorkQueue.job_id == JobNormalized.id)
+    if search:
+        stmt = (
+            stmt.join(Candidate, EmployeeWorkQueue.candidate_id == Candidate.id)
+            .join(Employee, EmployeeWorkQueue.employee_id == Employee.id)
+        )
     if candidate_id is not None:
         stmt = stmt.where(EmployeeWorkQueue.candidate_id == candidate_id)
     if employee_id is not None:
@@ -315,6 +324,20 @@ def list_employee_work_queues(
         stmt = stmt.where(EmployeeWorkQueue.priority_bucket == priority_bucket)
     if status is not None:
         stmt = stmt.where(EmployeeWorkQueue.status == status)
+    if source is not None:
+        stmt = stmt.where(JobNormalized.source == source)
+    if search:
+        term = f"%{search.strip()}%"
+        stmt = stmt.where(
+            or_(
+                Candidate.name.ilike(term),
+                Employee.name.ilike(term),
+                JobNormalized.title.ilike(term),
+                JobNormalized.company.ilike(term),
+                JobNormalized.source.ilike(term),
+                EmployeeWorkQueue.explanation.ilike(term),
+            )
+        )
     if created_after is not None:
         stmt = stmt.where(EmployeeWorkQueue.created_at >= created_after)
     if created_before is not None:
@@ -332,6 +355,9 @@ def get_work_queue_daily_stats(
     days: int = 7,
     employee_id: int | None = None,
     candidate_id: int | None = None,
+    source: str | None = None,
+    status: str | None = None,
+    search: str | None = None,
 ) -> list[dict]:
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days)
     stmt = (
@@ -343,10 +369,33 @@ def get_work_queue_daily_stats(
         )
         .where(EmployeeWorkQueue.created_at >= cutoff)
     )
+    if source is not None or search:
+        stmt = stmt.join(JobNormalized, EmployeeWorkQueue.job_id == JobNormalized.id)
+    if search:
+        stmt = (
+            stmt.join(Candidate, EmployeeWorkQueue.candidate_id == Candidate.id)
+            .join(Employee, EmployeeWorkQueue.employee_id == Employee.id)
+        )
     if employee_id is not None:
         stmt = stmt.where(EmployeeWorkQueue.employee_id == employee_id)
     if candidate_id is not None:
         stmt = stmt.where(EmployeeWorkQueue.candidate_id == candidate_id)
+    if source is not None:
+        stmt = stmt.where(JobNormalized.source == source)
+    if status is not None:
+        stmt = stmt.where(EmployeeWorkQueue.status == status)
+    if search:
+        term = f"%{search.strip()}%"
+        stmt = stmt.where(
+            or_(
+                Candidate.name.ilike(term),
+                Employee.name.ilike(term),
+                JobNormalized.title.ilike(term),
+                JobNormalized.company.ilike(term),
+                JobNormalized.source.ilike(term),
+                EmployeeWorkQueue.explanation.ilike(term),
+            )
+        )
     stmt = stmt.group_by(func.date(EmployeeWorkQueue.created_at)).order_by(
         func.date(EmployeeWorkQueue.created_at)
     )

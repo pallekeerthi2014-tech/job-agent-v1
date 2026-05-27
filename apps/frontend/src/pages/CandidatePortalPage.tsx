@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiClient, getStoredAccessToken } from "../api/client";
-import type { Candidate, Job, Match, User } from "../types";
+import type { Application, Candidate, CandidatePreference, Job, Match, User } from "../types";
 
 interface Props {
   currentUser: User;
@@ -17,6 +17,9 @@ interface Props {
 
 type SortKey = "score" | "date" | "title";
 type FilterKey = "all" | "high" | "medium" | "low";
+
+const ROLE_OPTIONS = ["Business Analyst", "Data Analyst", "Healthcare Business Analyst", "Product Analyst", "Scrum Master"];
+const WORK_MODE_OPTIONS = ["Remote", "Hybrid", "On-site", "Contract", "Full-time"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -30,6 +33,17 @@ function fmtSalary(min: number | null | undefined, unit: string | null | undefin
   if (!min) return null;
   const u = unit ?? "year";
   return `$${min.toLocaleString()} / ${u}`;
+}
+
+function splitList(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function toggleValue(values: string[], value: string) {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 }
 
 // ── Profile sidebar ───────────────────────────────────────────────────────────
@@ -271,7 +285,17 @@ function ProfileSidebar({
 
 // ── Job match card ────────────────────────────────────────────────────────────
 
-function JobCard({ match, job }: { match: Match; job: Job | undefined }) {
+function JobCard({
+  match,
+  job,
+  applied,
+  onApply,
+}: {
+  match: Match;
+  job: Job | undefined;
+  applied: boolean;
+  onApply: () => void;
+}) {
   const score = Math.round(match.score);
   const sc = scoreColor(score);
   const applyUrl = job?.canonical_apply_url ?? job?.apply_url;
@@ -325,10 +349,12 @@ function JobCard({ match, job }: { match: Match; job: Job | undefined }) {
 
       {/* Apply CTA */}
       <div className="portal-job-actions">
-        {applyUrl ? (
-          <a href={applyUrl} target="_blank" rel="noopener noreferrer" className="portal-btn-apply">
-            Apply →
-          </a>
+        {applied ? (
+          <span className="portal-btn-applied">Applied</span>
+        ) : applyUrl ? (
+          <button type="button" className="portal-btn-apply" onClick={onApply}>
+            Apply
+          </button>
         ) : (
           <span className="portal-no-link">No link</span>
         )}
@@ -337,11 +363,129 @@ function JobCard({ match, job }: { match: Match; job: Job | undefined }) {
   );
 }
 
+function PreferencePanel({
+  preferences,
+  applications,
+  totalMatches,
+  onSaved,
+}: {
+  preferences: CandidatePreference | null;
+  applications: Application[];
+  totalMatches: number;
+  onSaved: (preferences: CandidatePreference) => void;
+}) {
+  const [preferredTitles, setPreferredTitles] = useState<string[]>([]);
+  const [employmentPreferences, setEmploymentPreferences] = useState<string[]>([]);
+  const [locationText, setLocationText] = useState("");
+  const [keywordsText, setKeywordsText] = useState("");
+  const [excludeText, setExcludeText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPreferredTitles(preferences?.preferred_titles ?? []);
+    setEmploymentPreferences(preferences?.employment_preferences ?? []);
+    setLocationText((preferences?.location_preferences ?? []).join(", "));
+    setKeywordsText((preferences?.must_have_keywords ?? []).join(", "));
+    setExcludeText((preferences?.exclude_keywords ?? []).join(", "));
+  }, [preferences]);
+
+  async function savePreferences() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const updated = await apiClient.portalUpdatePreferences({
+        preferred_titles: preferredTitles,
+        employment_preferences: employmentPreferences,
+        location_preferences: splitList(locationText),
+        domain_expertise: [],
+        must_have_keywords: splitList(keywordsText),
+        exclude_keywords: splitList(excludeText),
+      });
+      onSaved(updated);
+      setMessage("Preferences saved. New matches will use this profile.");
+      setTimeout(() => setMessage(null), 3500);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const appliedCount = applications.filter((app) => app.status !== "skipped").length;
+  const pendingCount = Math.max(totalMatches - new Set(applications.map((app) => app.job_id)).size, 0);
+
+  return (
+    <section className="portal-profile-panel">
+      <div className="portal-profile-stats">
+        <div><strong>{totalMatches}</strong><span>Matching jobs</span></div>
+        <div><strong>{appliedCount}</strong><span>Applied</span></div>
+        <div><strong>{pendingCount}</strong><span>Pending</span></div>
+      </div>
+
+      <div className="portal-preference-card">
+        <div>
+          <h3>Job Profile</h3>
+          <p>Choose the roles, work modes, and locations you want the portal to prioritize.</p>
+        </div>
+
+        <div className="portal-chip-group">
+          {ROLE_OPTIONS.map((role) => (
+            <button
+              key={role}
+              className={`portal-choice-chip${preferredTitles.includes(role) ? " portal-choice-chip-active" : ""}`}
+              type="button"
+              onClick={() => setPreferredTitles((current) => toggleValue(current, role))}
+            >
+              {role}
+            </button>
+          ))}
+        </div>
+
+        <div className="portal-chip-group">
+          {WORK_MODE_OPTIONS.map((mode) => (
+            <button
+              key={mode}
+              className={`portal-choice-chip${employmentPreferences.includes(mode) ? " portal-choice-chip-active" : ""}`}
+              type="button"
+              onClick={() => setEmploymentPreferences((current) => toggleValue(current, mode))}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+
+        <div className="portal-preference-grid">
+          <label>
+            <span>Preferred locations</span>
+            <input value={locationText} onChange={(event) => setLocationText(event.target.value)} placeholder="Remote, Atlanta, Dallas" />
+          </label>
+          <label>
+            <span>Must-have keywords</span>
+            <input value={keywordsText} onChange={(event) => setKeywordsText(event.target.value)} placeholder="SQL, Excel, Power BI" />
+          </label>
+          <label>
+            <span>Exclude keywords</span>
+            <input value={excludeText} onChange={(event) => setExcludeText(event.target.value)} placeholder="Senior, onsite only" />
+          </label>
+        </div>
+
+        <div className="portal-preference-actions">
+          <button className="portal-sidebar-btn-primary" type="button" onClick={savePreferences} disabled={busy}>
+            {busy ? "Saving..." : "Save job profile"}
+          </button>
+          {message && <span>{message}</span>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function CandidatePortalPage({ currentUser, onLogout }: Props) {
   const [profile, setProfile] = useState<Candidate | null>(null);
+  const [preferences, setPreferences] = useState<CandidatePreference | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [jobCache, setJobCache] = useState<Map<number, Job>>(new Map());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -361,8 +505,14 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
         apiClient.portalGetProfile(),
         apiClient.portalGetMatches({ limit: 100, offset: 0 }),
       ]);
+      const [preferenceData, applicationData] = await Promise.all([
+        apiClient.portalGetPreferences(),
+        apiClient.portalGetApplications({ limit: 200, offset: 0 }),
+      ]);
       setProfile(profileData);
+      setPreferences(preferenceData);
       setMatches(matchData.items);
+      setApplications(applicationData.items);
 
       const uniqueJobIds = [...new Set(matchData.items.map((m) => m.job_id))];
       const pairs = await Promise.all(
@@ -413,6 +563,17 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
   const highCount = matches.filter((m) => m.score >= 75).length;
   const medCount  = matches.filter((m) => m.score >= 50 && m.score < 75).length;
   const lowCount  = matches.filter((m) => m.score < 50).length;
+  const appliedJobIds = new Set(applications.filter((app) => app.status !== "skipped").map((app) => app.job_id));
+
+  async function handleApply(match: Match, job: Job | undefined) {
+    const application = await apiClient.portalApplyToJob(match.job_id);
+    setApplications((current) => {
+      const withoutExisting = current.filter((item) => item.job_id !== application.job_id);
+      return [application, ...withoutExisting];
+    });
+    const applyUrl = job?.canonical_apply_url ?? job?.apply_url;
+    if (applyUrl) window.open(applyUrl, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <div className="portal-v2-shell">
@@ -429,7 +590,7 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
 
       <div className="portal-v2-body">
         {/* ── Sidebar ── */}
-        <ProfileSidebar
+          <ProfileSidebar
           profile={profile}
           currentUser={currentUser}
           onLogout={onLogout}
@@ -439,6 +600,13 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
         {/* ── Main content ── */}
         <main className="portal-v2-main">
           {error && <div className="portal-error" style={{ marginBottom: 16 }}>{error}</div>}
+
+          <PreferencePanel
+            preferences={preferences}
+            applications={applications}
+            totalMatches={matches.length}
+            onSaved={setPreferences}
+          />
 
           {/* Section header */}
           <div className="portal-v2-section-header">
@@ -511,7 +679,13 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
           ) : (
             <div className="portal-v2-cards">
               {filtered.map((match) => (
-                <JobCard key={match.id} match={match} job={jobCache.get(match.job_id)} />
+                <JobCard
+                  key={match.id}
+                  match={match}
+                  job={jobCache.get(match.job_id)}
+                  applied={appliedJobIds.has(match.job_id)}
+                  onApply={() => void handleApply(match, jobCache.get(match.job_id))}
+                />
               ))}
             </div>
           )}
