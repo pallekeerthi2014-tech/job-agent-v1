@@ -10,6 +10,7 @@ interface Props {
 type SortKey = "score" | "date" | "title";
 type FilterKey = "all" | "high" | "saved" | "pending" | "applied";
 type PortalTab = "overview" | "matches" | "tracker" | "prep";
+const PAGE_SIZE_OPTIONS = [5, 10, 20];
 
 const ROLE_OPTIONS = [
   "Business Analyst",
@@ -46,6 +47,11 @@ function formatDate(value?: string | null) {
 function fmtSalary(min: number | null | undefined, unit: string | null | undefined) {
   if (!min) return null;
   return `$${min.toLocaleString()} / ${unit ?? "year"}`;
+}
+
+function truncateText(value: string | null | undefined, max = 150) {
+  if (!value) return "";
+  return value.length > max ? `${value.slice(0, max).trim()}...` : value;
 }
 
 function getApplicationStatus(applicationsByJob: Map<number, Application>, jobId: number) {
@@ -410,6 +416,7 @@ function JobCard({
   onSkip: () => void;
   onTailor: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const score = Math.round(match.score);
   const sc = scoreColor(score);
   const reasons = matchReasons(match, job, preferences);
@@ -417,6 +424,10 @@ function JobCard({
   const applied = isAppliedStatus(status);
   const saved = status === "saved";
   const skipped = status === "not_interested";
+  const primaryRole = preferences?.preferred_titles?.[0] ?? job?.title ?? "this role";
+  const recruiterMessage = job
+    ? `Hi, I am interested in the ${job.title} role at ${job.company}. My background aligns with the role requirements, and I would welcome the chance to discuss fit.`
+    : "Save a job to generate a recruiter outreach message.";
 
   return (
     <article className={`portal-job-card portal-job-card-enhanced${skipped ? " portal-job-muted" : ""}`}>
@@ -441,27 +452,45 @@ function JobCard({
         </div>
       </div>
 
-      <div className="portal-fit-grid">
+      <div className="portal-fit-grid portal-fit-grid-compact">
         <div>
           <span className="portal-fit-label">Why it matches</span>
           <div className="portal-mini-list">
-            {(reasons.length ? reasons : ["Good overall profile alignment"]).map((reason) => <span key={reason}>{reason}</span>)}
+            {(reasons.length ? reasons : ["Good overall profile alignment"]).slice(0, 3).map((reason) => <span key={reason}>{reason}</span>)}
           </div>
         </div>
         <div>
           <span className="portal-fit-label">Resume focus</span>
           <div className="portal-mini-list">
-            {(missing.length ? missing : ["Resume already covers key terms"]).slice(0, 4).map((keyword) => <span key={keyword}>{keyword}</span>)}
+            {(missing.length ? missing : ["Resume already covers key terms"]).slice(0, 3).map((keyword) => <span key={keyword}>{keyword}</span>)}
           </div>
         </div>
       </div>
 
-      {match.explanation && <div className="portal-job-explanation">{match.explanation}</div>}
+      {match.explanation && <div className="portal-job-explanation">{truncateText(match.explanation, expanded ? 900 : 170)}</div>}
+
+      {expanded && (
+        <div className="portal-job-detail-drawer">
+          <div>
+            <span className="portal-fit-label">Application plan</span>
+            <p>Use a tailored resume for {primaryRole}, mention the strongest matching keywords, and apply while the posting is fresh.</p>
+          </div>
+          <div>
+            <span className="portal-fit-label">Recruiter message</span>
+            <p>{recruiterMessage}</p>
+          </div>
+          <div>
+            <span className="portal-fit-label">Interview prep</span>
+            <p>Prepare one project story, one metrics-driven result, and one answer connecting your tools to business outcomes.</p>
+          </div>
+        </div>
+      )}
 
       <div className="portal-job-actions portal-job-actions-enhanced">
         <button type="button" className="portal-btn-apply" onClick={onApply} disabled={actionBusy || applied}>{applied ? "Applied" : "Apply"}</button>
         <button type="button" className="portal-btn-secondary" onClick={onTailor} disabled={actionBusy}>Request tailored resume</button>
         <button type="button" className="portal-btn-secondary" onClick={onSave} disabled={actionBusy || saved}>{saved ? "Saved" : "Save"}</button>
+        <button type="button" className="portal-btn-secondary" onClick={() => setExpanded((value) => !value)}>{expanded ? "Less detail" : "View plan"}</button>
         <button type="button" className="portal-btn-quiet" onClick={onSkip} disabled={actionBusy || skipped}>{skipped ? "Hidden" : "Not interested"}</button>
       </div>
     </article>
@@ -592,8 +621,11 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<PortalTab>("overview");
   const [actionBusyJobId, setActionBusyJobId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [matchPage, setMatchPage] = useState(1);
+  const [matchPageSize, setMatchPageSize] = useState(10);
 
   useEffect(() => { void loadAll(); }, []);
+  useEffect(() => { setMatchPage(1); }, [filterKey, search, sortKey, activeTab, matchPageSize]);
 
   async function loadAll() {
     setBusy(true);
@@ -609,19 +641,24 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
       setPreferences(preferenceData);
       setMatches(matchData.items);
       setApplications(applicationData.items);
-
-      const uniqueJobIds = [...new Set(matchData.items.map((m) => m.job_id))];
-      const pairs = await Promise.all(
-        uniqueJobIds.map((jid) => apiClient.portalGetJob(jid).then((j) => [jid, j] as [number, Job]).catch(() => null))
-      );
-      const map = new Map<number, Job>();
-      for (const pair of pairs) if (pair) map.set(pair[0], pair[1]);
-      setJobCache(map);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load portal data");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function loadJobsForIds(jobIds: number[]) {
+    const missingIds = [...new Set(jobIds)].filter((jobId) => !jobCache.has(jobId));
+    if (missingIds.length === 0) return;
+    const pairs = await Promise.all(
+      missingIds.map((jobId) => apiClient.portalGetJob(jobId).then((job) => [jobId, job] as [number, Job]).catch(() => null))
+    );
+    setJobCache((current) => {
+      const next = new Map(current);
+      for (const pair of pairs) if (pair) next.set(pair[0], pair[1]);
+      return next;
+    });
   }
 
   const applicationsByJob = useMemo(() => {
@@ -654,6 +691,15 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
 
   const topMatch = visibleMatches[0] ?? matches.slice().sort((a, b) => b.score - a.score)[0];
   const topJob = topMatch ? jobCache.get(topMatch.job_id) : undefined;
+  const totalMatchPages = Math.max(1, Math.ceil(visibleMatches.length / matchPageSize));
+  const safeMatchPage = Math.min(matchPage, totalMatchPages);
+  const pagedMatches = visibleMatches.slice((safeMatchPage - 1) * matchPageSize, safeMatchPage * matchPageSize);
+  const visibleJobIdKey = pagedMatches.map((match) => match.job_id).join(",");
+  useEffect(() => {
+    const ids = pagedMatches.map((match) => match.job_id);
+    if (topMatch) ids.push(topMatch.job_id);
+    void loadJobsForIds(ids);
+  }, [visibleJobIdKey, topMatch?.job_id]);
   const counts = {
     high: matches.filter((m) => m.score >= 80).length,
     saved: applications.filter((app) => app.status === "saved").length,
@@ -749,6 +795,9 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
                   <option value="date">Newest first</option>
                   <option value="title">Title A-Z</option>
                 </select>
+                <select className="portal-v2-sort-select" value={matchPageSize} onChange={(e) => setMatchPageSize(Number(e.target.value))}>
+                  {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size} per page</option>)}
+                </select>
               </div>
 
               {busy && matches.length === 0 ? (
@@ -756,25 +805,35 @@ export function CandidatePortalPage({ currentUser, onLogout }: Props) {
               ) : visibleMatches.length === 0 ? (
                 <div className="portal-v2-empty">No jobs match this view yet.</div>
               ) : (
-                <div className="portal-v2-cards">
-                  {visibleMatches.map((match) => {
-                    const job = jobCache.get(match.job_id);
-                    return (
-                      <JobCard
-                        key={match.id}
-                        match={match}
-                        job={job}
-                        status={getApplicationStatus(applicationsByJob, match.job_id)}
-                        preferences={preferences}
-                        actionBusy={actionBusyJobId === match.job_id}
-                        onApply={() => void handleApply(match, job)}
-                        onSave={() => void recordJobStatus(match.job_id, "saved", "Candidate saved this job for review.")}
-                        onSkip={() => void recordJobStatus(match.job_id, "not_interested", "Candidate marked this job as not interested.")}
-                        onTailor={() => void recordJobStatus(match.job_id, "saved", "Candidate requested a tailored resume for this job.")}
-                      />
-                    );
-                  })}
-                </div>
+                <>
+                  <div className="portal-results-meta">
+                    Showing {(safeMatchPage - 1) * matchPageSize + 1}-{Math.min(safeMatchPage * matchPageSize, visibleMatches.length)} of {visibleMatches.length} jobs
+                  </div>
+                  <div className="portal-v2-cards">
+                    {pagedMatches.map((match) => {
+                      const job = jobCache.get(match.job_id);
+                      return (
+                        <JobCard
+                          key={match.id}
+                          match={match}
+                          job={job}
+                          status={getApplicationStatus(applicationsByJob, match.job_id)}
+                          preferences={preferences}
+                          actionBusy={actionBusyJobId === match.job_id}
+                          onApply={() => void handleApply(match, job)}
+                          onSave={() => void recordJobStatus(match.job_id, "saved", "Candidate saved this job for review.")}
+                          onSkip={() => void recordJobStatus(match.job_id, "not_interested", "Candidate marked this job as not interested.")}
+                          onTailor={() => void recordJobStatus(match.job_id, "saved", "Candidate requested a tailored resume for this job.")}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="portal-pagination">
+                    <button type="button" onClick={() => setMatchPage((page) => Math.max(1, page - 1))} disabled={safeMatchPage <= 1}>Previous</button>
+                    <span>Page {safeMatchPage} of {totalMatchPages}</span>
+                    <button type="button" onClick={() => setMatchPage((page) => Math.min(totalMatchPages, page + 1))} disabled={safeMatchPage >= totalMatchPages}>Next</button>
+                  </div>
+                </>
               )}
             </>
           )}

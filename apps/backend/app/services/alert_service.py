@@ -504,15 +504,19 @@ def dispatch_job_alerts(db: Session, new_job_ids: list[int]) -> AlertDispatchSum
             job_id=job.id,
         )
 
-        wa_sent  = send_whatsapp_alert(**alert_kwargs, db=db)
-        summary.whatsapp_sent += wa_sent
-
         email_ok = (
             send_email_alert(**alert_kwargs, recruiter_email=recruiter_email)
             if recruiter_email else False
         )
         if email_ok:
             summary.email_sent += 1
+
+        # Email is the primary low-cost channel. WhatsApp is only a fallback when
+        # email is unavailable and the installation explicitly enables Twilio.
+        wa_sent = 0
+        if not email_ok:
+            wa_sent = send_whatsapp_alert(**alert_kwargs, db=db)
+            summary.whatsapp_sent += wa_sent
 
         if is_smart:
             summary.smart_alerts_sent += 1

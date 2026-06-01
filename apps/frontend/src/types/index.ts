@@ -279,6 +279,27 @@ export type AnalyticsOverview = {
   reports_by_source: { source: string; total: number; invalid: number; outdated: number; not_relevant: number }[];
   top_candidates: { candidate_id: number; candidate_name: string; match_count: number; avg_score: number }[];
   employee_stats: EmployeeStat[];
+  candidate_portal?: {
+    total_candidates: number;
+    logged_in_candidates: number;
+    resume_ready_candidates: number;
+    total_candidate_applications: number;
+    total_candidate_saved: number;
+    candidates: {
+      candidate_id: number;
+      candidate_name: string;
+      candidate_email?: string | null;
+      last_login_at?: string | null;
+      resume_uploaded: boolean;
+      match_count: number;
+      high_match_count: number;
+      avg_score: number;
+      applied: number;
+      saved: number;
+      pending: number;
+      not_interested: number;
+    }[];
+  };
 };
 
 // ── Phase 4: Source / Feed Management ────────────────────────────────────────

@@ -48,7 +48,7 @@ export function AnalyticsPage({ data, busy, error, onRefresh }: AnalyticsPagePro
     );
   }
 
-  const { funnel, jobs_by_source, freshness, reports_by_source, top_candidates, employee_stats = [] } = data;
+  const { funnel, jobs_by_source, freshness, reports_by_source, top_candidates, employee_stats = [], candidate_portal } = data;
   const totalFresh = freshness.find((f) => f.status === "fresh")?.count ?? 0;
   const totalStale = freshness.find((f) => f.status === "stale")?.count ?? 0;
   const totalOther = freshness.find((f) => !["fresh", "stale"].includes(f.status))?.count ?? 0;
@@ -169,6 +169,24 @@ export function AnalyticsPage({ data, busy, error, onRefresh }: AnalyticsPagePro
         </div>
       </section>
 
+      {/* ── Candidate Portal Engagement ─────────────────────────────────────── */}
+      {candidate_portal ? (
+        <section className="panel">
+          <div className="section-heading">
+            <h3>Candidate Portal Engagement</h3>
+            <p>Login activity, resume readiness, and candidate-owned application progress.</p>
+          </div>
+          <div className="stat-grid">
+            <StatCard label="Candidate Accounts" value={candidate_portal.total_candidates} />
+            <StatCard label="Logged In" value={candidate_portal.logged_in_candidates} sub={pct(candidate_portal.logged_in_candidates, candidate_portal.total_candidates)} />
+            <StatCard label="Resume Ready" value={candidate_portal.resume_ready_candidates} sub={pct(candidate_portal.resume_ready_candidates, candidate_portal.total_candidates)} />
+            <StatCard label="Candidate Applications" value={candidate_portal.total_candidate_applications} />
+            <StatCard label="Saved Jobs" value={candidate_portal.total_candidate_saved} />
+          </div>
+          <CandidatePortalStatsTable rows={candidate_portal.candidates} />
+        </section>
+      ) : null}
+
       {/* ── Top Candidates ─────────────────────────────────────────────────────── */}
       <section className="panel">
         <div className="section-heading">
@@ -231,6 +249,56 @@ export function AnalyticsPage({ data, busy, error, onRefresh }: AnalyticsPagePro
         )}
       </section>
     </section>
+  );
+}
+
+type CandidatePortalMetric = NonNullable<AnalyticsOverview["candidate_portal"]>["candidates"][number];
+
+function CandidatePortalStatsTable({ rows }: { rows: CandidatePortalMetric[] }) {
+  return (
+    <div className="analytics-table-wrap">
+      <table className="analytics-table">
+        <thead>
+          <tr>
+            <th>Candidate</th>
+            <th>Last Login</th>
+            <th>Resume</th>
+            <th>Matches</th>
+            <th>High Fit</th>
+            <th>Applied</th>
+            <th>Saved</th>
+            <th>Pending</th>
+            <th>Progress</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr><td colSpan={9}>No candidate portal activity yet.</td></tr>
+          ) : rows.map((row) => {
+            const decided = row.applied + row.saved + row.not_interested;
+            const progress = row.match_count ? Math.round((decided / row.match_count) * 100) : 0;
+            return (
+              <tr key={row.candidate_id}>
+                <td><strong>{row.candidate_name}</strong><br /><span className="muted-text">{row.candidate_email ?? "No email"}</span></td>
+                <td>{row.last_login_at ? new Date(row.last_login_at).toLocaleString() : "Never"}</td>
+                <td>{row.resume_uploaded ? "Ready" : "Missing"}</td>
+                <td>{row.match_count}</td>
+                <td>{row.high_match_count}</td>
+                <td className="applied-cell">{row.applied}</td>
+                <td>{row.saved}</td>
+                <td className="pending-cell">{row.pending}</td>
+                <td>
+                  <span style={{ fontSize: "0.8rem", marginRight: 6 }}>{progress}%</span>
+                  <span className="applied-bar-track">
+                    <span className="applied-bar-fill" style={{ width: `${Math.min(100, progress)}%` }} />
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user, require_authenticated_user, require_super_admin, require_candidate_user
 from app.db import crud
 from app.models.alert_recipient import AlertRecipient
+from app.models.application import Application
 from app.models.candidate import Candidate, CandidatePreference
 from app.models.gmail_analytics import CandidateMailbox
 from app.models.employee import Employee
@@ -154,6 +155,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
     user = authenticate_user(db, payload.email, payload.password)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
     return TokenResponse(access_token=create_access_token(user), user=user)
 
 
@@ -1166,6 +1170,73 @@ def analytics_overview(
         for row in top_rows
     ]
 
+    # ── Candidate portal engagement ────────────────────────────────────────
+    candidate_rows = db.execute(
+        select(
+            Candidate.id.label("candidate_id"),
+            Candidate.name.label("candidate_name"),
+            Candidate.email.label("candidate_email"),
+            Candidate.resume_filename.label("resume_filename"),
+            User.last_login_at.label("last_login_at"),
+        )
+        .join(User, User.candidate_id == Candidate.id, isouter=True)
+        .where(Candidate.active.is_(True))
+        .order_by(Candidate.name.asc())
+    ).all()
+
+    app_rows = db.execute(
+        select(Application.candidate_id, Application.status, func.count().label("cnt"))
+        .group_by(Application.candidate_id, Application.status)
+    ).all()
+    app_counts: dict[int, dict[str, int]] = {}
+    for row in app_rows:
+        bucket = app_counts.setdefault(row.candidate_id, {})
+        bucket[row.status or "pending"] = int(row.cnt)
+
+    match_rows = db.execute(
+        select(
+            JobCandidateMatch.candidate_id,
+            func.count(JobCandidateMatch.id).label("match_count"),
+            func.sum(case((JobCandidateMatch.score >= 80, 1), else_=0)).label("high_match_count"),
+            func.avg(JobCandidateMatch.score).label("avg_score"),
+        )
+        .group_by(JobCandidateMatch.candidate_id)
+    ).all()
+    match_counts = {
+        row.candidate_id: {
+            "match_count": int(row.match_count or 0),
+            "high_match_count": int(row.high_match_count or 0),
+            "avg_score": round(float(row.avg_score or 0), 1),
+        }
+        for row in match_rows
+    }
+
+    candidate_metrics = []
+    active_candidate_logins = 0
+    for row in candidate_rows:
+        counts = app_counts.get(row.candidate_id, {})
+        matches_for_candidate = match_counts.get(row.candidate_id, {"match_count": 0, "high_match_count": 0, "avg_score": 0.0})
+        applied = sum(counts.get(status_name, 0) for status_name in ("applied", "interviewing", "offer"))
+        saved = counts.get("saved", 0)
+        not_interested = counts.get("not_interested", 0)
+        pending = max(matches_for_candidate["match_count"] - applied - saved - not_interested, 0)
+        if row.last_login_at is not None:
+            active_candidate_logins += 1
+        candidate_metrics.append({
+            "candidate_id": row.candidate_id,
+            "candidate_name": row.candidate_name,
+            "candidate_email": row.candidate_email,
+            "last_login_at": row.last_login_at.isoformat() if row.last_login_at else None,
+            "resume_uploaded": bool(row.resume_filename),
+            "match_count": matches_for_candidate["match_count"],
+            "high_match_count": matches_for_candidate["high_match_count"],
+            "avg_score": matches_for_candidate["avg_score"],
+            "applied": applied,
+            "saved": saved,
+            "pending": pending,
+            "not_interested": not_interested,
+        })
+
     return {
         "jobs_by_source": jobs_by_source,
         "freshness": freshness,
@@ -1179,6 +1250,14 @@ def analytics_overview(
         "reports_by_source": reports_by_source,
         "top_candidates": top_candidates,
         "employee_stats": employee_stats,
+        "candidate_portal": {
+            "total_candidates": len(candidate_rows),
+            "logged_in_candidates": active_candidate_logins,
+            "resume_ready_candidates": sum(1 for row in candidate_metrics if row["resume_uploaded"]),
+            "total_candidate_applications": sum(row["applied"] for row in candidate_metrics),
+            "total_candidate_saved": sum(row["saved"] for row in candidate_metrics),
+            "candidates": candidate_metrics,
+        },
     }
 
 
