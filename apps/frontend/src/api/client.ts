@@ -46,13 +46,11 @@ import type {
 } from "../types";
 
 const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const DEFAULT_API_BASE_URL = "https://job-agent-backend-production-a463.up.railway.app";
 const ACCESS_TOKEN_KEY = "job-agent-access-token";
 
 function getApiBaseUrl() {
-  const baseUrl = RAW_API_BASE_URL?.trim();
-  if (!baseUrl) {
-    throw new Error("API URL is not configured. Set VITE_API_BASE_URL and redeploy the frontend.");
-  }
+  const baseUrl = RAW_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL;
   return baseUrl.replace(/\/+$/, "");
 }
 
@@ -63,7 +61,7 @@ function apiUrl(path: string) {
 function toNetworkError(error: unknown) {
   if (error instanceof TypeError) {
     return new Error(
-      "Unable to reach the backend API. Check that VITE_API_BASE_URL points to the deployed backend and that CORS allows this site."
+      "Unable to reach the backend API. Check that the backend is running and that CORS allows this site."
     );
   }
   return error;
