@@ -348,6 +348,11 @@ export const apiClient = {
     request<Application>(`/api/v1/portal/jobs/${jobId}/apply`, {
       method: "POST"
     }),
+  portalSetJobStatus: (jobId: number, payload: { status: string; notes?: string | null }) =>
+    request<Application>(`/api/v1/portal/jobs/${jobId}/status`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   portalUploadResume: (file: File) => {
     const token = getStoredAccessToken();
     const formData = new FormData();

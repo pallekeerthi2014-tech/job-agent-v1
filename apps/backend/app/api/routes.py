@@ -20,7 +20,7 @@ from app.models.match_score import JobCandidateMatch
 from app.models.user import User
 from app.models.work_queue import EmployeeWorkQueue
 from app.schemas.alert_recipient import AlertRecipientCreate, AlertRecipientRead, AlertRecipientUpdate
-from app.schemas.application import ApplicationCreate, ApplicationPage, ApplicationRead
+from app.schemas.application import ApplicationCreate, ApplicationPage, ApplicationRead, ApplicationStatusUpdate
 from app.schemas.candidate import (
     AlertSettingsRead,
     AlertSettingsUpdate,
@@ -1456,6 +1456,50 @@ def portal_apply_to_job(
             job_id=job_id,
             status="applied",
             notes="Applied from candidate portal.",
+        ),
+    )
+
+
+@router.post("/portal/jobs/{job_id}/status", response_model=ApplicationRead, status_code=status.HTTP_201_CREATED)
+def portal_set_job_status(
+    job_id: int,
+    payload: ApplicationStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_candidate_user),
+) -> ApplicationRead:
+    """Let candidates save, skip, or otherwise classify a job in their portal queue."""
+    candidate_id = current_user.candidate_id
+    if candidate_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate profile not found")
+
+    allowed_statuses = {"saved", "not_interested", "applied", "interviewing", "rejected", "offer"}
+    if payload.status not in allowed_statuses:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported candidate job status")
+
+    job = db.get(JobNormalized, job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    existing = db.scalar(
+        select(Application)
+        .where(Application.candidate_id == candidate_id)
+        .where(Application.job_id == job_id)
+        .order_by(Application.applied_at.desc())
+    )
+    if existing is not None:
+        existing.status = payload.status
+        existing.notes = payload.notes
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    return crud.create_application(
+        db,
+        ApplicationCreate(
+            candidate_id=candidate_id,
+            job_id=job_id,
+            status=payload.status,
+            notes=payload.notes,
         ),
     )
 

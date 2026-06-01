@@ -19,6 +19,11 @@ class ApplicationCreate(ApplicationBase):
     applied_at: datetime | None = None
 
 
+class ApplicationStatusUpdate(BaseModel):
+    status: str
+    notes: str | None = None
+
+
 class ApplicationRead(ApplicationBase):
     model_config = ConfigDict(from_attributes=True)
 
