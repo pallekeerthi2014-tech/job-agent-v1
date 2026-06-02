@@ -39,11 +39,12 @@ type LoginPageProps = {
   successMessage: string | null;
   isSubmitting: boolean;
   initialResetToken?: string | null;
+  initialInviteToken?: string | null;
   initialInviteEmail?: string | null;
   forgotPasswordPreview: ForgotPasswordResponse | null;
   googleClientId?: string;
   onLogin: (payload: { email: string; password: string }) => Promise<void>;
-  onRegister: (payload: { name: string; email: string; password: string }) => Promise<void>;
+  onRegister: (payload: { name: string; email: string; password: string; invite_token: string }) => Promise<void>;
   onGoogleAuth: (credential: string) => Promise<void>;
   onForgotPassword: (payload: { email: string }) => Promise<void>;
   onResetPassword: (payload: { token: string; password: string }) => Promise<void>;
@@ -55,6 +56,7 @@ export function LoginPage({
   successMessage,
   isSubmitting,
   initialResetToken,
+  initialInviteToken,
   initialInviteEmail,
   forgotPasswordPreview,
   googleClientId,
@@ -65,7 +67,8 @@ export function LoginPage({
   onResetPassword,
   onPublicHome
 }: LoginPageProps) {
-  const [view, setView] = useState<AuthView>(initialResetToken ? "reset" : "login");
+  const hasInvite = Boolean(initialInviteToken && initialInviteEmail);
+  const [view, setView] = useState<AuthView>(initialResetToken ? "reset" : hasInvite ? "register" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [resetToken, setResetToken] = useState(initialResetToken ?? "");
@@ -78,9 +81,7 @@ export function LoginPage({
   const [regConfirm, setRegConfirm] = useState("");
   const [regPasswordError, setRegPasswordError] = useState<string | null>(null);
 
-  // Google button container refs
   const googleSignInRef = useRef<HTMLDivElement>(null);
-  const googleRegisterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialResetToken) {
@@ -88,6 +89,15 @@ export function LoginPage({
       setView("reset");
     }
   }, [initialResetToken]);
+
+  useEffect(() => {
+    if (hasInvite && !initialResetToken) {
+      setRegEmail(initialInviteEmail ?? "");
+      setView("register");
+    } else if (!hasInvite && view === "register") {
+      setView("login");
+    }
+  }, [hasInvite, initialInviteEmail, initialResetToken, view]);
 
   // Initialize Google Identity Services once the library is ready
   useEffect(() => {
@@ -117,17 +127,6 @@ export function LoginPage({
           width: 320,
         });
       }
-      if (googleRegisterRef.current) {
-        googleRegisterRef.current.innerHTML = "";
-        window.google.accounts.id.renderButton(googleRegisterRef.current, {
-          theme: "outline",
-          size: "large",
-          type: "standard",
-          text: "signup_with",
-          shape: "rectangular",
-          width: 320,
-        });
-      }
     }
 
     // Poll for Google library to be loaded (it's async/defer in index.html)
@@ -146,7 +145,7 @@ export function LoginPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleClientId, view]);
 
-  // Re-render Google buttons whenever view switches to login or register
+  // Re-render Google button whenever the sign-in view is mounted.
   useEffect(() => {
     if (!googleClientId || !window.google) return;
     if (view === "login" && googleSignInRef.current) {
@@ -154,13 +153,6 @@ export function LoginPage({
       window.google.accounts.id.renderButton(googleSignInRef.current, {
         theme: "outline", size: "large", type: "standard",
         text: "signin_with", shape: "rectangular", width: 320,
-      });
-    }
-    if (view === "register" && googleRegisterRef.current) {
-      googleRegisterRef.current.innerHTML = "";
-      window.google.accounts.id.renderButton(googleRegisterRef.current, {
-        theme: "outline", size: "large", type: "standard",
-        text: "signup_with", shape: "rectangular", width: 320,
       });
     }
   }, [googleClientId, view]);
@@ -176,17 +168,38 @@ export function LoginPage({
       setRegPasswordError("Password must be at least 8 characters");
       return;
     }
-    void onRegister({ name: regName, email: regEmail, password: regPassword });
+    if (!initialInviteToken) {
+      setRegPasswordError("Candidate registration requires an admin invitation link");
+      return;
+    }
+    void onRegister({ name: regName, email: regEmail, password: regPassword, invite_token: initialInviteToken });
   }
 
   return (
     <main className="login-shell">
+      <section className="login-showcase" aria-label="Think Success portal overview">
+        <div className="login-showcase-content">
+          <p className="eyebrow">Think Success Consulting</p>
+          <h1>Focused access for every placement workflow.</h1>
+          <p>
+            Candidates, employees, and admins sign into one secure portal built for job matching,
+            resume readiness, and application follow-through.
+          </p>
+          <div className="login-proof-grid">
+            <span><strong>Admin-led</strong> Candidate accounts begin from your team.</span>
+            <span><strong>Role aware</strong> The right dashboard opens after sign-in.</span>
+            <span><strong>Action ready</strong> Matches, resumes, and queues stay connected.</span>
+          </div>
+        </div>
+      </section>
       <section className="login-panel">
-        <div className="brand-block login-brand-block">
+        <div className="login-card-header">
           <img className="brand-logo" src="/brand/think-success-logo.jpg" alt="Think Success Consulting" />
-          <p className="eyebrow">Candidate &amp; Team Access</p>
-          <h1>Think Success</h1>
-          <span>One portal for candidates, employees, and admins.</span>
+          <div>
+            <p className="eyebrow">Secure Portal</p>
+            <h2>{view === "register" ? "Complete candidate invite" : "Welcome back"}</h2>
+            <span>{view === "register" ? "Use the admin-provided invite to activate this candidate account." : "Sign in with your approved Think Success account."}</span>
+          </div>
         </div>
 
         {onPublicHome ? (
@@ -195,13 +208,15 @@ export function LoginPage({
           </button>
         ) : null}
 
-        <div className="auth-tabs">
+        <div className={`auth-tabs ${hasInvite ? "auth-tabs-invite" : ""}`} aria-label="Authentication options">
           <button className={`link-button ${view === "login" ? "auth-tab-active" : ""}`} onClick={() => setView("login")}>
             Sign In
           </button>
-          <button className={`link-button ${view === "register" ? "auth-tab-active" : ""}`} onClick={() => setView("register")}>
-            Register
-          </button>
+          {hasInvite ? (
+            <button className={`link-button ${view === "register" ? "auth-tab-active" : ""}`} onClick={() => setView("register")}>
+              Candidate Invite
+            </button>
+          ) : null}
           <button className={`link-button ${view === "forgot" ? "auth-tab-active" : ""}`} onClick={() => setView("forgot")}>
             Forgot Password
           </button>
@@ -242,15 +257,19 @@ export function LoginPage({
 
             {googleClientId ? (
               <div className="google-auth-section">
-                <div className="google-auth-divider"><span>or</span></div>
+                <div className="google-auth-divider"><span>or continue with an existing account</span></div>
                 <div ref={googleSignInRef} className="google-button-wrapper" />
               </div>
             ) : null}
+            <div className="auth-helper-card login-access-note">
+              <strong>Candidate access is invitation-only</strong>
+              <p>New candidate accounts are created or invited by the Think Success admin team after admin sign-in.</p>
+            </div>
           </>
         ) : null}
 
-        {/* ── Register ────────────────────────────────────────────────────── */}
-        {view === "register" ? (
+        {/* ── Candidate Invite Completion ─────────────────────────────────── */}
+        {view === "register" && hasInvite ? (
           <>
             <form className="login-form" onSubmit={handleRegisterSubmit}>
               <label className="filter-field">
@@ -265,6 +284,7 @@ export function LoginPage({
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   placeholder="you@email.com"
+                  readOnly={hasInvite}
                   required
                 />
               </label>
@@ -298,12 +318,7 @@ export function LoginPage({
               </button>
             </form>
 
-            {googleClientId ? (
-              <div className="google-auth-section">
-                <div className="google-auth-divider"><span>or register with</span></div>
-                <div ref={googleRegisterRef} className="google-button-wrapper" />
-              </div>
-            ) : null}
+            <p className="login-invite-footnote">This page only works from a valid admin invitation link.</p>
           </>
         ) : null}
 

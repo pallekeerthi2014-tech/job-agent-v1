@@ -1617,28 +1617,135 @@ button:disabled {
 .login-shell {
   min-height: 100vh;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+  align-items: stretch;
+  padding: 0;
   background:
-    radial-gradient(circle at top, rgba(0, 122, 61, 0.18), transparent 35%),
-    linear-gradient(180deg, #fbfdfb 0%, #eef5f0 100%);
+    radial-gradient(circle at 12% 14%, rgba(0, 128, 128, 0.2), transparent 28%),
+    radial-gradient(circle at 86% 76%, rgba(0, 122, 61, 0.14), transparent 24%),
+    linear-gradient(135deg, #f8fcfa 0%, #eef7f4 52%, #ffffff 100%);
+}
+
+.login-showcase {
+  min-height: 100vh;
+  padding: 56px max(40px, calc((100vw - 1180px) / 2)) 56px 56px;
+  display: flex;
+  align-items: center;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(13, 40, 54, 0.94), rgba(0, 108, 93, 0.88)),
+    url("/brand/think-success-logo.png");
+  background-size: cover, min(48vw, 620px);
+  background-position: center, center;
+  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-showcase::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(13, 40, 54, 0.98), rgba(13, 40, 54, 0.76) 52%, rgba(13, 40, 54, 0.42)),
+    radial-gradient(circle at 78% 18%, rgba(124, 240, 171, 0.18), transparent 28%);
+}
+
+.login-showcase-content {
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  display: grid;
+  gap: 22px;
+}
+
+.login-showcase .eyebrow {
+  color: #7cf0ab;
+}
+
+.login-showcase h1 {
+  margin: 0;
+  max-width: 720px;
+  font-size: clamp(2.8rem, 5vw, 5rem);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+
+.login-showcase p {
+  margin: 0;
+  max-width: 620px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.12rem;
+}
+
+.login-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.login-proof-grid span {
+  min-height: 116px;
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.login-proof-grid strong {
+  display: block;
+  color: #ffffff;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
 }
 
 .login-panel {
-  width: min(540px, 100%);
-  padding: 28px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--brand-border);
-  box-shadow: 0 30px 80px rgba(16, 19, 20, 0.08);
+  width: min(520px, calc(100% - 48px));
+  margin: auto;
+  padding: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(16, 19, 20, 0.08);
+  box-shadow: 0 34px 90px rgba(16, 19, 20, 0.12);
 }
 
-.login-brand-block {
-  margin-bottom: 24px;
+.login-card-header {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.login-card-header .brand-logo {
+  width: 82px;
+  height: 82px;
+  object-fit: cover;
+  margin: 0;
+  border-radius: 8px;
+}
+
+.login-card-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.1;
+}
+
+.login-card-header span {
+  display: block;
+  margin-top: 7px;
+  color: var(--brand-muted);
 }
 
 .login-home-link {
   margin-bottom: 18px;
+  padding-left: 0;
+  background: transparent;
+  color: var(--brand-green-dark);
+  font-weight: 750;
 }
 
 .login-form,
@@ -1650,14 +1757,33 @@ button:disabled {
 }
 
 .auth-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 5px;
+  border-radius: 12px;
+  background: rgba(0, 122, 61, 0.08);
+}
+
+.auth-tabs-invite {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.auth-tabs .link-button {
+  background: transparent;
+  color: var(--brand-charcoal);
+  font-weight: 750;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 10px 12px;
+  white-space: normal;
 }
 
 .auth-tab-active {
-  outline: 2px solid rgba(0, 122, 61, 0.28);
+  background: #ffffff !important;
+  color: var(--brand-green-dark) !important;
+  box-shadow: 0 8px 22px rgba(7, 58, 35, 0.1);
 }
 
 .auth-helper-card {
@@ -1683,6 +1809,24 @@ button:disabled {
   background: rgba(0, 122, 61, 0.1);
   color: var(--brand-green-dark);
   border: 1px solid rgba(0, 122, 61, 0.16);
+}
+
+.login-access-note {
+  margin-top: 18px;
+  background: rgba(0, 128, 128, 0.08);
+  border-color: rgba(0, 128, 128, 0.16);
+}
+
+.login-access-note p,
+.login-invite-footnote {
+  margin: 0;
+  color: var(--brand-muted);
+}
+
+.login-invite-footnote {
+  margin-top: 14px;
+  font-size: 0.88rem;
+  text-align: center;
 }
 
 /* Google OAuth section */
@@ -1746,6 +1890,19 @@ button:disabled {
 }
 
 @media (max-width: 1180px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .login-showcase {
+    min-height: auto;
+    padding: 56px 32px 42px;
+  }
+
+  .login-panel {
+    margin: 32px auto;
+  }
+
   .public-hero,
   .public-band,
   .public-two-column,
@@ -1787,6 +1944,46 @@ button:disabled {
 }
 
 @media (max-width: 760px) {
+  .login-shell {
+    display: block;
+  }
+
+  .login-showcase {
+    padding: 42px 20px 32px;
+  }
+
+  .login-showcase h1 {
+    font-size: 2.35rem;
+  }
+
+  .login-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .login-proof-grid span {
+    min-height: auto;
+  }
+
+  .login-panel {
+    width: calc(100% - 28px);
+    margin: -12px auto 24px;
+    padding: 22px;
+  }
+
+  .login-card-header {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .login-card-header .brand-logo {
+    width: 64px;
+    height: 64px;
+  }
+
+  .auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .public-nav {
     min-height: 70px;
   }

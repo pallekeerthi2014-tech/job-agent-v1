@@ -238,7 +238,7 @@ def admin_invite_candidate(
 ) -> InviteCandidateResponse:
     """Generate a 72-hour candidate registration invite link.
 
-    The link pre-fills the email on the portal Register tab.
+    The link allows the candidate to finish registration from an admin invite.
     If SMTP is configured the email is sent; otherwise the URL is returned
     in the response so the admin can share it manually.
     """
@@ -1268,8 +1268,26 @@ def analytics_overview(
 
 @router.post("/portal/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def candidate_register(payload: CandidateSelfRegister, db: Session = Depends(get_db)) -> TokenResponse:
-    """Self-registration: creates a Candidate record + linked User (role=candidate) in one shot."""
+    """Create a candidate account only from a valid admin-generated invite."""
+    from jose import JWTError, jwt
+    from app.core.config import settings
     from app.services.auth import get_user_by_email
+
+    try:
+        invite_payload = jwt.decode(
+            payload.invite_token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired candidate invite")
+
+    if invite_payload.get("type") != "candidate_invite":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid candidate invite")
+
+    invite_email = str(invite_payload.get("sub") or "").lower()
+    if invite_email != payload.email.lower():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite email does not match this registration")
 
     if get_user_by_email(db, payload.email) is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists")
@@ -1306,13 +1324,13 @@ def candidate_register(payload: CandidateSelfRegister, db: Session = Depends(get
 
 @router.post("/portal/auth/google", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 def portal_google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    """Authenticate or register a candidate via Google OAuth credential (ID token).
+    """Authenticate an existing candidate via Google OAuth credential (ID token).
 
     Flow:
     1. Frontend passes the credential string from Google Identity Services.
     2. Backend verifies it against GOOGLE_CLIENT_ID.
     3. If user exists (matched by google_id or email) — return JWT.
-    4. If user is new — create Candidate + User records, then return JWT.
+    4. If user is new — reject and ask an admin to invite/create the account.
     """
     from app.core.config import settings
 
@@ -1353,36 +1371,16 @@ def portal_google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)
         user = db.query(User).filter(User.email == google_email).first()
 
     if user is None:
-        # New user — create Candidate + User in one transaction
-        import secrets
-        from app.services.auth import hash_password
-
-        candidate = Candidate(
-            name=google_name,
-            email=google_email,
-            active=True,
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No account exists for this Google email. Please contact Think Success for an invitation.",
         )
-        db.add(candidate)
-        db.flush()  # get candidate.id
 
-        user = User(
-            name=google_name,
-            email=google_email,
-            password_hash=hash_password(secrets.token_hex(32)),  # not usable directly
-            role="candidate",
-            is_active=True,
-            candidate_id=candidate.id,
-            google_id=google_sub,
-        )
-        db.add(user)
+    # Existing user — link google_id if not yet set
+    if user.google_id != google_sub:
+        user.google_id = google_sub
         db.commit()
         db.refresh(user)
-    else:
-        # Existing user — link google_id if not yet set
-        if user.google_id != google_sub:
-            user.google_id = google_sub
-            db.commit()
-            db.refresh(user)
 
     return TokenResponse(access_token=create_access_token(user), user=user)
 

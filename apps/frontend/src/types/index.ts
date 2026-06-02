@@ -241,6 +241,7 @@ export type CandidateSelfRegisterPayload = {
   name: string;
   email: string;
   password: string;
+  invite_token: string;
   phone?: string | null;
   location?: string | null;
   work_authorization?: string | null;

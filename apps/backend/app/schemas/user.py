@@ -41,10 +41,11 @@ class UserRead(UserBase):
 # ── Candidate self-registration ───────────────────────────────────────────────
 
 class CandidateSelfRegister(BaseModel):
-    """Payload for candidate self-registration via the portal."""
+    """Payload for candidate registration via an admin-generated invite."""
     name: str
     email: EmailStr
     password: str
+    invite_token: str
     phone: str | None = None
     location: str | None = None
     work_authorization: str | None = None

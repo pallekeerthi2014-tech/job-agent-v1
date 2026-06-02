@@ -105,7 +105,8 @@ function extractInviteEmail(token: string | null): string | null {
 export default function App() {
   const params = new URLSearchParams(window.location.search);
   const initialResetToken = params.get("reset_token");
-  const initialInviteEmail = extractInviteEmail(params.get("invite"));
+  const initialInviteToken = params.get("invite");
+  const initialInviteEmail = extractInviteEmail(initialInviteToken);
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [activePage, setActivePage] = useState<ActivePage>("operations-dashboard");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -340,7 +341,7 @@ export default function App() {
     } finally { setAuthBusy(false); }
   }
 
-  async function handleRegister(payload: { name: string; email: string; password: string }) {
+  async function handleRegister(payload: { name: string; email: string; password: string; invite_token: string }) {
     setAuthBusy(true); setAuthError(null); setAuthSuccess(null);
     try {
       const response = await apiClient.candidateRegister(payload);
@@ -535,6 +536,7 @@ export default function App() {
         successMessage={authSuccess}
         isSubmitting={authBusy}
         initialResetToken={initialResetToken}
+        initialInviteToken={initialInviteToken}
         initialInviteEmail={initialInviteEmail}
         forgotPasswordPreview={forgotPasswordPreview}
         googleClientId={import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined}
