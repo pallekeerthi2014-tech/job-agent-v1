@@ -3643,6 +3643,68 @@ button:disabled {
 }
 
 /* Gmail analytics onboarding */
+.gmail-analytics-console {
+  display: grid;
+  gap: 1rem;
+}
+
+.gmail-console-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.gmail-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+
+.gmail-metric-card {
+  border: 1px solid #d9e1e8;
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 0.9rem;
+  min-height: 86px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.gmail-metric-card span {
+  color: #5d6974;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.gmail-metric-card strong {
+  color: #1f2b37;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+.gmail-metric-good {
+  border-color: #b9dfc6;
+  background: #f4fbf6;
+}
+
+.gmail-metric-warn {
+  border-color: #ecd48d;
+  background: #fffaf0;
+}
+
+.gmail-metric-wide {
+  grid-column: span 2;
+}
+
+.gmail-admin-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 1rem;
+}
+
 .gmail-action-row,
 .gmail-connect-grid {
   display: flex;
@@ -3675,6 +3737,33 @@ button:disabled {
   flex: 1 1 360px;
 }
 
+.gmail-forwarding-card {
+  margin-top: 1rem;
+  border: 1px solid #d7dde7;
+  border-radius: 8px;
+  background: #f7f9fc;
+  padding: 1rem;
+}
+
+.gmail-forwarding-card span {
+  display: block;
+  color: #657080;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.gmail-forwarding-card strong {
+  display: block;
+  color: #1d2d3d;
+  margin-top: 0.25rem;
+}
+
+.gmail-forwarding-card p {
+  color: #405060;
+  margin: 0.75rem 0 0;
+}
+
 .gmail-connect-result {
   margin-top: 1rem;
   border: 1px solid #cfe7d7;
@@ -3698,6 +3787,69 @@ button:disabled {
   font: 0.78rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   color: #27342f;
   resize: vertical;
+}
+
+.gmail-health-table td {
+  vertical-align: middle;
+}
+
+.gmail-table-subtext {
+  display: block;
+  margin-top: 0.2rem;
+  color: #66727d;
+  font-size: 0.78rem;
+}
+
+.gmail-table-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.flow-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.flow-good {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.flow-warn {
+  color: #8a5a00;
+  background: #fef3c7;
+}
+
+.flow-bad {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.flow-muted {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+@media (max-width: 900px) {
+  .gmail-console-header,
+  .gmail-admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gmail-console-header {
+    display: grid;
+  }
+
+  .gmail-metric-wide {
+    grid-column: span 1;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
