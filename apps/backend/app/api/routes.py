@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import os
+import secrets
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -58,9 +59,13 @@ from app.schemas.user import (
 from app.schemas.gmail_analytics import (
     CandidateMailboxCreate,
     CandidateMailboxRead,
+    ForwardingScanPayload,
+    ForwardingScanResponse,
+    ForwardingScanTarget,
     GmailAnalyticsRunResponse,
     GmailOAuthUrlResponse,
 )
+from app.core.config import settings
 from app.schemas.work_queue import EmployeeWorkQueuePage, WorkQueueDayStatsRead, WorkQueueReportPayload
 from app.services.auth import (
     authenticate_user,
@@ -721,6 +726,69 @@ def run_daily_pipeline_endpoint(
 
 
 # ── Gmail Analytics (admin) ──────────────────────────────────────────────────
+
+def _require_gmail_forwarding_secret(secret: str | None) -> None:
+    expected = settings.gmail_forwarding_webhook_secret.strip()
+    if not expected:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Gmail forwarding scanner is not configured")
+    if not secret or not secrets.compare_digest(secret, expected):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Gmail forwarding scanner secret")
+
+
+@router.get("/admin/gmail/forwarding-targets", response_model=list[ForwardingScanTarget])
+def list_gmail_forwarding_targets(
+    db: Session = Depends(get_db),
+    x_tsc_gmail_webhook_secret: str | None = Header(default=None, alias="X-TSC-Gmail-Webhook-Secret"),
+) -> list[ForwardingScanTarget]:
+    _require_gmail_forwarding_secret(x_tsc_gmail_webhook_secret)
+    rows = db.execute(
+        select(CandidateMailbox, Candidate)
+        .join(Candidate, Candidate.id == CandidateMailbox.candidate_id)
+        .where(Candidate.active.is_(True))
+        .order_by(Candidate.name.asc())
+    ).all()
+    return [
+        ForwardingScanTarget(
+            candidate_id=candidate.id,
+            candidate_name=candidate.name,
+            candidate_email=mailbox.email,
+        )
+        for mailbox, candidate in rows
+        if mailbox.email
+    ]
+
+
+@router.post("/admin/gmail/forwarding-scan", response_model=ForwardingScanResponse)
+def update_gmail_forwarding_scan(
+    payload: ForwardingScanPayload,
+    db: Session = Depends(get_db),
+    x_tsc_gmail_webhook_secret: str | None = Header(default=None, alias="X-TSC-Gmail-Webhook-Secret"),
+) -> ForwardingScanResponse:
+    _require_gmail_forwarding_secret(x_tsc_gmail_webhook_secret)
+    updated = 0
+    missing: list[str] = []
+    scanner_ran_at = datetime.now(timezone.utc)
+
+    for event in payload.events:
+        email = event.candidate_email.lower()
+        mailbox = db.scalar(select(CandidateMailbox).where(func.lower(CandidateMailbox.email) == email))
+        if mailbox is None:
+            missing.append(email)
+            continue
+        mailbox.last_successful_scan_at = scanner_ran_at
+        mailbox.calendar_connected = False
+        mailbox.gmail_connected = False
+        if event.last_email_received_at is not None:
+            mailbox.status = "receiving"
+            mailbox.last_email_scan_at = event.last_email_received_at
+            mailbox.last_error = None
+        else:
+            mailbox.status = "forwarding_active"
+            mailbox.last_error = None
+        updated += 1
+
+    db.commit()
+    return ForwardingScanResponse(received=len(payload.events), updated=updated, missing=missing)
 
 @router.get("/admin/gmail/mailboxes", response_model=list[CandidateMailboxRead])
 def list_candidate_mailboxes(

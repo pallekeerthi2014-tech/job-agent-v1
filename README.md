@@ -122,6 +122,7 @@ The monorepo uses environment variables across Compose, backend, and frontend.
 - `SEED_SAMPLE_CANDIDATES`
 - `GMAIL_ANALYTICS_ENABLED`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`
 - `GOOGLE_TOKEN_ENCRYPTION_KEY`, `GOOGLE_SHEETS_REPORT_ID`
+- `GMAIL_FORWARDING_WEBHOOK_SECRET` for the ThinkSuccess central Gmail Apps Script scanner
 
 ## Auth overview
 

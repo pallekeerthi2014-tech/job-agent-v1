@@ -114,6 +114,7 @@ class Settings(BaseSettings):
     gmail_scan_interval_minutes: int = Field(default=60, alias="GMAIL_SCAN_INTERVAL_MINUTES")
     gmail_scan_lookback_days: int = Field(default=30, alias="GMAIL_SCAN_LOOKBACK_DAYS")
     gmail_calendar_lookahead_days: int = Field(default=14, alias="GMAIL_CALENDAR_LOOKAHEAD_DAYS")
+    gmail_forwarding_webhook_secret: str = Field(default="", alias="GMAIL_FORWARDING_WEBHOOK_SECRET")
 
     # ── USAJobs ───────────────────────────────────────────────────────────────
     usajobs_api_key: str = Field(default="", alias="USAJOBS_API_KEY")

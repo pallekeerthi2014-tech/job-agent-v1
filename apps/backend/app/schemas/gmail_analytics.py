@@ -25,6 +25,31 @@ class CandidateMailboxRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ForwardingScanTarget(BaseModel):
+    candidate_id: int
+    candidate_name: str
+    candidate_email: str
+
+
+class ForwardedGmailEvent(BaseModel):
+    candidate_email: EmailStr
+    last_email_received_at: datetime | None = None
+    message_id: str | None = None
+    subject: str | None = None
+    sender: str | None = None
+    email_count_7_days: int = 0
+
+
+class ForwardingScanPayload(BaseModel):
+    events: list[ForwardedGmailEvent]
+
+
+class ForwardingScanResponse(BaseModel):
+    received: int
+    updated: int
+    missing: list[str]
+
+
 class GmailOAuthUrlResponse(BaseModel):
     candidate_id: int
     authorization_url: str
