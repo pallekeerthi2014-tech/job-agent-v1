@@ -58,6 +58,7 @@ export function GmailAnalyticsAdminPage({
     const emailRecorded = linked.filter((row) => hasRecordedForward(row.mailbox)).length;
     const waitingForEmail = linked.length - emailRecorded;
     const latestEmail = linked
+      .filter((row) => hasRecordedForward(row.mailbox))
       .map((row) => row.mailbox?.last_email_scan_at)
       .filter(Boolean)
       .sort()
@@ -277,8 +278,8 @@ export function GmailAnalyticsAdminPage({
                     </td>
                     <td>{mailbox?.email ?? candidate.email ?? "Missing"}</td>
                     <td><ForwardingBadge status={status} /></td>
-                    <td>{formatDate(mailbox?.last_email_scan_at)}</td>
-                    <td>{formatDate(mailbox?.last_successful_scan_at)}</td>
+                    <td>{hasRecordedForward(mailbox) ? formatDate(mailbox?.last_email_scan_at) : ""}</td>
+                    <td>{hasRecordedForward(mailbox) ? formatDate(mailbox?.last_successful_scan_at) : ""}</td>
                     <td>
                       {mailbox ? (
                         <span className="gmail-table-subtext">Saved</span>
