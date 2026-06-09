@@ -10,11 +10,6 @@ class CandidateMailboxCreate(BaseModel):
     email: EmailStr
 
 
-class CandidateMailboxFlowCheck(BaseModel):
-    emails_flowing: bool
-    last_error: str | None = None
-
-
 class CandidateMailboxRead(BaseModel):
     id: int
     candidate_id: int

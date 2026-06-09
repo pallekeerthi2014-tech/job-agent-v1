@@ -421,11 +421,6 @@ export const apiClient = {
     request<CandidateMailbox>(`/api/v1/admin/gmail/mailboxes/${mailboxId}/forwarding-active`, {
       method: "POST",
     }),
-  updateCandidateMailboxFlowCheck: (mailboxId: number, payload: { emails_flowing: boolean; last_error?: string | null }) =>
-    request<CandidateMailbox>(`/api/v1/admin/gmail/mailboxes/${mailboxId}/flow-check`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
   getCandidateGmailOAuthUrl: (candidateId: number) =>
     request<GmailOAuthUrlResponse>(`/api/v1/admin/gmail/oauth-url?candidate_id=${candidateId}`),
   runGmailAnalytics: (publishSheets = true) =>

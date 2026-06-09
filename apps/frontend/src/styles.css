@@ -3705,6 +3705,17 @@ button:disabled {
   gap: 1rem;
 }
 
+.gmail-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr) auto minmax(260px, 0.8fr);
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.gmail-setup-grid label {
+  min-width: 0;
+}
+
 .gmail-action-row,
 .gmail-connect-grid {
   display: flex;
@@ -3762,6 +3773,13 @@ button:disabled {
 .gmail-forwarding-card p {
   color: #405060;
   margin: 0.75rem 0 0;
+}
+
+.gmail-steps-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #41505d;
+  line-height: 1.65;
 }
 
 .gmail-connect-result {
@@ -3840,6 +3858,10 @@ button:disabled {
 @media (max-width: 900px) {
   .gmail-console-header,
   .gmail-admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gmail-setup-grid {
     grid-template-columns: 1fr;
   }
 

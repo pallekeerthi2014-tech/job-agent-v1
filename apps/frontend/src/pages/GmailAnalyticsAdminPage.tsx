@@ -33,7 +33,6 @@ export function GmailAnalyticsAdminPage({
   const [trackingEmail, setTrackingEmail] = useState("");
   const [mailboxes, setMailboxes] = useState<CandidateMailbox[]>([]);
   const [busy, setBusy] = useState(false);
-  const [rowBusyId, setRowBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -54,23 +53,21 @@ export function GmailAnalyticsAdminPage({
     [candidates, mailboxByCandidate]
   );
 
-  const health = useMemo(() => {
+  const summary = useMemo(() => {
     const linked = rows.filter((row) => row.mailbox);
-    const flowing = linked.filter((row) => isFlowing(row.mailbox)).length;
-    const needsCheck = linked.filter((row) => row.mailbox?.status === "forwarding_active").length;
-    const notSeen = linked.filter((row) => row.mailbox?.status === "no_messages_seen").length;
-    const lastCheck = linked
-      .map((row) => row.mailbox?.last_successful_scan_at)
+    const emailRecorded = linked.filter((row) => hasRecordedForward(row.mailbox)).length;
+    const waitingForEmail = linked.length - emailRecorded;
+    const latestEmail = linked
+      .map((row) => row.mailbox?.last_email_scan_at)
       .filter(Boolean)
       .sort()
       .pop();
     return {
       total: candidates.length,
       linked: linked.length,
-      flowing,
-      needsCheck,
-      notSeen,
-      lastCheck
+      emailRecorded,
+      waitingForEmail,
+      latestEmail
     };
   }, [candidates.length, rows]);
 
@@ -95,7 +92,7 @@ export function GmailAnalyticsAdminPage({
       await onCreateCandidate(form);
       setForm(BLANK_FORM);
       await onRefreshCandidates();
-      setNotice("Candidate created. Link the Gmail address below after forwarding is configured.");
+      setNotice("Candidate created. Save the forwarding Gmail below after forwarding is enabled.");
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Unable to create candidate.");
     } finally {
@@ -110,7 +107,7 @@ export function GmailAnalyticsAdminPage({
     setNotice(null);
     try {
       const email = (trackingEmail || selectedCandidate.email || "").trim().toLowerCase();
-      if (!email) throw new Error("Enter the candidate Gmail address before linking.");
+      if (!email) throw new Error("Enter the candidate Gmail address before saving.");
       const existingMailbox = mailboxByCandidate.get(selectedCandidate.id);
       const mailbox = existingMailbox ?? await apiClient.createCandidateMailbox({
         candidate_id: selectedCandidate.id,
@@ -118,29 +115,11 @@ export function GmailAnalyticsAdminPage({
       });
       await apiClient.markCandidateMailboxForwardingActive(mailbox.id);
       await loadMailboxes();
-      setNotice(`Forwarding setup recorded for ${email}. Send a test email, confirm it lands in ${CENTRAL_INBOX}, then mark the flow as received.`);
+      setNotice(`Forwarding setup saved for ${email}. Last email time appears only after a real inbox scanner records a forwarded message.`);
     } catch (linkError) {
-      setError(linkError instanceof Error ? linkError.message : "Unable to link candidate Gmail.");
+      setError(linkError instanceof Error ? linkError.message : "Unable to save forwarding setup.");
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function updateFlowCheck(mailbox: CandidateMailbox, emailsFlowing: boolean) {
-    setRowBusyId(mailbox.id);
-    setError(null);
-    setNotice(null);
-    try {
-      await apiClient.updateCandidateMailboxFlowCheck(mailbox.id, {
-        emails_flowing: emailsFlowing,
-        last_error: emailsFlowing ? null : "No forwarded email found in the central ThinkSuccess Gmail inbox."
-      });
-      await loadMailboxes();
-      setNotice(emailsFlowing ? `${mailbox.email} is marked as flowing.` : `${mailbox.email} is marked as not seen yet.`);
-    } catch (flowError) {
-      setError(flowError instanceof Error ? flowError.message : "Unable to update flow check.");
-    } finally {
-      setRowBusyId(null);
     }
   }
 
@@ -149,8 +128,8 @@ export function GmailAnalyticsAdminPage({
       <section className="panel gmail-analytics-console">
         <div className="gmail-console-header">
           <div className="section-heading">
-            <h3>Central Gmail Analytics</h3>
-            <p>Track candidate Gmail forwarding into {CENTRAL_INBOX} and publish the analytics sheet from the central inbox.</p>
+            <h3>Gmail Forwarding Monitor</h3>
+            <p>Candidate Gmail accounts forwarding into {CENTRAL_INBOX}, with the last forwarded email timestamp recorded by analytics.</p>
           </div>
           <a className="secondary-button" href={REPORT_SHEET_URL} target="_blank" rel="noreferrer">
             Open Analytics Sheet
@@ -161,58 +140,69 @@ export function GmailAnalyticsAdminPage({
         {notice ? <p className="success-msg">{notice}</p> : null}
 
         <div className="gmail-health-grid">
-          <MetricCard label="Total candidates" value={health.total} />
-          <MetricCard label="Gmail linked" value={health.linked} />
-          <MetricCard label="Emails flowing" value={health.flowing} tone="good" />
-          <MetricCard label="Needs check" value={health.needsCheck + health.notSeen} tone={health.needsCheck + health.notSeen ? "warn" : "default"} />
-          <MetricCard label="Last flow check" value={formatDate(health.lastCheck)} wide />
+          <MetricCard label="Total candidates" value={summary.total} />
+          <MetricCard label="Forwarding saved" value={summary.linked} />
+          <MetricCard label="Email recorded" value={summary.emailRecorded} tone="good" />
+          <MetricCard label="Awaiting first email" value={summary.waitingForEmail} tone={summary.waitingForEmail ? "warn" : "default"} />
+          <MetricCard label="Latest email recorded" value={formatDate(summary.latestEmail)} wide />
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <h3>Save Forwarding Setup</h3>
+          <p>Use this after the candidate Gmail has been configured to forward incoming mail to the ThinkSuccess inbox.</p>
+        </div>
+        <div className="gmail-setup-grid">
+          <label>
+            Candidate
+            <select
+              value={selectedCandidateId}
+              onChange={(event) => {
+                const candidateId = event.target.value ? Number(event.target.value) : "";
+                const candidate = candidates.find((item) => item.id === candidateId);
+                setSelectedCandidateId(candidateId);
+                setTrackingEmail(candidate?.email ?? "");
+              }}
+            >
+              <option value="">Select candidate</option>
+              {candidates.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name} {candidate.email ? `(${candidate.email})` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Candidate Gmail
+            <input
+              type="email"
+              value={trackingEmail}
+              onChange={(event) => setTrackingEmail(event.target.value)}
+              placeholder="abc.tsc@gmail.com"
+            />
+          </label>
+          <button className="primary-button" onClick={() => void handleLinkForwardingMailbox()} disabled={!selectedCandidate || busy}>
+            {busy ? "Saving..." : "Save setup"}
+          </button>
+          <div className="gmail-forwarding-card">
+            <span>Forwarding destination</span>
+            <strong>{CENTRAL_INBOX}</strong>
+          </div>
         </div>
       </section>
 
       <section className="gmail-admin-layout">
         <section className="panel">
           <div className="section-heading">
-            <h3>Link Candidate Gmail</h3>
-            <p>Use this after the candidate Gmail forwards all incoming mail to the central ThinkSuccess inbox.</p>
+            <h3>What This Page Shows</h3>
+            <p>This page is a forwarding monitor, not a Gmail reader.</p>
           </div>
-          <div className="gmail-connect-grid">
-            <label>
-              Candidate
-              <select
-                value={selectedCandidateId}
-                onChange={(event) => {
-                  const candidateId = event.target.value ? Number(event.target.value) : "";
-                  const candidate = candidates.find((item) => item.id === candidateId);
-                  setSelectedCandidateId(candidateId);
-                  setTrackingEmail(candidate?.email ?? "");
-                }}
-              >
-                <option value="">Select candidate</option>
-                {candidates.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.name} {candidate.email ? `(${candidate.email})` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Candidate Gmail
-              <input
-                type="email"
-                value={trackingEmail}
-                onChange={(event) => setTrackingEmail(event.target.value)}
-                placeholder="abc.tsc@gmail.com"
-              />
-            </label>
-            <button className="primary-button" onClick={() => void handleLinkForwardingMailbox()} disabled={!selectedCandidate || busy}>
-              {busy ? "Saving..." : "Record forwarding setup"}
-            </button>
-          </div>
-          <div className="gmail-forwarding-card">
-            <span>Forwarding destination</span>
-            <strong>{CENTRAL_INBOX}</strong>
-            <p>Forward all incoming mail and keep Gmail's copy in the candidate Inbox. After a test email appears in the central inbox, use the health table to mark it as flowing.</p>
-          </div>
+          <ul className="gmail-steps-list">
+            <li>It lists which candidate Gmail accounts are saved for forwarding.</li>
+            <li>It shows when analytics last recorded an email from that Gmail.</li>
+            <li>It does not open, scan, or read your Gmail inbox from the website.</li>
+          </ul>
         </section>
 
         <section className="panel">
@@ -261,8 +251,8 @@ export function GmailAnalyticsAdminPage({
 
       <section className="panel">
         <div className="section-heading">
-          <h3>Forwarding Health</h3>
-          <p>Shows whether each candidate Gmail has been linked, whether emails are flowing into ThinkSuccess, and when that check last ran.</p>
+          <h3>Forwarding Status</h3>
+          <p>Which candidate Gmail accounts are saved, and when analytics last recorded a forwarded email from each one.</p>
         </div>
         <div className="table-wrapper">
           <table className="gmail-health-table">
@@ -270,16 +260,15 @@ export function GmailAnalyticsAdminPage({
               <tr>
                 <th>Candidate</th>
                 <th>Candidate Gmail</th>
-                <th>Flow status</th>
-                <th>Last email seen</th>
-                <th>Last check run</th>
-                <th>Issue</th>
-                <th>Actions</th>
+                <th>Forwarding</th>
+                <th>Last email from this Gmail</th>
+                <th>Last analytics update</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {rows.map(({ candidate, mailbox }) => {
-                const status = flowStatus(mailbox);
+                const status = forwardingStatus(mailbox);
                 return (
                   <tr key={candidate.id}>
                     <td>
@@ -287,28 +276,12 @@ export function GmailAnalyticsAdminPage({
                       <span className="gmail-table-subtext">{candidate.active ? "Active" : "Inactive"}</span>
                     </td>
                     <td>{mailbox?.email ?? candidate.email ?? "Missing"}</td>
-                    <td><FlowBadge status={status} /></td>
+                    <td><ForwardingBadge status={status} /></td>
                     <td>{formatDate(mailbox?.last_email_scan_at)}</td>
                     <td>{formatDate(mailbox?.last_successful_scan_at)}</td>
-                    <td>{mailbox?.last_error ?? ""}</td>
                     <td>
                       {mailbox ? (
-                        <div className="gmail-table-actions">
-                          <button
-                            className="secondary-button"
-                            onClick={() => void updateFlowCheck(mailbox, true)}
-                            disabled={rowBusyId === mailbox.id}
-                          >
-                            Received
-                          </button>
-                          <button
-                            className="ghost-button"
-                            onClick={() => void updateFlowCheck(mailbox, false)}
-                            disabled={rowBusyId === mailbox.id}
-                          >
-                            Not seen
-                          </button>
-                        </div>
+                        <span className="gmail-table-subtext">Saved</span>
                       ) : (
                         <button
                           className="secondary-button"
@@ -317,7 +290,7 @@ export function GmailAnalyticsAdminPage({
                             setTrackingEmail(candidate.email ?? "");
                           }}
                         >
-                          Link
+                          Save setup
                         </button>
                       )}
                     </td>
@@ -341,20 +314,18 @@ function MetricCard({ label, value, tone = "default", wide = false }: { label: s
   );
 }
 
-function FlowBadge({ status }: { status: ReturnType<typeof flowStatus> }) {
+function ForwardingBadge({ status }: { status: ReturnType<typeof forwardingStatus> }) {
   return <span className={`flow-badge flow-${status.tone}`}>{status.label}</span>;
 }
 
-function flowStatus(mailbox?: CandidateMailbox | null) {
+function forwardingStatus(mailbox?: CandidateMailbox | null) {
   if (!mailbox) return { label: "Needs setup", tone: "muted" as const };
-  if (isFlowing(mailbox)) return { label: "Flowing", tone: "good" as const };
-  if (mailbox.status === "forwarding_active") return { label: "Awaiting test", tone: "warn" as const };
-  if (mailbox.status === "no_messages_seen") return { label: "Not seen", tone: "bad" as const };
-  return { label: mailbox.status || "Unknown", tone: "muted" as const };
+  if (hasRecordedForward(mailbox)) return { label: "Email recorded", tone: "good" as const };
+  return { label: "Setup saved", tone: "warn" as const };
 }
 
-function isFlowing(mailbox?: CandidateMailbox | null) {
-  return Boolean(mailbox && (mailbox.status === "flowing" || (mailbox.gmail_connected && mailbox.last_email_scan_at)));
+function hasRecordedForward(mailbox?: CandidateMailbox | null) {
+  return Boolean(mailbox?.last_email_scan_at && mailbox.status !== "flowing");
 }
 
 function formatDate(value?: string | null) {

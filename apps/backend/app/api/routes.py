@@ -57,7 +57,6 @@ from app.schemas.user import (
 )
 from app.schemas.gmail_analytics import (
     CandidateMailboxCreate,
-    CandidateMailboxFlowCheck,
     CandidateMailboxRead,
     GmailAnalyticsRunResponse,
     GmailOAuthUrlResponse,
@@ -764,32 +763,9 @@ def mark_candidate_mailbox_forwarding_active(
     if mailbox is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate mailbox not found")
     mailbox.status = "forwarding_active"
-    mailbox.gmail_connected = True
+    mailbox.gmail_connected = False
     mailbox.calendar_connected = False
     mailbox.last_error = None
-    db.commit()
-    db.refresh(mailbox)
-    return mailbox
-
-
-@router.post("/admin/gmail/mailboxes/{mailbox_id}/flow-check", response_model=CandidateMailboxRead)
-def update_candidate_mailbox_flow_check(
-    mailbox_id: int,
-    payload: CandidateMailboxFlowCheck,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_super_admin),
-) -> CandidateMailboxRead:
-    mailbox = db.get(CandidateMailbox, mailbox_id)
-    if mailbox is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate mailbox not found")
-    checked_at = datetime.now(timezone.utc)
-    mailbox.last_successful_scan_at = checked_at
-    mailbox.gmail_connected = payload.emails_flowing
-    mailbox.calendar_connected = False
-    mailbox.status = "flowing" if payload.emails_flowing else "no_messages_seen"
-    mailbox.last_email_scan_at = checked_at if payload.emails_flowing else mailbox.last_email_scan_at
-    mailbox.last_error = None if payload.emails_flowing else payload.last_error or "No forwarded email found in the central ThinkSuccess Gmail inbox."
-    mailbox.updated_at = checked_at
     db.commit()
     db.refresh(mailbox)
     return mailbox
